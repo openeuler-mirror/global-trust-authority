@@ -3,7 +3,7 @@ use std::process::{Command, Output};
 use serde::{Deserialize, Serialize};
 
 pub trait CommandExecutor {
-    
+
     fn execute(&self, command: &str, args: &Vec<String>) -> io::Result<Output> {
         log::info!("Executing {:?}", command);
         let output = Command::new(command).args(args).output();
@@ -15,7 +15,7 @@ pub trait CommandExecutor {
             Err(error) => {Err(error)}
         }
     }
-    
+
     fn run(&self) -> io::Result<Output>;
 
 }
