@@ -8,6 +8,7 @@ use log::LevelFilter;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use crate::controller::cipher_controller::{create_ciphers, get_ciphers};
 use crate::utils::env_setting_center::{get_cert, get_key, get_port, get_tls, load_env};
+use crate::utils::logger::init_logger;
 
 pub mod controller;
 pub mod key_manager;
@@ -15,33 +16,9 @@ pub mod config;
 pub mod utils;
 pub mod models;
 
-fn setup_logger() {
-    let stdout = ConsoleAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{d} - {l} - {m}\n")))
-        .build();
-    let log_path = "log.log";
-    let file_config = FileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{d} - {l} - {m}\n")))
-        .build(log_path)
-        .unwrap();
-    // 构建日志配置
-    let config = Config::builder()
-        .appender(Appender::builder().build("stdout", Box::new(stdout)))
-        .appender(Appender::builder().build("file", Box::new(file_config)))
-        .build(
-            Root::builder()
-                .appender("stdout")
-                .appender("file")
-                .build(LevelFilter::Info),
-        )
-        .unwrap();
-    // 初始化日志系统
-    log4rs::init_config(config).unwrap();
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    setup_logger();
+    init_logger().expect("failed to init logger");
     load_env();
 
     let server = HttpServer::new(|| App::new()
