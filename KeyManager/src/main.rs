@@ -6,13 +6,14 @@ use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log::LevelFilter;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
-use crate::controller::cipher_controller::get_ciphers;
+use crate::controller::cipher_controller::{create_ciphers, get_ciphers};
 use crate::utils::env_setting_center::{get_cert, get_key, get_port, get_tls, load_env};
 
 pub mod controller;
 pub mod key_manager;
 pub mod config;
 pub mod utils;
+pub mod models;
 
 fn setup_logger() {
     let stdout = ConsoleAppender::builder()
@@ -43,7 +44,9 @@ async fn main() -> std::io::Result<()> {
     setup_logger();
     load_env();
 
-    let server = HttpServer::new(|| App::new().service(get_ciphers));
+    let server = HttpServer::new(|| App::new()
+        .service(get_ciphers)
+        .service(create_ciphers));
 
     let server = if get_tls() {
         let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())?;

@@ -21,3 +21,6 @@ openssl = { version = "0.10.45" }
 dotenv = "0.15"
 
 walkdir = "2.5.0"
+
+# 错误处理
+thiserror = "1.0"

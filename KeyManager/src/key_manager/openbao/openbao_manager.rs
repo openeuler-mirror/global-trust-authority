@@ -4,6 +4,8 @@ use crate::key_manager::base_key_manager::{CommandExecutor, PrivateKey, PrivateK
 use crate::key_manager::openbao::openbao_command::OpenBaoManager;
 use crate::key_manager::openbao::openbao_service::Version;
 use crate::key_manager::secret_manager_factory::SecretManager;
+use crate::models::cipher_models::CreateCipherReq;
+use crate::utils::response::AppError;
 
 impl SecretManager for OpenBaoManager {
     fn get_all_secret(&self) -> Result<PrivateKeyVec, i16> {
@@ -42,8 +44,39 @@ impl SecretManager for OpenBaoManager {
         Ok(vector)
     }
 
-    fn import_secret(&self, path: &str, value: &str) -> Result<(), String> {
-        todo!()
+    fn import_secret(&self, cipher: &CreateCipherReq) -> Result<String, AppError> {
+
+        let mut bao = OpenBaoManager::default();
+        if !bao.check_status() {
+            return Err(AppError::OpenbaoNotAvailable("service not ready".to_string()));
+        }
+
+        cipher.validate()?;
+
+        let private_key_value;
+        if !cipher.private_key.trim().is_empty() {
+            private_key_value = cipher.private_key.clone();
+        } else {
+            private_key_value = format!("@{:?}", cipher.file_path);
+        }
+
+        let result = bao.kv().put().mount(&config::SECRET_PATH)
+            .map_name(cipher.key_name.as_str())
+            .key_value("encoding", cipher.encoding.as_str())
+            .key_value("algorithm", cipher.algorithm.as_str())
+            .key_value("private_key", private_key_value.as_str()).run();
+        match result {
+            Ok(output) => {
+                if !output.status.success() {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    return Err(AppError::OpenbaoCommandExecuteError(stderr.to_string()));
+                }
+                Ok(String::from_utf8_lossy(&output.stdout).into())
+            },
+            Err(_e) => {
+                Err(AppError::OpenbaoCommandException("command error".to_string()))
+            },
+        }
     }
 }
 
