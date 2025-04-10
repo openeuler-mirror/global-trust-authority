@@ -38,3 +38,11 @@ pub fn get_cert() -> String {
 pub fn get_key() -> String {
     env::var("KEY_MANAGER_KEY_PATH").expect("Missing KEY_MANAGER_KEY_PATH environment variable")
 }
+
+pub fn get_log_level() -> String {
+    env::var("KEY_MANAGER_LOG_LEVEL").expect("Missing KEY_MANAGER_LOG_LEVEL environment variable")
+}
+
+pub fn get_log_path() -> String {
+    env::var("KEY_MANAGER_LOG_PATH").expect("Missing KEY_MANAGER_LOG_PATH environment variable")
+}

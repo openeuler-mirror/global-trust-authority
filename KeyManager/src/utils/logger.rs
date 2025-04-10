@@ -1,14 +1,14 @@
-use log::{LevelFilter, SetLoggerError, debug, error, info, trace, warn};
+use log::{LevelFilter, SetLoggerError, info};
 use log4rs::{
     append::{
         console::{ConsoleAppender, Target},
         file::FileAppender,
     },
-    config::{Appender, Config, Logger, Root},
+    config::{Appender, Config, Root},
     encode::pattern::PatternEncoder,
     filter::threshold::ThresholdFilter,
 };
-use std::env;
+use crate::utils::env_setting_center::{get_log_path, get_log_level};
 
 const LOG_PATTERN: &'static str = "{d(%Y-%m-%dT%H:%M:%S%.3f)} {P} [{l}] {t} - {m}{n}";
 
@@ -25,8 +25,8 @@ fn parse_level(level: &str) -> LevelFilter {
 }
 
 pub fn init_logger() -> Result<(), SetLoggerError> {
-    let log_level = env::var("KEY_MANAGER_LOG_LEVEL").unwrap_or("info".into());
-    let log_path = env::var("KEY_MANAGER_LOG_PATH").unwrap_or("key_manager.log".into());
+    let log_level = get_log_level();
+    let log_path = get_log_path();
 
     let level = parse_level(&log_level);
 

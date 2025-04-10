@@ -18,8 +18,8 @@ pub mod models;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    init_logger().expect("failed to init logger");
     load_env();
+    init_logger().expect("failed to init logger");
 
     let server = HttpServer::new(|| App::new()
         .service(get_ciphers)
