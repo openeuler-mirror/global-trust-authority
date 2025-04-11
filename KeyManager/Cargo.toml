@@ -17,3 +17,5 @@ openssl = { version = "0.10.45" }
 dotenv = "0.15"
 # 错误处理
 thiserror = "1.0"
+# 数据校验
+validator = { version = "0.20.0", features = ["derive"] }

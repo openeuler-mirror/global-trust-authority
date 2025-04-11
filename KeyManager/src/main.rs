@@ -1,10 +1,4 @@
 use actix_web::{App, HttpServer};
-use log4rs::append::console::ConsoleAppender;
-use log4rs::append::file::FileAppender;
-use log4rs::Config;
-use log4rs::config::{Appender, Root};
-use log4rs::encode::pattern::PatternEncoder;
-use log::LevelFilter;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use crate::controller::cipher_controller::{create_ciphers, get_ciphers};
 use crate::utils::env_setting_center::{get_cert, get_key, get_port, get_tls, load_env};

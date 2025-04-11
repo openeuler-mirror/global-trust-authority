@@ -1,4 +1,5 @@
 use actix_web::{get, post, web, HttpResponse};
+use validator::Validate;
 use crate::key_manager::secret_manager_factory::SecretManagerFactory;
 use crate::key_manager::secret_manager_factory::SecretManagerType::OpenBao;
 use crate::models::cipher_models::CreateCipherReq;
@@ -12,6 +13,7 @@ pub async fn get_ciphers() -> Result<HttpResponse, AppError> {
 
 #[post("/ciphers")]
 pub async fn create_ciphers(req: web::Json<CreateCipherReq>) -> Result<ApiResponse<String>, AppError> {
+    req.validate()?;
     SecretManagerFactory::create_manager(OpenBao).import_secret(&req)?;
     Ok(ApiResponse::ok_without_data())
 }
