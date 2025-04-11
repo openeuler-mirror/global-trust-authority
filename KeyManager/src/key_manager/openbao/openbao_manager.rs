@@ -1,47 +1,31 @@
+use std::collections::HashMap;
 use serde_json::{from_str, from_value, Value};
-use crate::config::{config, status_code};
-use crate::key_manager::base_key_manager::{CommandExecutor, PrivateKey, PrivateKeyVec};
-use crate::key_manager::openbao::openbao_command::OpenBaoManager;
-use crate::key_manager::openbao::openbao_service::Version;
+use crate::config::{config};
+use crate::key_manager::base_key_manager::{CommandExecutor, PrivateKey};
+use crate::key_manager::openbao::openbao_command::{OpenBaoManager, Version};
 use crate::key_manager::secret_manager_factory::SecretManager;
 use crate::models::cipher_models::CreateCipherReq;
 use crate::utils::response::AppError;
 
 impl SecretManager for OpenBaoManager {
-    fn get_all_secret(&self) -> Result<PrivateKeyVec, i16> {
+    fn get_all_secret(&self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError> {
         let mut bao = OpenBaoManager::default();
-        let mut vector = PrivateKeyVec::default();
         if !bao.check_status() {
-            return Err(status_code::OPENBAO_NOT_AVAILABLE);
+            return Err(AppError::OpenbaoNotAvailable(String::new()));
         }
-        let fsk = get_single_private_key(config::FSK);
-        match fsk {
-            Ok(fsk) => {
-                vector.fsk = fsk;
-            }
-            Err(e) => {
-                return Err(e);
-            }
-        }
-        let nsk = get_single_private_key(config::NSK);
-        match nsk {
-            Ok(nsk) => {
-                vector.nsk = nsk;
-            }
-            Err(e) => {
-                return Err(e);
+        let mut map = HashMap::new();
+        for key in config::TOKEN_ARRAY {
+            let result = get_single_private_key(key);
+            match result { 
+                Ok(data) => {
+                    map.insert(key.to_string(), data);
+                }
+                Err(err) => {
+                    return Err(err);
+                }
             }
         }
-        let tsk = get_single_private_key(config::TSK);
-        match tsk {
-            Ok(tsk) => {
-                vector.tsk = tsk;
-            }
-            Err(e) => {
-                return Err(e);
-            }
-        }
-        Ok(vector)
+        Ok(map)
     }
 
     fn import_secret(&self, cipher: &CreateCipherReq) -> Result<String, AppError> {
@@ -50,9 +34,7 @@ impl SecretManager for OpenBaoManager {
         if !bao.check_status() {
             return Err(AppError::OpenbaoNotAvailable("service not ready".to_string()));
         }
-
         cipher.validate()?;
-
         let private_key_value;
         if !cipher.private_key.trim().is_empty() {
             private_key_value = cipher.private_key.clone();
@@ -74,36 +56,38 @@ impl SecretManager for OpenBaoManager {
                 Ok(String::from_utf8_lossy(&output.stdout).into())
             },
             Err(_e) => {
-                Err(AppError::OpenbaoCommandException("command error".to_string()))
+                Err(AppError::CommandException("command error".to_string()))
             },
         }
     }
 }
 
-fn get_single_private_key(map_name: &str) -> Result<Vec<PrivateKey>, i16> {
+fn get_single_private_key(key_name: &str) -> Result<Vec<PrivateKey>, AppError> {
+    log::info!("start get {} private key", key_name);
     let mut openbao = OpenBaoManager::default();
     let mut vec = Vec::<PrivateKey>::new();
-    let result = openbao.kv().metadata().get().format_json().mount(&config::SECRET_PATH).map_name(map_name).run();
+    let result = openbao.kv().metadata().get().format_json().mount(&config::SECRET_PATH).map_name(key_name).run();
     let json: Value;
     match result {
         Ok(out) => {
             if !out.status.success() {
-                // 当前数据为空时，此时返回异常
+                log::warn!("private key not found, message: {}", String::from_utf8_lossy(&out.stderr));
                 return Ok(vec);
             }
             json = from_str(&String::from_utf8(out.stdout).unwrap_or("".to_string())).unwrap();
         }
         Err(_e) => {
-            return Err(status_code::OPENBAO_COMMAND_EXCEPTION);
+            log::error!("command execute error, message: {}", _e);
+            return Err(AppError::CommandException(String::new()));
         }
     }
     if !json.is_object() || json.get("data").is_none() {
-        // todo 异常
-        return Err(status_code::OPENBAO_JSON_ERROR);
+        log::error!("json or json[data] is error");
+        return Err(AppError::OpenbaoJsonError(String::new()));
     }
     if !json["data"].is_object() || json["data"].get("versions").is_none() || !json["data"]["versions"].is_object() {
-        // todo 异常
-        return Err(status_code::OPENBAO_JSON_ERROR);
+        log::error!("json[data] or json[data][versions] is error");
+        return Err(AppError::OpenbaoJsonError(String::new()));
     }
     let versions = json["data"]["versions"].as_object().unwrap();
     let mut version_vec = Vec::<i32>::new();
@@ -115,36 +99,36 @@ fn get_single_private_key(map_name: &str) -> Result<Vec<PrivateKey>, i16> {
     }
     version_vec.sort_by(|item1, item2| item2.cmp(item1));
     for item in version_vec {
-        let info = openbao.clean().kv().get().format_json().version(&item).mount(&config::SECRET_PATH).map_name(map_name).run();
+        let info = openbao.clean().kv().get().format_json().version(&item).mount(&config::SECRET_PATH).map_name(key_name).run();
         match info {
             Ok(info) => {
                 if !info.status.success() {
-                    log::error!("{}", item);
-                    return Err(status_code::OPENBAO_COMMAND_EXECUTE_ERROR);
+                    log::error!("{} private key version[{}] select error", key_name, item);
+                    return Err(AppError::OpenbaoCommandExecuteError(String::new()));
                 }
                 let mut detail_info: Value = from_str(&String::from_utf8(info.stdout).unwrap()).unwrap();
                 if !detail_info.is_object() || detail_info.get("data").is_none() {
-                    log::error!("{}", item);
-                    return Err(status_code::OPENBAO_JSON_ERROR);
+                    log::error!("json or json[data] is error");
+                    return Err(AppError::OpenbaoJsonError(String::new()));
                 }
                 if !detail_info["data"].is_object() || detail_info["data"].get("data").is_none() {
-                    log::error!("{}", item);
-                    return Err(status_code::OPENBAO_JSON_ERROR);
+                    log::error!("json[data] or json[data][data] is error");
+                    return Err(AppError::OpenbaoJsonError(String::new()));
                 }
                 let detail_data = detail_info["data"]["data"].take();
                 let mut key = match from_value::<PrivateKey>(detail_data) {
                     Ok(key) => key,
                     Err(_e) => {
-                        log::error!("{}", item);
-                        return Err(status_code::OPENBAO_JSON_ERROR)
+                        log::error!("openbao data is not match private key, key: {}, version: {}", key_name, item);
+                        return Err(AppError::OpenbaoJsonError(String::new()))
                     }
                 };
-                key.version = item.to_string();
+                key.version = format!("v{}", item.to_string());
                 vec.push(key);
             }
             Err(_e) => {
-                log::error!("{}", item);
-                return Err(status_code::OPENBAO_COMMAND_EXCEPTION);
+                log::error!("command execute error, message: {}", _e);
+                return Err(AppError::CommandException(String::new()));
             }
         }
     }

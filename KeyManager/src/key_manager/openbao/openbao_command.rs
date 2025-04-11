@@ -1,5 +1,6 @@
 use std::{io};
 use std::process::{Output};
+use serde::{Deserialize, Serialize};
 use serde_json::{from_str, Value};
 use crate::key_manager::base_key_manager::{CommandExecutor};
 
@@ -107,27 +108,31 @@ impl OpenBaoManager {
     }
 
     pub fn check_status(&mut self) -> bool {
+        log::info!("start check openbao status");
         self.clean();
         self.status().format_json();
         let result = self.run();
         match result {
             Ok(out) => {
-                if !out.status.success() { 
+                if !out.status.success() {
+                    log::error!("openbao status check error, message: {:?}", String::from_utf8_lossy(&out.stderr));
                     return false;
                 }
                 let data: Value = from_str(&String::from_utf8(out.stdout).unwrap()).unwrap();
-                if data["Initialized"] == "false" { 
-                    // 未初始化 todo
+                if data["Initialized"] == "false" {
+                    log::error!("openbao not initialized, please check");
+                    return false;
                 }
-                if data["Sealed"] == "false" { 
-                    // openbao处于lock todo
+                if data["Sealed"] == "false" {
+                    log::error!("openbao is seal, please unseal openbao");
+                    return false;
                 }
-                
-                return true
+                log::info!("openbao is healthy");
+                true
             }
             Err(_e) => {
-                // 当前命令执行异常
-                return false
+                log::error!("command execute error, message: {}", _e);
+                false
             }
         }
     }
@@ -138,5 +143,12 @@ impl CommandExecutor for OpenBaoManager {
     fn run(&self) -> io::Result<Output> {
         self.execute(&self.command, &self.args)
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Version {
+    pub created_time : String,
+    pub deletion_time : String,
+    pub destroyed : bool
 }
 

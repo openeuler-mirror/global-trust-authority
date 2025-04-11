@@ -5,12 +5,9 @@ use crate::models::cipher_models::CreateCipherReq;
 use crate::utils::response::{ApiResponse, AppError};
 
 #[get("/ciphers")]
-pub async fn get_ciphers() -> HttpResponse {
-    let result = SecretManagerFactory::create_manager(OpenBao).get_all_secret();
-    match result {
-        Ok(private_key) => { HttpResponse::Ok().json(private_key)}
-        Err(error) => { HttpResponse::BadRequest().body(error.to_string())}
-    }
+pub async fn get_ciphers() -> Result<HttpResponse, AppError> {
+    let result = SecretManagerFactory::create_manager(OpenBao).get_all_secret()?;
+    Ok(HttpResponse::Ok().json(result))
 }
 
 #[post("/ciphers")]

@@ -30,13 +30,13 @@ pub enum AppError {
     #[error("openbao not available: {0}")]
     OpenbaoNotAvailable(String),
 
-    #[error("openbao command execute error: {0}")]
+    #[error("openbao command execute error, please check openbao")]
     OpenbaoCommandExecuteError(String),
 
-    #[error("openbao command exception: {0}")]
-    OpenbaoCommandException(String),
+    #[error("command execute exception, please check command")]
+    CommandException(String),
 
-    #[error("openbao json error: {0}")]
+    #[error("openbao read private key error")]
     OpenbaoJsonError(String),
 }
 
@@ -48,7 +48,7 @@ impl AppError {
             Self::IoFailed(_) => error_codes::IO_FAILED,
             Self::OpenbaoNotAvailable(_) => error_codes::OPENBAO_NOT_AVAILABLE,
             Self::OpenbaoCommandExecuteError(_) => error_codes::OPENBAO_COMMAND_EXECUTE_ERROR,
-            Self::OpenbaoCommandException(_) => error_codes::OPENBAO_COMMAND_EXCEPTION,
+            Self::CommandException(_) => error_codes::OPENBAO_COMMAND_EXCEPTION,
             Self::OpenbaoJsonError(_) => error_codes::OPENBAO_JSON_ERROR,
         }
     }
