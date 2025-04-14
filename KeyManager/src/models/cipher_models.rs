@@ -19,8 +19,8 @@ pub struct CreateCipherReq {
     ))]
     pub algorithm: String,
     #[validate(length(
-        max = 10,
-        message = "The length of the private_key should be less than 10"
+        max = 2097152,
+        message = "The length of the private_key should be less than 2MB "
     ))]
     pub private_key: String,
     #[validate(custom(function = "validate_file_path"))]
