@@ -4,6 +4,7 @@ use actix_web::{HttpResponse, Responder, ResponseError};
 use log::error;
 use serde::Serialize;
 use thiserror::Error;
+use validator::ValidationErrors;
 
 mod error_codes {
     pub const PARAM_INVALID: u16 = 10001;
@@ -117,5 +118,34 @@ impl ResponseError for AppError {
                 message: self.to_string(),
                 data: None,
             })
+    }
+}
+
+// 实现从 ValidationErrors 到 AppError 的自动转换
+impl From<ValidationErrors> for AppError {
+    fn from(errors: ValidationErrors) -> Self {
+        // 将验证错误转换为友好的错误消息
+        let error_msg = errors
+            .field_errors()
+            .iter()
+            .map(|(field, errors)| {
+                let details = errors
+                    .iter()
+                    .map(|e| {
+                        let code = e.code.to_string();
+                        let msg = e
+                            .message
+                            .as_ref()
+                            .map(|s| format!("{}", s))
+                            .unwrap_or_default();
+                        format!("{}", msg)
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("{}", details)
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        AppError::ParamInvalid(error_msg)
     }
 }

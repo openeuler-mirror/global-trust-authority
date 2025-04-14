@@ -16,7 +16,7 @@ impl SecretManager for OpenBaoManager {
         let mut map = HashMap::new();
         for key in config::TOKEN_ARRAY {
             let result = get_single_private_key(key);
-            match result { 
+            match result {
                 Ok(data) => {
                     map.insert(key.to_string(), data);
                 }
@@ -29,12 +29,11 @@ impl SecretManager for OpenBaoManager {
     }
 
     fn import_secret(&self, cipher: &CreateCipherReq) -> Result<String, AppError> {
-
         let mut bao = OpenBaoManager::default();
         if !bao.check_status() {
             return Err(AppError::OpenbaoNotAvailable("service not ready".to_string()));
         }
-        cipher.validate()?;
+
         let private_key_value;
         if !cipher.private_key.trim().is_empty() {
             private_key_value = cipher.private_key.clone();
@@ -53,9 +52,11 @@ impl SecretManager for OpenBaoManager {
                     let stderr = String::from_utf8_lossy(&output.stderr);
                     return Err(AppError::OpenbaoCommandExecuteError(stderr.to_string()));
                 }
+                log::info!("import secret successfully");
                 Ok(String::from_utf8_lossy(&output.stdout).into())
             },
             Err(_e) => {
+                log::error!("failed to import_secret, command execute error, err: {}", _e);
                 Err(AppError::CommandException("command error".to_string()))
             },
         }

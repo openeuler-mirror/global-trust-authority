@@ -1,76 +1,83 @@
-use std::path::Path;
 use serde::{Deserialize, Serialize};
-use crate::utils::response::AppError;
+use std::path::Path;
+use validator::{Validate, ValidationError};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Validate)]
+#[validate(schema(function = "validate_private_key_and_file_path_exclusive"))]
 pub struct CreateCipherReq {
+    #[validate(length(
+        min = 1,
+        max = 32,
+        message = "The length of the key name should be between 1 and 32 characters"
+    ))]
     pub key_name: String,
+    #[validate(custom(function = "validate_encoding", message = "The encoding must be PEM"))]
     pub encoding: String,
+    #[validate(custom(
+        function = "validate_algorithm",
+        message = "The algorithm must be rsa 3072 pss/sm2/ec"
+    ))]
     pub algorithm: String,
+    #[validate(length(
+        max = 10,
+        message = "The length of the private_key should be less than 10"
+    ))]
     pub private_key: String,
-    pub file_path: String
+    #[validate(custom(function = "validate_file_path"))]
+    pub file_path: String,
 }
 
-impl CreateCipherReq {
-    fn validate_encoding(&self) -> Result<(), AppError> {
-        // match self.encoding.as_str() {
-        //     "base64" | "hex" | "utf8" => Ok(()),
-        //     _ => Err(CommandError::ParamInvalid(format!("无效编码类型: {}", self.encoding))),
-        // }
-        Ok(())
+fn validate_encoding(encoding: &str) -> Result<(), ValidationError> {
+    match encoding.to_lowercase().as_str() {
+        "pem" => Ok(()),
+        _ => Err(ValidationError::new("invalid encoding")),
+    }
+}
+
+fn validate_algorithm(algorithm: &str) -> Result<(), ValidationError> {
+    match algorithm.to_lowercase().as_str() {
+        "rsa 3072 pss" | "sm2" | "ec" => Ok(()),
+        _ => Err(ValidationError::new("invalid algorithm")),
+    }
+}
+
+// 结构体级别校验：private_key 和 file_path 互斥
+fn validate_private_key_and_file_path_exclusive(
+    req: &CreateCipherReq,
+) -> Result<(), ValidationError> {
+    let has_private = !req.private_key.trim().is_empty();
+    let has_file = !req.file_path.trim().is_empty();
+
+    match (has_private, has_file) {
+        (true, true) => Err(ValidationError::new("validate exclusive")
+            .with_message("Private_key and file_path cannot have both values".into())),
+        (false, false) => Err(ValidationError::new("validate exclusive")
+            .with_message("Either private_key or file_path must be provided".into())),
+        _ => Ok(()),
+    }
+}
+
+fn validate_file_path(file_path: &str) -> Result<(), ValidationError> {
+    if file_path.is_empty() {
+        return Ok(());
+    }
+    let path = Path::new(file_path.trim());
+
+    // 绝对路径检查
+    if !path.is_absolute() {
+        return Err(ValidationError::new("validate file path")
+            .with_message("File path must be an absolute path".into()));
     }
 
-    fn validate_algorithm(&self) -> Result<(), AppError> {
-        // match self.algorithm.as_str() {
-        //     "aes-256-gcm" | "chacha20-poly1305" => Ok(()),
-        //     _ => Err(CommandError::ParamInvalid(format!("无效算法: {}", self.algorithm))),
-        // }
-        Ok(())
-    }
-    // 验证参数private_key和file_path互斥性
-    fn validate_private_key_and_file_path_exclusive(&self) -> Result<(), AppError> {
-        let has_private = !self.private_key.trim().is_empty();
-        let has_file = !self.file_path.trim().is_empty();
-
-        match (has_private, has_file) {
-            (true, true) => Err(AppError::ParamInvalid(
-                "private_key 和 file_path 不能同时有值".into()
-            )),
-            (false, false) => Err(AppError::ParamInvalid(
-                "必须提供 private_key 或 file_path 其中一个".into()
-            )),
-            _ => Ok(())
-        }
+    // 路径规范检查（禁止相对路径组件）
+    if path
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err(
+            ValidationError::new("validate file path").with_message("Invalid file path".into())
+        );
     }
 
-    fn validate_file_path(&self) -> Result<(), AppError> {
-        if !self.file_path.is_empty() {
-            let path = Path::new(self.file_path.trim());
-
-            // 绝对路径检查
-            if !path.is_absolute() {
-                return Err(AppError::ParamInvalid(
-                    format!("文件路径必须为绝对路径: {}", self.file_path)
-                ));
-            }
-
-            // 路径规范检查（禁止相对路径组件）
-            if path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
-                return Err(AppError::ParamInvalid(
-                    format!("路径包含非法相对组件: {}", self.file_path)
-                ));
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn validate(&self) -> Result<(), AppError> {
-        self.validate_algorithm()?;
-        self.validate_encoding()?;
-        self.validate_private_key_and_file_path_exclusive()?;
-        self.validate_file_path()?;
-        Ok(())
-    }
-
+    Ok(())
 }
