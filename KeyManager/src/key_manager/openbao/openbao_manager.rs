@@ -42,10 +42,10 @@ impl SecretManager for OpenBaoManager {
         if !cipher.private_key.trim().is_empty() {
             private_key_value = cipher.private_key.clone();
         } else {
-            private_key_value = format!("@{:?}", cipher.file_path);
+            private_key_value = format!("@{}", cipher.file_path);
         }
 
-        let result = bao.kv().put().mount(&config::SECRET_PATH)
+        let result = bao.clean().kv().put().mount(&config::SECRET_PATH)
             .map_name(cipher.key_name.as_str())
             .key_value("encoding", cipher.encoding.as_str())
             .key_value("algorithm", cipher.algorithm.as_str())

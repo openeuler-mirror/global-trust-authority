@@ -124,25 +124,16 @@ impl ResponseError for AppError {
 // 实现从 ValidationErrors 到 AppError 的自动转换
 impl From<ValidationErrors> for AppError {
     fn from(errors: ValidationErrors) -> Self {
-        // 将验证错误转换为友好的错误消息
+        // 将验证错误转换为的message
         let error_msg = errors
             .field_errors()
-            .iter()
-            .map(|(field, errors)| {
-                let details = errors
-                    .iter()
-                    .map(|e| {
-                        let code = e.code.to_string();
-                        let msg = e
-                            .message
-                            .as_ref()
-                            .map(|s| format!("{}", s))
-                            .unwrap_or_default();
-                        format!("{}", msg)
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!("{}", details)
+            .values()
+            .flat_map(|errs| errs.iter())
+            .map(|e| {
+                e.message
+                    .as_deref()
+                    .map(|msg| format!("{}", msg))
+                    .unwrap_or_else(|| e.code.to_string())
             })
             .collect::<Vec<_>>()
             .join("; ");
