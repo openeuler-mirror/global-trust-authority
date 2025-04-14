@@ -10,8 +10,10 @@ pub struct SecretManagerFactory;
 pub trait SecretManager {
     fn get_all_secret(&self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError>;
     fn import_secret(&self, cipher: &CreateCipherReq) -> Result<String, AppError>;
+    fn init_system(&self) -> Result<(), AppError>;
 }
 
+#[derive(Debug)]
 pub enum SecretManagerType {
     OpenBao,
 }

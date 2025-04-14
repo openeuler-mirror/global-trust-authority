@@ -68,7 +68,7 @@ impl OpenBaoManager {
     }
 
     pub fn path(&mut self, path: &str) -> &mut Self {
-        self.args.push(format!("path={}", path));
+        self.args.push(format!("-path={}", path));
         self
     }
 
@@ -102,6 +102,11 @@ impl OpenBaoManager {
         self
     }
 
+    pub fn max_versions(&mut self, max_versions: &u32) -> &mut Self {
+        self.args.push(format!("--max-versions={}", max_versions));
+        self
+    }
+    
     pub fn clean(&mut self) -> &mut Self {
         self.args.clear();
         self

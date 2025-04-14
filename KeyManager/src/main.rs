@@ -1,6 +1,7 @@
 use actix_web::{App, HttpServer};
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use crate::controller::cipher_controller::{create_ciphers, get_ciphers};
+use crate::key_manager::secret_manager_factory::{SecretManagerFactory, SecretManagerType};
 use crate::utils::env_setting_center::{load_env, Environment};
 use crate::utils::logger::init_logger;
 
@@ -45,5 +46,12 @@ async fn main() -> std::io::Result<()> {
     } else {
         server.bind(("0.0.0.0", config.port))?
     };
+    match SecretManagerFactory::create_manager(SecretManagerType::OpenBao).init_system() {
+        Ok(_) => {},
+        Err(err) => {
+            log::error!("{:?} init config error: {}", SecretManagerType::OpenBao, err);
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()));
+        }
+    }
     server.run().await
 }
