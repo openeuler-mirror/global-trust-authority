@@ -14,6 +14,8 @@ mod error_codes {
     pub const OPENBAO_COMMAND_EXECUTE_ERROR: u16 = 20002;
     pub const OPENBAO_COMMAND_EXCEPTION: u16 = 20003;
     pub const OPENBAO_JSON_ERROR: u16 = 20004;
+    pub const ENV_CONFIG_ERROR: u16 = 20005;
+
 }
 
 #[derive(Error, Debug)]
@@ -38,6 +40,9 @@ pub enum AppError {
 
     #[error("openbao read private key error")]
     OpenbaoJsonError(String),
+
+    #[error("key manager env read {0} error")]
+    EnvConfigError(String),
 }
 
 impl AppError {
@@ -50,6 +55,7 @@ impl AppError {
             Self::OpenbaoCommandExecuteError(_) => error_codes::OPENBAO_COMMAND_EXECUTE_ERROR,
             Self::CommandException(_) => error_codes::OPENBAO_COMMAND_EXCEPTION,
             Self::OpenbaoJsonError(_) => error_codes::OPENBAO_JSON_ERROR,
+            Self::EnvConfigError(_) => error_codes::ENV_CONFIG_ERROR,
         }
     }
 }

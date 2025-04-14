@@ -8,7 +8,7 @@ use log4rs::{
     encode::pattern::PatternEncoder,
     filter::threshold::ThresholdFilter,
 };
-use crate::utils::env_setting_center::{get_log_path, get_log_level};
+use crate::utils::env_setting_center::{Environment};
 
 const LOG_PATTERN: &'static str = "{d(%Y-%m-%dT%H:%M:%S%.3f)} {P} [{l}] {t} - {m}{n}";
 
@@ -25,8 +25,8 @@ fn parse_level(level: &str) -> LevelFilter {
 }
 
 pub fn init_logger() -> Result<(), SetLoggerError> {
-    let log_level = get_log_level();
-    let log_path = get_log_path();
+    let log_level = &Environment::global().log_level;
+    let log_path = &Environment::global().log_path;
 
     let level = parse_level(&log_level);
 

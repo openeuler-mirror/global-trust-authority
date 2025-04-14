@@ -1,13 +1,7 @@
 use actix_web::{App, HttpServer};
-use log4rs::append::console::ConsoleAppender;
-use log4rs::append::file::FileAppender;
-use log4rs::Config;
-use log4rs::config::{Appender, Root};
-use log4rs::encode::pattern::PatternEncoder;
-use log::LevelFilter;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use crate::controller::cipher_controller::{create_ciphers, get_ciphers};
-use crate::utils::env_setting_center::{get_cert, get_key, get_port, get_tls, load_env};
+use crate::utils::env_setting_center::{load_env, Environment};
 use crate::utils::logger::init_logger;
 
 pub mod controller;
@@ -19,31 +13,37 @@ pub mod models;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     load_env();
+    match Environment::check() {
+        Ok(_) => {}
+        Err(err) => {
+            log::error!("load env config error, message: {}", err);
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()));
+        }
+    }
+    let config = Environment::global();
     init_logger().expect("failed to init logger");
-
     let server = HttpServer::new(|| App::new()
         .service(get_ciphers)
         .service(create_ciphers));
-
-    let server = if get_tls() {
+    let server = if config.tls {
         let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())?;
-        match builder.set_private_key_file(get_key(), SslFiletype::PEM) {
+        match builder.set_private_key_file(&config.tls_key, SslFiletype::PEM) {
             Ok(_) => (),
             Err(e) => {
-                log::error!("{}", e);
+                log::error!("private key file set failed, message: {}", e);
                 return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
             }
         };
-        match builder.set_certificate_chain_file(get_cert()) {
+        match builder.set_certificate_chain_file(&config.tls_cert) {
             Ok(_) => (),
             Err(e) => {
-                log::error!("{}", e);
+                log::error!("cert chain file set failed, message: {}", e);
                 return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
             }
         }
-        server.bind_openssl(("0.0.0.0", get_port()), builder)?
+        server.bind_openssl(("0.0.0.0", config.port), builder)?
     } else {
-        server.bind(("0.0.0.0", get_port()))?
+        server.bind(("0.0.0.0", config.port))?
     };
     server.run().await
 }
