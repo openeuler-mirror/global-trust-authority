@@ -40,7 +40,7 @@ fn main() {
             println!("success to handle command");
         }
         Err(e) => {
-            eprint!("error: {}", e);
+            eprintln!("{}", e);
             exit(1);
         }
     }

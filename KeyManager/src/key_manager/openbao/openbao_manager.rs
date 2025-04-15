@@ -7,7 +7,7 @@ use crate::config::config::TOKEN_ARRAY;
 use crate::key_manager::base_key_manager::{CommandExecutor, PrivateKey};
 use crate::key_manager::openbao::openbao_command::{OpenBaoManager, Version};
 use crate::key_manager::secret_manager_factory::SecretManager;
-use crate::models::cipher_models::CreateCipherReq;
+use crate::models::cipher_models::PutCipherReq;
 use crate::utils::env_setting_center::Environment;
 use crate::utils::response::AppError;
 
@@ -32,7 +32,7 @@ impl SecretManager for OpenBaoManager {
         Ok(map)
     }
 
-    fn import_secret(&self, cipher: &CreateCipherReq) -> Result<String, AppError> {
+    fn import_secret(&self, cipher: &PutCipherReq) -> Result<String, AppError> {
         let mut bao = OpenBaoManager::default();
         if !bao.check_status() {
             return Err(AppError::OpenbaoNotAvailable("service not ready".to_string()));

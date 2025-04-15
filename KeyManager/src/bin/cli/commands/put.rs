@@ -1,6 +1,6 @@
 use KeyManager::key_manager::secret_manager_factory::SecretManagerFactory;
 use KeyManager::key_manager::secret_manager_factory::SecretManagerType::OpenBao;
-use KeyManager::models::cipher_models::CreateCipherReq;
+use KeyManager::models::cipher_models::PutCipherReq;
 use KeyManager::utils::response::AppError;
 use clap::Args;
 use validator::Validate;
@@ -29,7 +29,7 @@ pub struct PutArgs {
 }
 
 pub fn handle_put(args: PutArgs) -> Result<(), AppError> {
-    let put_cipher = CreateCipherReq {
+    let put_cipher = PutCipherReq {
         key_name: args.key_name,
         encoding: args.encoding,
         algorithm: args.algorithm,
