@@ -1,15 +1,9 @@
 use actix_web::{App, HttpServer};
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
-use crate::controller::cipher_controller::{create_ciphers, get_ciphers};
-use crate::key_manager::secret_manager_factory::{SecretManagerFactory, SecretManagerType};
-use crate::utils::env_setting_center::{load_env, Environment};
-use crate::utils::logger::init_logger;
-
-pub mod controller;
-pub mod key_manager;
-pub mod config;
-pub mod utils;
-pub mod models;
+use KeyManager::controller::cipher_controller::get_ciphers;
+use KeyManager::key_manager::secret_manager_factory::{SecretManagerFactory, SecretManagerType};
+use KeyManager::utils::env_setting_center::{load_env, Environment};
+use KeyManager::utils::logger::init_logger;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -22,10 +16,9 @@ async fn main() -> std::io::Result<()> {
         }
     }
     let config = Environment::global();
-    init_logger().expect("failed to init logger");
+    init_logger(true).expect("failed to init logger");
     let server = HttpServer::new(|| App::new()
-        .service(get_ciphers)
-        .service(create_ciphers));
+        .service(get_ciphers));
     let server = if config.tls {
         let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())?;
         match builder.set_private_key_file(&config.tls_key, SslFiletype::PEM) {

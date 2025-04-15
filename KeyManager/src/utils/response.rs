@@ -33,10 +33,10 @@ pub enum AppError {
     #[error("openbao not available: {0}")]
     OpenbaoNotAvailable(String),
 
-    #[error("openbao command execute error, please check openbao")]
+    #[error("openbao command execute error, please check openbao.")]
     OpenbaoCommandExecuteError(String),
 
-    #[error("command execute exception, please check command")]
+    #[error("command execute exception, please check command. {0}")]
     CommandException(String),
 
     #[error("openbao read private key error")]
@@ -73,7 +73,7 @@ impl<T: Serialize> ApiResponse<T> {
     pub fn ok(data: T) -> Self {
         Self {
             code: StatusCode::OK.as_u16(),
-            message: "操作成功".into(),
+            message: "success".into(),
             data: Some(data),
         }
     }
@@ -81,7 +81,7 @@ impl<T: Serialize> ApiResponse<T> {
     pub fn ok_without_data() -> Self {
         ApiResponse {
             code: StatusCode::OK.as_u16(),
-            message: "操作成功".into(),
+            message: "success".into(),
             data: None,
         }
     }

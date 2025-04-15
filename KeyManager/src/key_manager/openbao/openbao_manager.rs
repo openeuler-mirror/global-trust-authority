@@ -54,7 +54,7 @@ impl SecretManager for OpenBaoManager {
             Ok(output) => {
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    return Err(AppError::OpenbaoCommandExecuteError(stderr.to_string()));
+                    return Err(AppError::CommandException(stderr.to_string()));
                 }
                 log::info!("import secret successfully");
                 Ok(String::from_utf8_lossy(&output.stdout).into())

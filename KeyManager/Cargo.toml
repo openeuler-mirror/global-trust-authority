@@ -1,7 +1,12 @@
 [package]
-name = "KeyManager"
+name = "KeyManager" # Key manager Service
 version = "0.1.0"
 edition = "2024"
+default-run = "KeyManager"
+
+[[bin]]
+name = "key_manager"  # key manager CLI tool
+path = "src/bin/cli/main.rs"
 
 [dependencies]
 # web框架
@@ -19,3 +24,5 @@ dotenv = "0.15"
 thiserror = "1.0"
 # 数据校验
 validator = { version = "0.20.0", features = ["derive"] }
+# 命令行参数处理
+clap = { version = "4.5.31", features = ["derive"] }
