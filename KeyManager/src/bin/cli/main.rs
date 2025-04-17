@@ -1,8 +1,6 @@
 pub mod commands;
 
 use crate::commands::put::{PutArgs, handle_put};
-use KeyManager::utils::env_setting_center::{Environment, load_env};
-use KeyManager::utils::logger::init_logger;
 use clap::Parser;
 use std::process::exit;
 
@@ -21,16 +19,6 @@ pub enum Commands {
 }
 
 fn main() {
-    load_env();
-    match Environment::check() {
-        Ok(_) => {}
-        Err(err) => {
-            log::error!("load env config error, message: {}", err);
-            exit(1);
-        }
-    }
-    init_logger(false).expect("failed to init logger");
-
     let cli = Cli::parse();
     let result = match cli.command {
         Commands::Put(args) => handle_put(args),

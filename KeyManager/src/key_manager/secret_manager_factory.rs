@@ -3,7 +3,7 @@ use crate::key_manager::base_key_manager::{PrivateKey};
 use crate::key_manager::openbao::openbao_command::OpenBaoManager;
 use crate::key_manager::secret_manager_factory::SecretManagerType::OpenBao;
 use crate::models::cipher_models::PutCipherReq;
-use crate::utils::response::AppError;
+use crate::utils::errors::AppError;
 
 pub struct SecretManagerFactory;
 

@@ -1,6 +1,6 @@
 use std::{env, sync};
 use crate::config::config::{KEY_MANAGER_CERT_PATH, KEY_MANAGER_KEY_PATH, KEY_MANAGER_LOG_LEVEL, KEY_MANAGER_LOG_PATH, KEY_MANAGER_PORT, KEY_MANAGER_ROOT_TOKEN, KEY_MANAGER_TLS};
-use crate::utils::response::AppError;
+use crate::utils::errors::AppError;
 
 pub fn load_env()  {
     dotenv::dotenv().ok();

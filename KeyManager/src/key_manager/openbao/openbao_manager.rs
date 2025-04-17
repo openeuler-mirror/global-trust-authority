@@ -9,7 +9,7 @@ use crate::key_manager::openbao::openbao_command::{OpenBaoManager, Version};
 use crate::key_manager::secret_manager_factory::SecretManager;
 use crate::models::cipher_models::PutCipherReq;
 use crate::utils::env_setting_center::Environment;
-use crate::utils::response::AppError;
+use crate::utils::errors::AppError;
 
 impl SecretManager for OpenBaoManager {
     fn get_all_secret(&self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError> {
@@ -42,7 +42,7 @@ impl SecretManager for OpenBaoManager {
         if !cipher.private_key.trim().is_empty() {
             private_key_value = cipher.private_key.clone();
         } else {
-            private_key_value = format!("@{}", cipher.file_path);
+            private_key_value = format!("@{}", cipher.key_file);
         }
 
         let result = bao.clean().kv().put().mount(&config::SECRET_PATH)

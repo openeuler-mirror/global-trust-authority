@@ -8,10 +8,9 @@ use validator::{Validate, ValidationError};
 #[derive(Serialize, Deserialize, Validate, Debug)]
 #[validate(schema(function = "validate_private_key_format"))]
 pub struct PutCipherReq {
-    #[validate(length(
-        min = 1,
-        max = 32,
-        message = "The length of the key name should be between 1 and 32 characters"
+    #[validate(custom(
+        function = "validate_key_name",
+        message = "The key name must be  FSK/NSK/TSK"
     ))]
     pub key_name: String,
 
@@ -24,13 +23,16 @@ pub struct PutCipherReq {
     ))]
     pub algorithm: String,
 
-    #[validate(length(
-        max = 2097152,
-        message = "The length of the private_key should be less than 2MB "
-    ))]
     pub private_key: String,
 
-    pub file_path: String,
+    pub key_file: String,
+}
+
+fn validate_key_name(key_name: &str) -> Result<(), ValidationError> {
+    match key_name.to_string().as_str() {
+        "FSK" | "NSK" | "TSK" => Ok(()),
+        _ => Err(ValidationError::new("invalid key name")),
+    }
 }
 
 fn validate_encoding(encoding: &str) -> Result<(), ValidationError> {
@@ -55,7 +57,7 @@ fn validate_private_key_format(req: &PutCipherReq) -> Result<(), ValidationError
     let pem_data = if !req.private_key.is_empty() {
         req.private_key.as_bytes()
     } else {
-        &fs::read(&req.file_path).map_err(|e| {
+        &fs::read(&req.key_file).map_err(|e| {
             ValidationError::new("FileReadError")
                 .with_message(format!("Failed to read key file: {}", e).into())
         })?
@@ -105,7 +107,7 @@ fn validate_sm2_key(pem: &[u8]) -> Result<(), ErrorStack> {
     }
 }
 
-// EC 校验（默认曲线示例，可自定义）
+// EC 校验
 fn validate_ec_key(pem: &[u8]) -> Result<(), ErrorStack> {
     let pkey = PKey::private_key_from_pem(pem)?;
     let _ec_key = pkey.ec_key()?;
