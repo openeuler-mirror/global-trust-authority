@@ -23,7 +23,7 @@ where
     Ok(s.replace("\n", ""))
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PrivateKey {
     #[serde(default)]
     pub version: String,

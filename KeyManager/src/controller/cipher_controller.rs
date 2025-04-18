@@ -1,10 +1,11 @@
-use actix_web::{get, HttpResponse};
+use actix_web::{get, HttpResponse, ResponseError};
 use crate::key_manager::secret_manager_factory::SecretManagerFactory;
 use crate::key_manager::secret_manager_factory::SecretManagerType::OpenBao;
-use crate::utils::errors::AppError;
 
 #[get("/ciphers")]
-pub async fn get_ciphers() -> Result<HttpResponse, AppError> {
-    let result = SecretManagerFactory::create_manager(OpenBao).get_all_secret()?;
-    Ok(HttpResponse::Ok().json(result))
+pub async fn get_ciphers() -> HttpResponse {
+    match SecretManagerFactory::create_manager(OpenBao).get_all_secret().await {
+        Ok(ciphers) => HttpResponse::Ok().json(ciphers),
+        Err(err) => err.error_response()
+    }
 }

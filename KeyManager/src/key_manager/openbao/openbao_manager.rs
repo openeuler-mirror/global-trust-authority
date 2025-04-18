@@ -1,6 +1,7 @@
 use std::string::String;
 use std::collections::HashMap;
 use std::env;
+use async_trait::async_trait;
 use serde_json::{from_str, from_value, Value};
 use crate::config::{config};
 use crate::config::config::TOKEN_ARRAY;
@@ -11,23 +12,16 @@ use crate::models::cipher_models::PutCipherReq;
 use crate::utils::env_setting_center::Environment;
 use crate::utils::errors::AppError;
 
+#[async_trait]
 impl SecretManager for OpenBaoManager {
-    fn get_all_secret(&self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError> {
+    async fn get_all_secret(&self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError> {
         let mut bao = OpenBaoManager::default();
         if !bao.check_status() {
             return Err(AppError::OpenbaoNotAvailable(String::new()));
         }
         let mut map = HashMap::new();
         for key in TOKEN_ARRAY {
-            let result = get_single_private_key(key);
-            match result {
-                Ok(data) => {
-                    map.insert(key.to_string(), data);
-                }
-                Err(err) => {
-                    return Err(err);
-                }
-            }
+            map.insert(key.to_string(), get_single_private_key(key).await?);
         }
         Ok(map)
     }
@@ -162,7 +156,7 @@ impl OpenBaoManager {
     }
 }
 
-fn get_single_private_key(key_name: &str) -> Result<Vec<PrivateKey>, AppError> {
+async fn get_single_private_key(key_name: &str) -> Result<Vec<PrivateKey>, AppError> {
     log::info!("start get {} private key", key_name);
     let mut openbao = OpenBaoManager::default();
     let mut vec = Vec::<PrivateKey>::new();
@@ -197,40 +191,61 @@ fn get_single_private_key(key_name: &str) -> Result<Vec<PrivateKey>, AppError> {
             version_vec.push(key.parse::<i32>().unwrap());
         }
     }
-    version_vec.sort_by(|item1, item2| item2.cmp(item1));
+    let mut tasks = Vec::new();
     for item in version_vec {
-        let info = openbao.clean().kv().get().format_json().version(&item).mount(&config::SECRET_PATH).map_name(key_name).run();
-        match info {
-            Ok(info) => {
-                if !info.status.success() {
-                    log::error!("{} private key version[{}] select error", key_name, item);
-                    return Err(AppError::OpenbaoCommandExecuteError(String::new()));
-                }
-                let mut detail_info: Value = from_str(&String::from_utf8(info.stdout).unwrap()).unwrap();
-                if !detail_info.is_object() || detail_info.get("data").is_none() {
-                    log::error!("json or json[data] is error");
-                    return Err(AppError::OpenbaoJsonError(String::new()));
-                }
-                if !detail_info["data"].is_object() || detail_info["data"].get("data").is_none() {
-                    log::error!("json[data] or json[data][data] is error");
-                    return Err(AppError::OpenbaoJsonError(String::new()));
-                }
-                let detail_data = detail_info["data"]["data"].take();
-                let mut key = match from_value::<PrivateKey>(detail_data) {
-                    Ok(key) => key,
-                    Err(_e) => {
-                        log::error!("openbao data is not match private key, key: {}, version: {}", key_name, item);
-                        return Err(AppError::OpenbaoJsonError(String::new()))
-                    }
-                };
-                key.version = format!("v{}", item.to_string());
-                vec.push(key);
-            }
-            Err(_e) => {
-                log::error!("command execute error, message: {}", _e);
-                return Err(AppError::CommandException(String::new()));
-            }
-        }
+        let key_name = key_name.to_string();
+        tasks.push(tokio::task::spawn(async move {
+            get_version_data(&key_name.to_string(), &item).await
+        }));
+    }
+    let results: Vec<Result<PrivateKey, AppError>> = futures::future::join_all(tasks)
+        .await
+        .into_iter()
+        .map(|res| res.unwrap_or_else(|join_error| {  // 处理 tokio::task::JoinError
+            log::error!("Task failed: {}", join_error);
+            Err(AppError::AsyncExecuteError(String::new()))
+        }))
+        .collect();
+    for item in results {
+        vec.push(item?);
     }
     Ok(vec)
+}
+
+async fn get_version_data(key_name: &str, item: &i32) -> Result<PrivateKey, AppError> {
+    let mut openbao =  OpenBaoManager::default();
+    let mut private_key = PrivateKey::default();
+    let info = openbao.clean().kv().get().format_json().version(&item).mount(&config::SECRET_PATH).map_name(key_name).run();
+    match info {
+        Ok(info) => {
+            if !info.status.success() {
+                log::error!("{} private key version[{}] select error", key_name, item);
+                return Err(AppError::OpenbaoCommandExecuteError(String::new()));
+            }
+            let mut detail_info: Value = from_str(&String::from_utf8(info.stdout).unwrap()).unwrap();
+            if !detail_info.is_object() || detail_info.get("data").is_none() {
+                log::error!("json or json[data] is error");
+                return Err(AppError::OpenbaoJsonError(String::new()));
+            }
+            if !detail_info["data"].is_object() || detail_info["data"].get("data").is_none() {
+                log::error!("json[data] or json[data][data] is error");
+                return Err(AppError::OpenbaoJsonError(String::new()));
+            }
+            let detail_data = detail_info["data"]["data"].take();
+            let mut key = match from_value::<PrivateKey>(detail_data) {
+                Ok(key) => key,
+                Err(_e) => {
+                    log::error!("openbao data is not match private key, key: {}, version: {}", key_name, item);
+                    return Err(AppError::OpenbaoJsonError(String::new()))
+                }
+            };
+            key.version = format!("v{}", item.to_string());
+            private_key = key.clone();
+        }
+        Err(_e) => {
+            log::error!("command execute error, message: {}", _e);
+            return Err(AppError::CommandException(String::new()));
+        }
+    }
+    Ok(private_key)
 }

@@ -24,5 +24,9 @@ dotenv = "0.15"
 thiserror = "1.0"
 # 数据校验
 validator = { version = "0.20.0", features = ["derive"] }
+# 异步
+tokio = { version = "1.0", features = ["full"] }
+futures = "0.3.31"
+async-trait = "0.1.77"
 # 命令行参数处理
 clap = { version = "4.5.31", features = ["derive"] }

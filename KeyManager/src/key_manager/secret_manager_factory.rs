@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use async_trait::async_trait;
 use crate::key_manager::base_key_manager::{PrivateKey};
 use crate::key_manager::openbao::openbao_command::OpenBaoManager;
 use crate::key_manager::secret_manager_factory::SecretManagerType::OpenBao;
@@ -7,8 +8,9 @@ use crate::utils::errors::AppError;
 
 pub struct SecretManagerFactory;
 
-pub trait SecretManager {
-    fn get_all_secret(&self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError>;
+#[async_trait]
+pub trait SecretManager : Send + Sync{
+    async fn get_all_secret(&self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError>;
     fn import_secret(&self, cipher: &PutCipherReq) -> Result<String, AppError>;
     fn init_system(&self) -> Result<(), AppError>;
 }

@@ -11,6 +11,7 @@ mod error_codes {
     pub const OPENBAO_COMMAND_EXCEPTION: u16 = 20003;
     pub const OPENBAO_JSON_ERROR: u16 = 20004;
     pub const ENV_CONFIG_ERROR: u16 = 20005;
+    pub const ASYNC_EXECUTE_ERROR: u16 = 20006;
 }
 
 #[derive(Error, Debug)]
@@ -38,6 +39,9 @@ pub enum AppError {
 
     #[error("key manager env read {0} error")]
     EnvConfigError(String),
+    
+    #[error("async execute error")]
+    AsyncExecuteError(String),
 }
 
 impl AppError {
@@ -51,6 +55,7 @@ impl AppError {
             Self::CommandException(_) => error_codes::OPENBAO_COMMAND_EXCEPTION,
             Self::OpenbaoJsonError(_) => error_codes::OPENBAO_JSON_ERROR,
             Self::EnvConfigError(_) => error_codes::ENV_CONFIG_ERROR,
+            Self::AsyncExecuteError(_) => error_codes::ASYNC_EXECUTE_ERROR,
         }
     }
 }
