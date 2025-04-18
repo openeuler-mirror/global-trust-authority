@@ -27,16 +27,24 @@ rm -rf %{buildroot}
 install -d -m 0755 %{buildroot}/usr/local/key_manager/bin
 install -d -m 0755 %{buildroot}/var/log/key_manager
 
-# 安装并剥离符号
+# 安装二进制
 install -m 0755 target/release/key_manager %{buildroot}/usr/local/key_manager/bin/
 install -m 0755 target/release/key_managerd %{buildroot}/usr/local/key_manager/bin/
 # 配置文件
 install -m 0600 .env %{buildroot}/usr/local/key_manager/bin/.env
 
+%postun
+# 强制删除安装目录
+rm -rf /usr/local/key_manager
+# 删除日志目录
+rm -rf /var/log/key_manager
+
 %files
+%dir /usr/local/key_manager
+%dir /usr/local/key_manager/bin
 /usr/local/key_manager/bin/key_manager
 /usr/local/key_manager/bin/key_managerd
 /usr/local/key_manager/bin/.env
-/var/log/key_manager
+%dir /var/log/key_manager
 
 %changelog

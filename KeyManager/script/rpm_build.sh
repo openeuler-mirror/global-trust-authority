@@ -1,9 +1,8 @@
 #!/bin/bash
-set -euo pipefail  # 启用严格错误检查[6,7](@ref)
 
 readonly VERSION="0.1.0"
 # 标准化路径声明
-readonly CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # 兼容软链接场景[6](@ref)
+readonly CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_DIR="$(realpath "${CURRENT_DIR}/../")"
 readonly SPEC_FILE="${PROJECT_DIR}/script/key_manager.spec"
 
@@ -18,7 +17,7 @@ clean_old_build() {
 create_source_tar_file() {
     local -r tar_file="${HOME}/rpmbuild/SOURCES/key_manager-${VERSION}.tar.gz"
     (
-        shopt -s dotglob  # 包含隐藏文件（如 .env）[1](@ref)
+        shopt -s dotglob  # 包含隐藏文件（如 .env）
         cd "${PROJECT_DIR}" || exit 1
         tar czf "${tar_file}" \
             --exclude=target \
