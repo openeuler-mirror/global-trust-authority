@@ -1,8 +1,8 @@
 [package]
-name = "KeyManager" # Key manager Service
+name = "key_managerd" # Key manager Service
 version = "0.1.0"
 edition = "2024"
-default-run = "KeyManager"
+default-run = "key_managerd"
 
 [[bin]]
 name = "key_manager"  # key manager CLI tool

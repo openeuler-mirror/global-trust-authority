@@ -1,7 +1,7 @@
-use KeyManager::key_manager::secret_manager_factory::SecretManagerFactory;
-use KeyManager::key_manager::secret_manager_factory::SecretManagerType::OpenBao;
-use KeyManager::models::cipher_models::PutCipherReq;
-use KeyManager::utils::errors::AppError;
+use key_managerd::key_manager::secret_manager_factory::SecretManagerFactory;
+use key_managerd::key_manager::secret_manager_factory::SecretManagerType::OpenBao;
+use key_managerd::models::cipher_models::PutCipherReq;
+use key_managerd::utils::errors::AppError;
 use clap::Args;
 use validator::Validate;
 
@@ -11,7 +11,7 @@ use validator::Validate;
 )]
 pub struct PutArgs {
     /// Key name
-    #[arg(short = 'n', long, required = true, value_parser = ["FSK", "NSK", "TSK"])]
+    #[arg(short = 'n', long = "key_name", required = true, value_parser = ["FSK", "NSK", "TSK"])]
     pub key_name: String,
 
     /// Encoding mode
