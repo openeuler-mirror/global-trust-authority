@@ -1,9 +1,9 @@
 use actix_web::{App, HttpServer};
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
-use KeyManager::controller::cipher_controller::get_ciphers;
-use KeyManager::key_manager::secret_manager_factory::{SecretManagerFactory, SecretManagerType};
-use KeyManager::utils::env_setting_center::{load_env, Environment};
-use KeyManager::utils::logger::init_logger;
+use key_managerd::controller::cipher_controller::get_ciphers;
+use key_managerd::key_manager::secret_manager_factory::{SecretManagerFactory, SecretManagerType};
+use key_managerd::utils::env_setting_center::{load_env, Environment};
+use key_managerd::utils::logger::init_logger;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

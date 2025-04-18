@@ -6,7 +6,7 @@ use std::process::exit;
 
 #[derive(Parser)]
 #[command(name = "key_manager")]
-#[command(about = "Key Manager CLI Tool", version = "0.0.1")]
+#[command(about = "Key Manager CLI Tool", version = "0.1.0")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
