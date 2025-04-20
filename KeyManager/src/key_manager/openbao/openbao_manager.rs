@@ -209,6 +209,7 @@ async fn get_single_private_key(key_name: &str) -> Result<Vec<PrivateKey>, AppEr
     for item in results {
         vec.push(item?);
     }
+    vec.sort_by(|i1, i2| i2.version[1..].parse::<u32>().ok().cmp(&i1.version[1..].parse::<u32>().ok()));
     Ok(vec)
 }
 
