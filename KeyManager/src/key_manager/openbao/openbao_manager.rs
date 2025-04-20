@@ -63,6 +63,7 @@ impl SecretManager for OpenBaoManager {
     fn init_system(&self) -> Result<(), AppError> {
         // 设置当前openbao的登录环境
         unsafe {
+            env::set_var("BAO_ADDR", &Environment::global().addr);
             env::set_var("BAO_TOKEN", &Environment::global().root_token);
         }
         let mut bao = OpenBaoManager::default();

@@ -1,5 +1,5 @@
 use std::{env, sync};
-use crate::config::config::{KEY_MANAGER_CERT_PATH, KEY_MANAGER_KEY_PATH, KEY_MANAGER_LOG_LEVEL, KEY_MANAGER_LOG_PATH, KEY_MANAGER_PORT, KEY_MANAGER_ROOT_TOKEN, KEY_MANAGER_TLS};
+use crate::config::config::{KEY_MANAGER_CERT_PATH, KEY_MANAGER_KEY_PATH, KEY_MANAGER_LOG_LEVEL, KEY_MANAGER_LOG_PATH, KEY_MANAGER_PORT, KEY_MANAGER_ROOT_TOKEN, KEY_MANAGER_SECRET_ADDR, KEY_MANAGER_TLS};
 use crate::utils::errors::AppError;
 
 pub fn load_env()  {
@@ -14,7 +14,8 @@ pub struct Environment {
     pub tls_key: String,
     pub log_level : String,
     pub log_path : String,
-    pub root_token: String
+    pub root_token: String,
+    pub addr: String
 }
 
 pub static ENVIRONMENT_CONFIG: sync::OnceLock<Environment> = sync::OnceLock::new();
@@ -28,7 +29,8 @@ impl Environment {
             tls_key: String::new(),
             log_level : String::new(),
             log_path : String::new(),
-            root_token: String::new()
+            root_token: String::new(),
+            addr: String::new()
         }
     }
 
@@ -97,4 +99,9 @@ pub fn get_log_path() -> Result<String, AppError> {
 pub fn get_root_token() -> Result<String, AppError> {
     let root_token = env::var(KEY_MANAGER_ROOT_TOKEN).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_ROOT_TOKEN)))?;
     Ok(root_token)
+}
+
+pub fn get_addr() -> Result<String, AppError> {
+    let addr = env::var(KEY_MANAGER_SECRET_ADDR).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_SECRET_ADDR)))?;
+    Ok(addr)
 }

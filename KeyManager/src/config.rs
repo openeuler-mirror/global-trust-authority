@@ -8,4 +8,5 @@ pub mod config {
     pub const KEY_MANAGER_LOG_LEVEL: &'static str = "KEY_MANAGER_LOG_LEVEL";
     pub const KEY_MANAGER_LOG_PATH: &'static str = "KEY_MANAGER_LOG_PATH";
     pub const KEY_MANAGER_ROOT_TOKEN: &'static str = "KEY_MANAGER_ROOT_TOKEN";
+    pub const KEY_MANAGER_SECRET_ADDR: &'static str = "KEY_MANAGER_SECRET_ADDR";
 }
