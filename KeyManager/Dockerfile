@@ -1,6 +1,6 @@
 # 构建阶段
 # 使用rust完整版镜像，生产环境推荐使用轻量级镜像 rust:1.85.0-slim
-FROM docker.xuanyuan.me/library/rust:1.85 AS builder
+FROM rust:1.85 AS builder
 
 # 配置 Rust 国内镜像源
 ENV CARGO_HOME=/usr/local/cargo
@@ -42,7 +42,7 @@ RUN cargo build --release --package key_managerd
 
 # 运行时阶段：-----------------------------
 # 使用轻量级基础镜像
-FROM docker.xuanyuan.me/library/debian:bookworm-slim
+FROM debian:bookworm-slim
 
 # 替换阿里云镜像（适用于 Debian Bookworm）
 RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources \
