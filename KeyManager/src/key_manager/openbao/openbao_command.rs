@@ -1,12 +1,17 @@
 use std::{io};
+use std::collections::HashMap;
+use std::ffi::OsString;
 use std::process::{Output};
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, Value};
+use crate::config::config::{OPENBAO_ADDR_ENV_KEY, OPENBAO_TOKEN_ENV_KEY};
 use crate::key_manager::base_key_manager::{CommandExecutor};
+use crate::utils::env_setting_center::Environment;
 
 pub struct OpenBaoManager {
     command: String,
-    args: Vec<String>
+    args: Vec<String>,
+    envs: HashMap<OsString, OsString>
 }
 
 impl OpenBaoManager {
@@ -14,6 +19,10 @@ impl OpenBaoManager {
         Self {
             command: String::from("bao"),
             args: Vec::<String>::new(),
+            envs: HashMap::from([
+                (OsString::from(OPENBAO_TOKEN_ENV_KEY), OsString::from(&Environment::global().root_token)),
+                (OsString::from(OPENBAO_ADDR_ENV_KEY), OsString::from(&Environment::global().addr)),
+            ])
         }
     }
 
@@ -146,7 +155,7 @@ impl OpenBaoManager {
 
 impl CommandExecutor for OpenBaoManager {
     fn run(&self) -> io::Result<Output> {
-        self.execute(&self.command, &self.args)
+        self.execute(&self.command, &self.args, &self.envs)
     }
 }
 

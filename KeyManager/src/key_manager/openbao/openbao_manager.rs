@@ -1,6 +1,5 @@
 use std::string::String;
 use std::collections::HashMap;
-use std::env;
 use async_trait::async_trait;
 use serde_json::{from_str, from_value, Value};
 use crate::config::{config};
@@ -9,7 +8,6 @@ use crate::key_manager::base_key_manager::{CommandExecutor, PrivateKey};
 use crate::key_manager::openbao::openbao_command::{OpenBaoManager, Version};
 use crate::key_manager::secret_manager_factory::SecretManager;
 use crate::models::cipher_models::PutCipherReq;
-use crate::utils::env_setting_center::Environment;
 use crate::utils::errors::AppError;
 
 #[async_trait]
@@ -62,10 +60,6 @@ impl SecretManager for OpenBaoManager {
 
     fn init_system(&self) -> Result<(), AppError> {
         // 设置当前openbao的登录环境
-        unsafe {
-            env::set_var("BAO_ADDR", &Environment::global().addr);
-            env::set_var("BAO_TOKEN", &Environment::global().root_token);
-        }
         let mut bao = OpenBaoManager::default();
         let check = Self::check_secrets(&mut bao)?;
         if !check {
@@ -216,7 +210,7 @@ async fn get_single_private_key(key_name: &str) -> Result<Vec<PrivateKey>, AppEr
 
 async fn get_version_data(key_name: &str, item: &i32) -> Result<PrivateKey, AppError> {
     let mut openbao =  OpenBaoManager::default();
-    let mut private_key = PrivateKey::default();
+    let private_key;
     let info = openbao.clean().kv().get().format_json().version(&item).mount(&config::SECRET_PATH).map_name(key_name).run();
     match info {
         Ok(info) => {

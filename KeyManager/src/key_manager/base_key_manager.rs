@@ -1,12 +1,14 @@
+use std::collections::HashMap;
+use std::ffi::{OsString};
 use std::io;
 use std::process::{Command, Output};
 use serde::{Deserialize, Deserializer, Serialize};
 
 pub trait CommandExecutor {
 
-    fn execute(&self, command: &str, args: &Vec<String>) -> io::Result<Output> {
+    fn execute(&self, command: &str, args: &Vec<String>, envs: &HashMap<OsString, OsString>) -> io::Result<Output> {
         log::debug!("start execute command");
-        let output = Command::new(command).args(args).output();
+        let output = Command::new(command).envs(envs).args(args).output();
         log::debug!("execute command end");
         output
     }

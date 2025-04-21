@@ -9,4 +9,6 @@ pub mod config {
     pub const KEY_MANAGER_LOG_PATH: &'static str = "KEY_MANAGER_LOG_PATH";
     pub const KEY_MANAGER_ROOT_TOKEN: &'static str = "KEY_MANAGER_ROOT_TOKEN";
     pub const KEY_MANAGER_SECRET_ADDR: &'static str = "KEY_MANAGER_SECRET_ADDR";
+    pub const OPENBAO_TOKEN_ENV_KEY: &'static str = "BAO_TOKEN";
+    pub const OPENBAO_ADDR_ENV_KEY: &'static str = "BAO_ADDR";
 }

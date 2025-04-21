@@ -43,6 +43,7 @@ impl Environment {
         get_log_level()?;
         get_log_path()?;
         get_root_token()?;
+        get_addr()?;
         Ok(())
     }
 
@@ -58,6 +59,7 @@ impl Environment {
             environment.log_level = get_log_level().unwrap();
             environment.log_path = get_log_path().unwrap();
             environment.root_token = get_root_token().unwrap();
+            environment.addr = get_addr().unwrap();
             environment
         })
     }
