@@ -15,12 +15,12 @@ pub struct PutArgs {
     pub key_name: String,
 
     /// Encoding mode
-    #[arg(long, value_parser = ["PEM"], default_value = "PEM")]
+    #[arg(long, value_parser = ["pem"], default_value = "pem")]
     #[arg(verbatim_doc_comment)]
     pub encoding: String,
 
     /// Encryption algorithm
-    #[arg(long, required = true, value_parser = ["RSA3072", "SM2", "EC"])]
+    #[arg(long, required = true, value_parser = ["rsa 3072 pss", "sm2", "ec"])]
     pub algorithm: String,
 
     /// Private key content, cannot be used with '--key_file'

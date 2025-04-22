@@ -14,12 +14,12 @@ pub struct PutCipherReq {
     ))]
     pub key_name: String,
 
-    #[validate(custom(function = "validate_encoding", message = "The encoding must be PEM"))]
+    #[validate(custom(function = "validate_encoding", message = "The encoding must be pem"))]
     pub encoding: String,
 
     #[validate(custom(
         function = "validate_algorithm",
-        message = "The algorithm must be RSA3072/SM2/EC"
+        message = "The algorithm must be rsa 3072 pss/sm2/ec"
     ))]
     pub algorithm: String,
 
@@ -37,21 +37,21 @@ fn validate_key_name(key_name: &str) -> Result<(), ValidationError> {
 
 fn validate_encoding(encoding: &str) -> Result<(), ValidationError> {
     match encoding.to_string().as_str() {
-        "PEM" => Ok(()),
+        "pem" => Ok(()),
         _ => Err(ValidationError::new("invalid encoding")),
     }
 }
 
 fn validate_algorithm(algorithm: &str) -> Result<(), ValidationError> {
     match algorithm.to_string().as_str() {
-        "RSA3072" | "SM2" | "EC" => Ok(()),
+        "rsa 3072 pss" | "sm2" | "ec" => Ok(()),
         _ => Err(ValidationError::new("invalid algorithm")),
     }
 }
 
 // 结构体级校验：根据 encoding/algorithm 校验密钥格式
 fn validate_private_key_format(req: &PutCipherReq) -> Result<(), ValidationError> {
-    if req.encoding != "PEM" {
+    if req.encoding != "pem" {
         return Ok(());
     }
     let pem_data = if !req.private_key.is_empty() {
@@ -63,9 +63,9 @@ fn validate_private_key_format(req: &PutCipherReq) -> Result<(), ValidationError
         })?
     };
     let result = match req.algorithm.as_str() {
-        "RSA3072" => validate_rsa3072_key(pem_data),
-        "SM2" => validate_sm2_key(pem_data),
-        "EC" => validate_ec_key(pem_data),
+        "rsa 3072 pss" => validate_rsa3072_key(pem_data),
+        "sm2" => validate_sm2_key(pem_data),
+        "ec" => validate_ec_key(pem_data),
         _ => Err(ErrorStack::get().into()),
     };
 
@@ -83,7 +83,7 @@ fn validate_private_key_format(req: &PutCipherReq) -> Result<(), ValidationError
     })
 }
 
-// RSA3072 校验
+// rsa 3072 pss 校验
 fn validate_rsa3072_key(pem: &[u8]) -> Result<(), ErrorStack> {
     let pkey = PKey::private_key_from_pem(pem)?;
     let rsa = pkey.rsa()?;
@@ -95,7 +95,7 @@ fn validate_rsa3072_key(pem: &[u8]) -> Result<(), ErrorStack> {
     }
 }
 
-// SM2 校验
+// sm2 校验
 fn validate_sm2_key(pem: &[u8]) -> Result<(), ErrorStack> {
     let pkey = PKey::private_key_from_pem(pem)?;
     let ec_key = pkey.ec_key()?;
@@ -107,7 +107,7 @@ fn validate_sm2_key(pem: &[u8]) -> Result<(), ErrorStack> {
     }
 }
 
-// EC 校验
+// ec 校验
 fn validate_ec_key(pem: &[u8]) -> Result<(), ErrorStack> {
     let pkey = PKey::private_key_from_pem(pem)?;
     let _ec_key = pkey.ec_key()?;
