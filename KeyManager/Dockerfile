@@ -83,7 +83,7 @@ RUN mkdir -p /tmp/certs && \
         -days 365 \
         -subj "/CN=127.0.0.1"
 
-EXPOSE 8080
+EXPOSE 8082
 
 # 设置入口点
 ENTRYPOINT ["/opt/key_manager/deps/openbao_init.sh"]

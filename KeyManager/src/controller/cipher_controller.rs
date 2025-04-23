@@ -2,7 +2,7 @@ use actix_web::{get, HttpResponse, ResponseError};
 use crate::key_manager::secret_manager_factory::SecretManagerFactory;
 use crate::key_manager::secret_manager_factory::SecretManagerType::OpenBao;
 
-#[get("/get_key")]
+#[get("/v1/vault/get_signing_keys")]
 pub async fn get_ciphers() -> HttpResponse {
     match SecretManagerFactory::create_manager(OpenBao).get_all_secret().await {
         Ok(ciphers) => HttpResponse::Ok().json(ciphers),

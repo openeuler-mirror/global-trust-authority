@@ -2,7 +2,7 @@ use std::string::String;
 use std::collections::HashMap;
 use async_trait::async_trait;
 use serde_json::{from_str, from_value, Value};
-use crate::config::{config};
+use crate::config::config;
 use crate::config::config::TOKEN_ARRAY;
 use crate::key_manager::base_key_manager::{CommandExecutor, PrivateKey};
 use crate::key_manager::openbao::openbao_command::{OpenBaoManager, Version};

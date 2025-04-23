@@ -18,9 +18,6 @@ if [ "$sealed" = "true" ] && [ ! -f /opt/key_manager/bao_init_data.txt ]; then
     ROOT_TOKEN=$(grep "Initial Root Token:" /opt/key_manager/bao_init_data.txt | awk '{print $4}')
     UNSEAL_KEYS=($(grep "Unseal Key [1-5]:" /opt/key_manager/bao_init_data.txt | awk '{print $4}'))
 
-    echo "$ROOT_TOKEN"
-    echo "$UNSEAL_KEYS"
-
     # 解封当前openbao
     bao operator unseal "${UNSEAL_KEYS[0]}"
     bao operator unseal "${UNSEAL_KEYS[1]}"

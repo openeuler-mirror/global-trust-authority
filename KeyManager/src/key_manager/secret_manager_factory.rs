@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use async_trait::async_trait;
-use crate::key_manager::base_key_manager::{PrivateKey};
+use crate::key_manager::base_key_manager::PrivateKey;
 use crate::key_manager::openbao::openbao_command::OpenBaoManager;
 use crate::key_manager::secret_manager_factory::SecretManagerType::OpenBao;
 use crate::models::cipher_models::PutCipherReq;

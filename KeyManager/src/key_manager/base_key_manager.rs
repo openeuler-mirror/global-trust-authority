@@ -29,7 +29,6 @@ where
 pub struct PrivateKey {
     #[serde(default)]
     pub version: String,
-    #[serde(deserialize_with = "remove_newlines")]
     pub private_key: String,
     pub algorithm: String,
     pub encoding: String
