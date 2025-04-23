@@ -7,7 +7,7 @@ use key_managerd::utils::logger::init_logger;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    load_env();
+    load_env().expect("failed to load .env file");
     match Environment::check() {
         Ok(_) => {}
         Err(err) => {

@@ -2,8 +2,18 @@ use std::{env, sync};
 use crate::config::config::{KEY_MANAGER_CERT_PATH, KEY_MANAGER_KEY_PATH, KEY_MANAGER_LOG_LEVEL, KEY_MANAGER_LOG_PATH, KEY_MANAGER_PORT, KEY_MANAGER_ROOT_TOKEN, KEY_MANAGER_SECRET_ADDR, KEY_MANAGER_TLS};
 use crate::utils::errors::AppError;
 
-pub fn load_env()  {
-    dotenv::dotenv().ok();
+pub fn load_env() -> Result<(), Box<dyn std::error::Error>> {
+    let exe_path = env::current_exe()?;
+    let bin_dir = if let Some(dir) = exe_path.parent() {
+        dir
+    } else {
+        return Err("failed to get parent directory".into());
+    };
+    let env_path = bin_dir.join(".env");
+
+    dotenv::from_path(env_path)?;
+
+    Ok(())
 }
 
 #[derive(Debug)]

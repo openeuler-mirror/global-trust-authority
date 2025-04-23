@@ -3,6 +3,7 @@ pub mod commands;
 use crate::commands::put::{PutArgs, handle_put};
 use clap::Parser;
 use std::process::exit;
+use key_managerd::utils::env_setting_center::load_env;
 
 #[derive(Parser)]
 #[command(name = "key_manager")]
@@ -19,6 +20,7 @@ pub enum Commands {
 }
 
 fn main() {
+    load_env().expect("failed to load .env file");
     let cli = Cli::parse();
     let result = match cli.command {
         Commands::Put(args) => handle_put(args),
