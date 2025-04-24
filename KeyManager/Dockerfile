@@ -50,12 +50,14 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debia
 
 RUN mkdir /opt/key_manager
 RUN mkdir /opt/key_manager/deps
+RUN mkdir /opt/key_manager/script
 
 # 从构建阶段复制可执行
 COPY --from=builder /var/key_manager/app/target/release/key_managerd /opt/key_manager
 COPY --from=builder /var/key_manager/app/target/release/key_manager /opt/key_manager
 COPY --from=builder /var/key_manager/app/.env /opt/key_manager
 COPY --from=builder /var/key_manager/app/deps/* /opt/key_manager/deps/
+COPY --from=builder /var/key_manager/app/script/* /opt/key_manager/script/
 RUN chmod -R +x /opt/key_manager/*
 
 # 安装运行时依赖  libssl3 OpenSSL 运行时库
@@ -63,6 +65,7 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     zlib1g \
     libcurl4 \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装 openssl
