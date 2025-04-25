@@ -1,5 +1,5 @@
 use std::{env, sync};
-use crate::config::config::{KEY_MANAGER_CERT_PATH, KEY_MANAGER_KEY_PATH, KEY_MANAGER_LOG_LEVEL, KEY_MANAGER_LOG_PATH, KEY_MANAGER_PORT, KEY_MANAGER_ROOT_TOKEN, KEY_MANAGER_SECRET_ADDR, KEY_MANAGER_TLS};
+use crate::config::config::{KEY_MANAGER_CA_CERT_PATH, KEY_MANAGER_CERT_PATH, KEY_MANAGER_KEY_PATH, KEY_MANAGER_LOG_LEVEL, KEY_MANAGER_LOG_PATH, KEY_MANAGER_PORT, KEY_MANAGER_ROOT_TOKEN, KEY_MANAGER_SECRET_ADDR, KEY_MANAGER_TLS};
 use crate::utils::errors::AppError;
 
 pub fn load_env() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,6 +22,7 @@ pub struct Environment {
     pub tls: bool,
     pub tls_cert: String,
     pub tls_key: String,
+    pub ca_cert: String,
     pub log_level : String,
     pub log_path : String,
     pub root_token: String,
@@ -37,6 +38,7 @@ impl Environment {
             tls: false,
             tls_cert: String::new(),
             tls_key: String::new(),
+            ca_cert: String::new(),
             log_level : String::new(),
             log_path : String::new(),
             root_token: String::new(),
@@ -49,6 +51,7 @@ impl Environment {
         if get_tls()? {
             get_cert()?;
             get_key()?;
+            get_ca_cert()?;
         }
         get_log_level()?;
         get_log_path()?;
@@ -65,6 +68,7 @@ impl Environment {
             if environment.tls {
                 environment.tls_cert = get_cert().unwrap();
                 environment.tls_key = get_key().unwrap();
+                environment.ca_cert = get_ca_cert().unwrap();
             }
             environment.log_level = get_log_level().unwrap();
             environment.log_path = get_log_path().unwrap();
@@ -116,4 +120,9 @@ pub fn get_root_token() -> Result<String, AppError> {
 pub fn get_addr() -> Result<String, AppError> {
     let addr = env::var(KEY_MANAGER_SECRET_ADDR).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_SECRET_ADDR)))?;
     Ok(addr)
+}
+
+pub fn get_ca_cert() -> Result<String, AppError> {
+    let ca_cert = env::var(KEY_MANAGER_CA_CERT_PATH).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_CA_CERT_PATH)))?;
+    Ok(ca_cert)
 }

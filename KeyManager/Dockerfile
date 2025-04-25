@@ -58,6 +58,9 @@ COPY --from=builder /var/key_manager/app/target/release/key_manager /opt/key_man
 COPY --from=builder /var/key_manager/app/.env /opt/key_manager
 COPY --from=builder /var/key_manager/app/deps/* /opt/key_manager/deps/
 COPY --from=builder /var/key_manager/app/script/* /opt/key_manager/script/
+COPY /home/hisec/joint_debugging/cert/KeyManager/KM_key.pem /tmp/certs/KM_key.pem
+COPY /home/hisec/joint_debugging/cert/KeyManager/KM_cert.pem /tmp/certs/KM_cert.pem
+COPY /home/hisec/joint_debugging/cert/KeyManager/RA_client_cert.pem /tmp/certs/RA_client_cert.pem
 RUN chmod -R +x /opt/key_manager/*
 
 # 安装运行时依赖  libssl3 OpenSSL 运行时库

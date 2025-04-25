@@ -1,5 +1,5 @@
 use actix_web::{App, HttpServer};
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslVerifyMode};
 use key_managerd::controller::cipher_controller::get_ciphers;
 use key_managerd::key_manager::secret_manager_factory::{SecretManagerFactory, SecretManagerType};
 use key_managerd::utils::env_setting_center::{load_env, Environment};
@@ -35,6 +35,14 @@ async fn main() -> std::io::Result<()> {
                 return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
             }
         }
+        builder.set_verify(SslVerifyMode::PEER |  SslVerifyMode::FAIL_IF_NO_PEER_CERT);
+        match builder.set_ca_file(&config.ca_cert) {
+            Ok(_) => {}
+            Err(e) => {
+                log::error!("ca cert file set failed, message: {}", e);
+                return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
+            }
+        };
         server.bind_openssl(("0.0.0.0", config.port), builder)?
     } else {
         server.bind(("0.0.0.0", config.port))?

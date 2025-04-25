@@ -5,6 +5,7 @@ pub mod config {
     pub const KEY_MANAGER_TLS: &'static str = "KEY_MANAGER_TLS";
     pub const KEY_MANAGER_CERT_PATH: &'static str = "KEY_MANAGER_CERT_PATH";
     pub const KEY_MANAGER_KEY_PATH: &'static str = "KEY_MANAGER_KEY_PATH";
+    pub const KEY_MANAGER_CA_CERT_PATH: &'static str = "KEY_MANAGER_CA_CERT_PATH";
     pub const KEY_MANAGER_LOG_LEVEL: &'static str = "KEY_MANAGER_LOG_LEVEL";
     pub const KEY_MANAGER_LOG_PATH: &'static str = "KEY_MANAGER_LOG_PATH";
     pub const KEY_MANAGER_ROOT_TOKEN: &'static str = "KEY_MANAGER_ROOT_TOKEN";

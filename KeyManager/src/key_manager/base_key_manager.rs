@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::ffi::{OsString};
 use std::io;
 use std::process::{Command, Output};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 pub trait CommandExecutor {
 
@@ -16,15 +16,6 @@ pub trait CommandExecutor {
     fn run(&self) -> io::Result<Output>;
 
 }
-
-fn remove_newlines<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    Ok(s.replace("\n", ""))
-}
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PrivateKey {
     #[serde(default)]
