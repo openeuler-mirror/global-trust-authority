@@ -20,7 +20,7 @@ pub struct PutArgs {
     pub encoding: String,
 
     /// Encryption algorithm
-    #[arg(long, required = true, value_parser = ["rsa 3072 pss", "sm2", "ec"])]
+    #[arg(long, required = true, value_parser = ["rsa_3072", "rsa_4096", "sm2", "ec"])]
     pub algorithm: String,
 
     /// Private key content, cannot be used with '--key_file'
