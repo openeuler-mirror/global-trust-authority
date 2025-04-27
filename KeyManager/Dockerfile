@@ -58,9 +58,7 @@ COPY --from=builder /var/key_manager/app/target/release/key_manager /opt/key_man
 COPY --from=builder /var/key_manager/app/.env /opt/key_manager
 COPY --from=builder /var/key_manager/app/deps/* /opt/key_manager/deps/
 COPY --from=builder /var/key_manager/app/script/* /opt/key_manager/script/
-COPY /home/hisec/joint_debugging/cert/KeyManager/KM_key.pem /tmp/certs/KM_key.pem
-COPY /home/hisec/joint_debugging/cert/KeyManager/KM_cert.pem /tmp/certs/KM_cert.pem
-COPY /home/hisec/joint_debugging/cert/KeyManager/RA_client_cert.pem /tmp/certs/RA_client_cert.pem
+COPY --from=builder /var/key_manager/app/certs/* /tmp/certs/
 RUN chmod -R +x /opt/key_manager/*
 
 # 安装运行时依赖  libssl3 OpenSSL 运行时库
@@ -81,13 +79,6 @@ COPY ./deps/bao_2.2.0_linux_amd64.deb /tmp/bao_2.2.0_linux_amd64.deb
 
 # 安裝deb包
 RUN apt-get update && \dpkg -i /tmp/bao_2.2.0_linux_amd64.deb || apt-get install -f -y
-
-RUN mkdir -p /tmp/certs && \
-    openssl req -x509 -newkey rsa:4096 -nodes \
-        -keyout /tmp/certs/key.pem \
-        -out /tmp/certs/cert.pem \
-        -days 365 \
-        -subj "/CN=127.0.0.1"
 
 EXPOSE 8082
 

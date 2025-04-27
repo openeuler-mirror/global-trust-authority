@@ -12,6 +12,9 @@ mod error_codes {
     pub const OPENBAO_JSON_ERROR: u16 = 20004;
     pub const ENV_CONFIG_ERROR: u16 = 20005;
     pub const ASYNC_EXECUTE_ERROR: u16 = 20006;
+    pub const ENV_LOAD_ERROR: u16 = 20007;
+    pub const CERT_LOAD_ERROR: u16 = 20008;
+    pub const FILE_LOAD_ERROR: u16 = 20009;
 }
 
 #[derive(Error, Debug)]
@@ -42,6 +45,15 @@ pub enum AppError {
     
     #[error("async execute error")]
     AsyncExecuteError(String),
+
+    #[error("load .env config error")]
+    EnvLoadError(String),
+
+    #[error("load certificate error, msg {0}")]
+    CertLoadError(String),
+
+    #[error("load file error, msg {0}")]
+    FileLoadError(String),
 }
 
 impl AppError {
@@ -56,6 +68,9 @@ impl AppError {
             Self::OpenbaoJsonError(_) => error_codes::OPENBAO_JSON_ERROR,
             Self::EnvConfigError(_) => error_codes::ENV_CONFIG_ERROR,
             Self::AsyncExecuteError(_) => error_codes::ASYNC_EXECUTE_ERROR,
+            Self::EnvLoadError(_) => error_codes::ENV_LOAD_ERROR,
+            Self::CertLoadError(_) => error_codes::CERT_LOAD_ERROR,
+            Self::FileLoadError(_) => error_codes::FILE_LOAD_ERROR
         }
     }
 }

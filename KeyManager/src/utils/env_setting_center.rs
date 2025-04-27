@@ -1,28 +1,39 @@
 use std::{env, sync};
-use crate::config::config::{KEY_MANAGER_CA_CERT_PATH, KEY_MANAGER_CERT_PATH, KEY_MANAGER_KEY_PATH, KEY_MANAGER_LOG_LEVEL, KEY_MANAGER_LOG_PATH, KEY_MANAGER_PORT, KEY_MANAGER_ROOT_TOKEN, KEY_MANAGER_SECRET_ADDR, KEY_MANAGER_TLS};
+use crate::config::config::{KEY_MANAGER_CERT_PATH, KEY_MANAGER_KEY_PATH, KEY_MANAGER_LOG_LEVEL, KEY_MANAGER_LOG_PATH, KEY_MANAGER_PORT, KEY_MANAGER_ROOT_TOKEN, KEY_MANAGER_SECRET_ADDR, ROOT_CA_CERT_PATH};
 use crate::utils::errors::AppError;
 
-pub fn load_env() -> Result<(), Box<dyn std::error::Error>> {
-    let exe_path = env::current_exe()?;
-    let bin_dir = if let Some(dir) = exe_path.parent() {
-        dir
-    } else {
-        return Err("failed to get parent directory".into());
+pub fn load_env() -> Result<(), AppError> {
+    let exe_path = match env::current_exe() {
+        Ok(path) => path,
+        Err(_) => {
+            log::error!("load .env config error, load current dir error");
+            return Err(AppError::EnvConfigError(String::new()));
+        }
+    };
+    let bin_dir = match exe_path.parent() {
+        Some(dir) => dir,
+        None => {
+            log::error!("load .env config error, get parent dir error");
+            return Err(AppError::EnvConfigError(String::new()))
+        },
     };
     let env_path = bin_dir.join(".env");
-
-    dotenv::from_path(env_path)?;
-
+    match dotenv::from_path(env_path) {
+        Ok(_) => {}
+        Err(_) => {
+            log::error!("load .env config error");
+            return Err(AppError::EnvConfigError(String::new()))
+        }
+    }
     Ok(())
 }
 
 #[derive(Debug)]
 pub struct Environment {
     pub port : u16,
-    pub tls: bool,
-    pub tls_cert: String,
-    pub tls_key: String,
-    pub ca_cert: String,
+    pub cert: String,
+    pub private_key: String,
+    pub root_ca_cert: String,
     pub log_level : String,
     pub log_path : String,
     pub root_token: String,
@@ -35,10 +46,9 @@ impl Environment {
     pub fn default() -> Self {
         Self {
             port : 0,
-            tls: false,
-            tls_cert: String::new(),
-            tls_key: String::new(),
-            ca_cert: String::new(),
+            cert: String::new(),
+            private_key: String::new(),
+            root_ca_cert: String::new(),
             log_level : String::new(),
             log_path : String::new(),
             root_token: String::new(),
@@ -48,11 +58,9 @@ impl Environment {
 
     pub fn check() -> Result<(), AppError> {
         get_port()?;
-        if get_tls()? {
-            get_cert()?;
-            get_key()?;
-            get_ca_cert()?;
-        }
+        get_cert()?;
+        get_key()?;
+        get_root_ca_cert()?;
         get_log_level()?;
         get_log_path()?;
         get_root_token()?;
@@ -64,12 +72,9 @@ impl Environment {
         ENVIRONMENT_CONFIG.get_or_init(|| {
             let mut environment = Environment::default();
             environment.port = get_port().unwrap();
-            environment.tls = get_tls().unwrap();
-            if environment.tls {
-                environment.tls_cert = get_cert().unwrap();
-                environment.tls_key = get_key().unwrap();
-                environment.ca_cert = get_ca_cert().unwrap();
-            }
+            environment.cert = get_cert().unwrap();
+            environment.private_key = get_key().unwrap();
+            environment.root_ca_cert = get_root_ca_cert().unwrap();
             environment.log_level = get_log_level().unwrap();
             environment.log_path = get_log_path().unwrap();
             environment.root_token = get_root_token().unwrap();
@@ -84,12 +89,6 @@ pub fn get_port() -> Result<u16, AppError> {
     let port_str = env::var(KEY_MANAGER_PORT).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_PORT)))?;
     let port = port_str.parse::<u16>().map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_PORT)))?;
     Ok(port)
-}
-
-pub fn get_tls() -> Result<bool, AppError> {
-    let tls_str = env::var(KEY_MANAGER_TLS).map_err(|_e| AppError::EnvConfigError(String::from(KEY_MANAGER_TLS)))?;
-    let tls = tls_str.parse::<bool>().map_err(|_e| AppError::EnvConfigError(String::from(KEY_MANAGER_TLS)))?;
-    Ok(tls)
 }
 
 pub fn get_cert() -> Result<String, AppError> {
@@ -122,7 +121,7 @@ pub fn get_addr() -> Result<String, AppError> {
     Ok(addr)
 }
 
-pub fn get_ca_cert() -> Result<String, AppError> {
-    let ca_cert = env::var(KEY_MANAGER_CA_CERT_PATH).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_CA_CERT_PATH)))?;
+pub fn get_root_ca_cert() -> Result<String, AppError> {
+    let ca_cert = env::var(ROOT_CA_CERT_PATH).map_err(|_| AppError::EnvConfigError(String::from(ROOT_CA_CERT_PATH)))?;
     Ok(ca_cert)
 }

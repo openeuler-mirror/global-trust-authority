@@ -20,7 +20,13 @@ pub enum Commands {
 }
 
 fn main() {
-    load_env().expect("failed to load .env file");
+    match load_env() {
+        Ok(_) => {}
+        Err(err) => {
+            eprintln!("{}", err);
+            exit(1);
+        }
+    };
     let cli = Cli::parse();
     let result = match cli.command {
         Commands::Put(args) => handle_put(args),
