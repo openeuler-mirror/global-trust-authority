@@ -2,29 +2,17 @@ use std::{env, sync};
 use crate::config::config::{KEY_MANAGER_CERT_PATH, KEY_MANAGER_KEY_PATH, KEY_MANAGER_LOG_LEVEL, KEY_MANAGER_LOG_PATH, KEY_MANAGER_PORT, KEY_MANAGER_ROOT_TOKEN, KEY_MANAGER_SECRET_ADDR, ROOT_CA_CERT_PATH};
 use crate::utils::errors::AppError;
 
-pub fn load_env() -> Result<(), AppError> {
-    let exe_path = match env::current_exe() {
-        Ok(path) => path,
-        Err(_) => {
-            log::error!("load .env config error, load current dir error");
-            return Err(AppError::EnvConfigError(String::new()));
-        }
-    };
-    let bin_dir = match exe_path.parent() {
-        Some(dir) => dir,
-        None => {
-            log::error!("load .env config error, get parent dir error");
-            return Err(AppError::EnvConfigError(String::new()))
-        },
+pub fn load_env() -> Result<(), Box<dyn std::error::Error>> {
+    let exe_path = env::current_exe()?;
+    let bin_dir = if let Some(dir) = exe_path.parent() {
+        dir
+    } else {
+        return Err("failed to get parent directory".into());
     };
     let env_path = bin_dir.join(".env");
-    match dotenv::from_path(env_path) {
-        Ok(_) => {}
-        Err(_) => {
-            log::error!("load .env config error");
-            return Err(AppError::EnvConfigError(String::new()))
-        }
-    }
+
+    dotenv::from_path(env_path)?;
+
     Ok(())
 }
 

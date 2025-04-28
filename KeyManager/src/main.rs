@@ -48,13 +48,7 @@ fn load_private_key(path: &str) -> Result<PrivateKey, AppError> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    init_logger(true).expect("failed to init logger");
-    match load_env() {
-        Ok(_) => {}
-        Err(err) => {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()));
-        }
-    };
+    load_env().expect("failed to load .env file");
     match Environment::check() {
         Ok(_) => {}
         Err(err) => {
@@ -62,6 +56,7 @@ async fn main() -> std::io::Result<()> {
             return Err(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()));
         }
     }
+    init_logger(true).expect("failed to init logger");
     let config = Environment::global();
     let mut server = HttpServer::new(|| App::new()
         .service(get_ciphers));
