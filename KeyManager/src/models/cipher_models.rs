@@ -1,3 +1,8 @@
+use crate::config::config::TOKEN_ARRAY;
+use crate::constants::{
+    ALGORITHM_EC, ALGORITHM_RSA_3072, ALGORITHM_RSA_4096, ALGORITHM_SM2, ENCODING_PEM,
+    RSA_3072_KEY_SIZE, RSA_4096_KEY_SIZE,
+};
 use openssl::error::ErrorStack;
 use openssl::nid::Nid;
 use openssl::pkey::PKey;
@@ -19,7 +24,7 @@ pub struct PutCipherReq {
 
     #[validate(custom(
         function = "validate_algorithm",
-        message = "The algorithm must be rsa 3072 pss/sm2/ec"
+        message = "The algorithm must be rsa_3072/rsa_4096/sm2/ec"
     ))]
     pub algorithm: String,
 
@@ -29,29 +34,30 @@ pub struct PutCipherReq {
 }
 
 fn validate_key_name(key_name: &str) -> Result<(), ValidationError> {
-    match key_name.to_string().as_str() {
-        "FSK" | "NSK" | "TSK" => Ok(()),
-        _ => Err(ValidationError::new("invalid key name")),
+    if TOKEN_ARRAY.contains(&key_name) {
+        Ok(())
+    } else {
+        Err(ValidationError::new("invalid key name"))
     }
 }
 
 fn validate_encoding(encoding: &str) -> Result<(), ValidationError> {
     match encoding.to_string().as_str() {
-        "pem" => Ok(()),
+        ENCODING_PEM => Ok(()),
         _ => Err(ValidationError::new("invalid encoding")),
     }
 }
 
 fn validate_algorithm(algorithm: &str) -> Result<(), ValidationError> {
     match algorithm.to_string().as_str() {
-        "rsa 3072 pss" | "sm2" | "ec" => Ok(()),
+        ALGORITHM_RSA_3072 | ALGORITHM_RSA_4096 | ALGORITHM_SM2 | ALGORITHM_EC => Ok(()),
         _ => Err(ValidationError::new("invalid algorithm")),
     }
 }
 
 // 结构体级校验：根据 encoding/algorithm 校验密钥格式
 fn validate_private_key_format(req: &PutCipherReq) -> Result<(), ValidationError> {
-    if req.encoding != "pem" {
+    if req.encoding != ENCODING_PEM {
         return Ok(());
     }
     let pem_data = if !req.private_key.is_empty() {
@@ -63,9 +69,10 @@ fn validate_private_key_format(req: &PutCipherReq) -> Result<(), ValidationError
         })?
     };
     let result = match req.algorithm.as_str() {
-        "rsa 3072 pss" => validate_rsa3072_key(pem_data),
-        "sm2" => validate_sm2_key(pem_data),
-        "ec" => validate_ec_key(pem_data),
+        ALGORITHM_RSA_3072 => validate_rsa3072_key(pem_data),
+        ALGORITHM_RSA_4096 => validate_rsa4096_key(pem_data),
+        ALGORITHM_SM2 => validate_sm2_key(pem_data),
+        ALGORITHM_EC => validate_ec_key(pem_data),
         _ => Err(ErrorStack::get().into()),
     };
 
@@ -83,14 +90,27 @@ fn validate_private_key_format(req: &PutCipherReq) -> Result<(), ValidationError
     })
 }
 
-// rsa 3072 pss 校验
+// rsa 3072校验
 fn validate_rsa3072_key(pem: &[u8]) -> Result<(), ErrorStack> {
     let pkey = PKey::private_key_from_pem(pem)?;
     let rsa = pkey.rsa()?;
-    if rsa.size() * 8 == 3072 {
+    if rsa.size() * 8 == RSA_3072_KEY_SIZE {
         Ok(())
     } else {
-        log::error!("validate_rsa3072_key failed");
+        log::error!("RSA 3072 key validation failed: Incorrect key size");
+        Err(ErrorStack::get().into())
+    }
+}
+
+// rsa 4096校验
+fn validate_rsa4096_key(pem: &[u8]) -> Result<(), ErrorStack> {
+    let pkey = PKey::private_key_from_pem(pem)?;
+    let rsa = pkey.rsa()?;
+    // 验证密钥长度是否为 4096 位
+    if rsa.size() * 8 == RSA_4096_KEY_SIZE {
+        Ok(())
+    } else {
+        log::error!("RSA 4096 key validation failed: Incorrect key size");
         Err(ErrorStack::get().into())
     }
 }
