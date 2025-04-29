@@ -1,0 +1,30 @@
+{
+    "evidence": {
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": [
+                {
+                    "is_matched": true,
+                    "pcr_index": 10,
+                    "pcr_value": "be00517f0f1e46f33a39e0a2c21f8f0ae681c647be00517f0f1e46f33a39e0a2",
+                    "replay_value": "be00517f0f1e46f33a39e0a2c21f8f0ae681c647be00517f0f1e46f33a39e0a2"
+                }
+            ]
+        },
+        "logs": [
+            {
+                "is_log_valid": true,
+                "log_type": "tpm_ima",
+                "log_data":{
+                    "pcr_index": 10,
+                    "template_hash": "be00517f0f1e46f33a39e0a2c21f8f0ae681c647",
+                    "template_name": "ima-ng",
+                    "file_hash_alg": "sha256",
+                    "file_hash": "0ffb68384766c27acb35e1ed0b4a04f3e9d456f131db842feecbeb5d4d543a8a",
+                    "file_path": "boot_aggregate",
+                    "ref_value_matched": true
+                }
+            }
+        ]
+    }
+}
