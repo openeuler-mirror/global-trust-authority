@@ -1,0 +1,29 @@
+[package]
+name = "endorserment"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+actix-web.workspace = true
+sea-orm.workspace = true
+key_management.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+openssl.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+base64.workspace = true
+ctor.workspace = true
+futures.workspace = true
+hex.workspace = true
+validator.workspace = true
+
+env_config_parse.workspace = true
+rdb.workspace = true
+common_log.workspace = true
+mockall.workspace = true
+tokio.workspace = true

@@ -1,0 +1,42 @@
+[package]
+name = "attestation_service"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "attestation_service"
+path = "src/main.rs"
+
+[dependencies]
+#actix-web.workspace = true
+sea-orm.workspace = true
+log.workspace = true
+env_logger.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+dotenv.workspace = true
+redis.workspace = true
+tokio.workspace = true
+attestation.workspace = true
+futures.workspace = true
+key_management.workspace = true
+token_management.workspace = true
+nonce.workspace = true
+#policy.workspace = true
+endorserment.workspace = true
+actix-governor.workspace = true
+governor.workspace = true
+base64.workspace = true
+resource_provider = {workspace = true, features = ["co-deployment"]} # independent-deployment co-deployment
+openssl.workspace = true
+actix-web = { version = "4", features = ["openssl"] }
+plugin_manager.workspace = true
+serde_yaml.workspace = true
+cache.workspace = true
+env_config_parse.workspace = true
+mq.workspace = true
+rdb.workspace = true
+ratelimit.workspace = true
+common_log.workspace = true
+server_config.workspace = true
+config_manager.workspace = true

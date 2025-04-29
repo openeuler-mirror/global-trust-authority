@@ -1,0 +1,18 @@
+[package]
+name = "tpm_common_verifier"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+tokio.workspace = true
+plugin_manager = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+openssl = { workspace = true }
+base64 = { workspace = true }
+hex = { workspace = true }
+byteorder = { workspace = true }
+async-trait = { workspace = true }

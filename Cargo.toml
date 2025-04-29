@@ -1,0 +1,109 @@
+[workspace]
+members = [
+    "attestation_agent/agent",
+    "attestation_agent/agent_restful",
+    "attestation_agent/challenge",
+    "attestation_agent/config",
+    "attestation_agent/utils",
+    "attestation_agent/attester/tpm/ima",
+    "attestation_agent/attester/tpm/boot",
+    "attestation_service/service_restful",
+    "attestation_service/policy",
+    "attestation_service/rv",
+    "attestation_service/endorserment",
+    "attestation_service/attestation_service",
+    "attestation_service/nonce",
+    "attestation_service/token_management",
+    "attestation_service/policy_engine",
+    "attestation_service/key_management",
+    "attestation_service/attestation",
+    "attestation_service/server_config",
+    "attestation_service/resource_provider",
+    "attestation_service/verifier/tpm/boot",
+    "attestation_service/verifier/tpm/ima",
+    "attestation_common/cache",
+    "attestation_common/config_manager",
+    "attestation_common/distributed_lock",
+    "attestation_common/env_config_parse",
+    "attestation_common/mq",
+    "attestation_common/rdb",
+    "attestation_common/schedule_job",
+    "attestation_common/ratelimit",
+    "attestation_common/common_log",
+    "attestation_common/jwt",
+    "plugin_manager",
+    "attestation_cli",
+]
+
+resolver = "2"
+
+[workspace.dependencies]
+log = "0.4"
+env_logger = "0.11.6"
+actix-web = "4.0"
+sea-orm = { version = "^0.10", features = ["sqlx-postgres", "sqlx-mysql", "sqlx-sqlite", "runtime-tokio-native-tls", "debug-print", "mock"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+serde_yaml = "0.9"
+dotenv = "0.15"
+redis = { version = "0.23.0", features = ["async-std-comp", "tokio-comp", "connection-manager"] }
+tokio = { version = "1", features = ["full"] }
+thiserror = "2.0.12"
+once_cell = "1.19.0"
+async-trait = "0.1.77"
+log4rs = { version = "1.2.0", features = ["gzip"] }
+lazy_static = "1.5.0"
+chrono = "0.4"
+parking_lot = "0.12.3"
+cron = "0.15.0"
+awc = "3.5.1"
+openssl = { version = "0.10.45" }
+anyhow = "1.0"
+ctor = "0.4.0"
+libsm = "0.6.0"
+encoding = "0.2.33"
+futures = "0.3.31"
+plugin_manager = { path = "./plugin_manager" }
+attestation = { path = "./attestation_service/attestation" }
+key_management = { path = "attestation_service/key_management" }
+nonce = { path = "./attestation_service/nonce" }
+policy = { path = "./attestation_service/policy" }
+endorserment = { path = "./attestation_service/endorserment" }
+rv = { path = "./attestation_service/rv" }
+resource_provider = {path = "attestation_service/resource_provider" }
+policy_engine = { path = "./attestation_service/policy_engine" }
+rand = "0.8.4"
+rand_chacha = "0.3.1"
+base64 = "0.22.1"
+regex = "1.9.1"
+regorus = "0.2.8"
+mockall = "0.10.1"
+fmt = "0.8"
+token_management = { path = "attestation_service/token_management" }
+jsonwebtoken = "9"
+uuid = { version = "1.13.1", features = ["v4", "v5"] }
+libloading = "0.8.6"
+tempfile = "3.19.0"
+serial_test = "3.2.0"
+walkdir = "2.5.0"
+actix-governor = "0.6.0"
+governor = "0.5.1"
+hex = "0.4.3"
+rdkafka = { version = "0.37.0", features = ["dynamic-linking"] }
+reqwest = { version = "0.11"}
+tss-esapi = { version = "7.6.0", features = ["generate-bindings"] }
+validator = { version = "0.20.0", features = ["derive"]}
+byteorder = "1.4"
+cache = { path = "attestation_common/cache" }
+config_manager = { path = "attestation_common/config_manager" }
+distributed_lock = {path = "attestation_common/distributed_lock"}
+env_config_parse = {path = "attestation_common/env_config_parse"}
+mq = {path = "attestation_common/mq"}
+rdb = {path = "attestation_common/rdb"}
+jwt = {path = "attestation_common/jwt"}
+schedule_job = {path = "attestation_common/schedule_job"}
+ratelimit = {path = "attestation_common/ratelimit"}
+common_log = {path = "attestation_common/common_log"}
+server_config = {path = "attestation_service/server_config" }
+scopeguard = "1.2.0"
+clap = { version = "4.5.32", features = ["derive"] }

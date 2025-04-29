@@ -1,0 +1,13 @@
+[package]
+name = "test_plugin_for_service"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+plugin_manager = { path = "../.." , features = ["test-plugins"] }
+async-trait = "0.1.77"

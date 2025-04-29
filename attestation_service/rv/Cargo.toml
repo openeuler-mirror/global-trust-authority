@@ -1,0 +1,34 @@
+[package]
+name = "rv"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+#crate-type = ["dylib"]
+path = "src/lib.rs"
+
+[features]
+redis_mode = []
+mysql_mode = []
+
+[dependencies]
+actix-web.workspace = true
+chrono.workspace = true
+sea-orm.workspace = true
+async-trait.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+validator.workspace = true
+thiserror.workspace = true
+log.workspace = true
+openssl.workspace = true
+base64.workspace = true
+endorserment.workspace = true
+common_log.workspace = true
+jwt.workspace = true
+key_management.workspace = true
+policy.workspace = true
+ctor.workspace = true
+rdb.workspace = true
+futures.workspace = true
+config_manager.workspace = true

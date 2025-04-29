@@ -1,0 +1,9 @@
+use_small_heuristics = "Max"
+
+max_width = 120
+
+newline_style = "Unix"
+
+merge_derives = false
+
+match_block_trailing_comma = true

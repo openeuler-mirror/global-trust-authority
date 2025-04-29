@@ -1,0 +1,11 @@
+[source.crates-io]
+replace-with = 'tuna'
+
+[source.mirror]
+registry = "https://mirrors.tools.huawei.com/rust/crates.io-index/"
+
+[source.tuna]
+registry = "sparse+https://mirrors.tuna.tsinghua.edu.cn/crates.io-index/"
+
+[net]
+git-fetch-with-cli = true
