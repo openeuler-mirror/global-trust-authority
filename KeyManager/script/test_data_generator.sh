@@ -4,12 +4,15 @@ algorithm=$1
 encoding="pem"
 version=$2
 
+export BAO_ADDR=http://127.0.0.1:8200/
+export BAO_TOKEN=
+
 generate_key() {
     local algorithm=$1
     local key_content
 
     case "$algorithm" in
-        rsa_3072_pss)
+        rsa_3072)
             # RSA-PSS 3072 (OpenSSL 3.0+ 需要指定 PSS 参数)
             openssl genpkey -algorithm RSA-PSS \
                 -pkeyopt rsa_keygen_bits:3072 \
@@ -35,7 +38,7 @@ generate_key() {
 
 if [ $# -ne 2 ]; then
     echo "用法: $0 <algorithm> <version>" >&2
-    echo "支持的算法: rsa_3072_pss, sm2, ec" >&2
+    echo "支持的算法: rsa_3072, sm2, ec" >&2
     exit 1
 fi
 
