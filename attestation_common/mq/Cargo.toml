@@ -1,0 +1,12 @@
+[package]
+name = "mq"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+log.workspace = true
+rdkafka.workspace = true
+env_config_parse.workspace = true

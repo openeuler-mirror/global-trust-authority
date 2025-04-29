@@ -1,0 +1,12 @@
+[package]
+name = "cache"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+thiserror.workspace = true
+lazy_static.workspace = true
+redis.workspace = true
