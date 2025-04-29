@@ -1,0 +1,30 @@
+[package]
+name = "agent_restful"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+agent_utils = { path = "../utils", features = ["validate"] }
+challenge = { path = "../challenge" }
+actix-web.workspace = true
+actix-web.features = ["openssl"]
+reqwest.workspace = true
+reqwest.features = ["json", "native-tls"]
+tokio.workspace = true
+tokio.features = ["full"]
+serde.workspace = true
+serde.features = ["derive"]
+serde_json.workspace = true
+once_cell.workspace = true
+futures.workspace = true
+chrono.workspace = true
+log.workspace = true
+openssl.workspace = true
+env_logger.workspace = true
+actix-governor.workspace = true
+validator.workspace = true
+
+[dev-dependencies]
+tempfile = "3.5.0"
+
+[features]
