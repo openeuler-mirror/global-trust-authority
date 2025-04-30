@@ -74,11 +74,8 @@ RUN apt-get update && \
     apt-get install -y openssl && \
     rm -rf /var/lib/apt/lists/*
 
-# copy openbao的deb包
-COPY ./deps/bao_2.2.0_linux_amd64.deb /tmp/bao_2.2.0_linux_amd64.deb
-
-# 安裝deb包
-RUN apt-get update && \dpkg -i /tmp/bao_2.2.0_linux_amd64.deb || apt-get install -f -y
+# 安裝openbao
+RUN apt-get update && apt-get install bao || apt-get install -f -y
 
 EXPOSE 8082
 
