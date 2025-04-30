@@ -2,7 +2,7 @@ Name:           key_manager
 Version:        %_version
 Release:        linux
 Summary:        Key Manager Package
-License:        MIT
+License:        Mulan v2
 Source0:        %{name}-%{version}.tar.gz
 
 %description

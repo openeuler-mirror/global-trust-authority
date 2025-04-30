@@ -53,12 +53,12 @@ generate_certs() {
     local cert_dir="$1"
 
     echo "=== 生成根CA证书 ==="
-    openssl genrsa -out "$cert_dir/KM_key.pem" 2048 || {
+    openssl genrsa -out "$cert_dir/km_key.pem" 2048 || {
         echo "生成根CA私钥失败" >&2; exit 1
     }
 
-    openssl req -x509 -new -nodes -key "$cert_dir/KM_key.pem" \
-        -out "$cert_dir/KM_cert.pem" \
+    openssl req -x509 -new -nodes -key "$cert_dir/km_key.pem" \
+        -out "$cert_dir/km_cert.pem" \
         -days 3650 -subj "/CN=RootCA-KeyManager" || {
         echo "生成根CA证书失败" >&2; exit 1
     }
@@ -76,8 +76,8 @@ generate_certs() {
     }
 
     openssl x509 -req -in "$cert_dir/key_manager_server.csr" \
-        -CA "$cert_dir/KM_cert.pem" \
-        -CAkey "$cert_dir/KM_key.pem" \
+        -CA "$cert_dir/km_cert.pem" \
+        -CAkey "$cert_dir/km_key.pem" \
         -CAcreateserial \
         -out "$cert_dir/key_manager_server_cert.pem" \
         -days 365 -sha256 \
@@ -86,34 +86,34 @@ generate_certs() {
     }
 
     echo "=== 生成RA客户端证书 ==="
-    openssl genrsa -out "$cert_dir/RA_client_key.pem" 2048 || {
+    openssl genrsa -out "$cert_dir/ra_client_key.pem" 2048 || {
         echo "生成客户端私钥失败" >&2; exit 1
     }
 
-    openssl req -new -key "$cert_dir/RA_client_key.pem" \
-        -out "$cert_dir/RA_client.csr" \
+    openssl req -new -key "$cert_dir/ra_client_key.pem" \
+        -out "$cert_dir/ra_client.csr" \
         -subj "/CN=RA-Service" || {
         echo "生成客户端CSR失败" >&2; exit 1
     }
 
-    openssl x509 -req -in "$cert_dir/RA_client.csr" \
-        -CA "$cert_dir/KM_cert.pem" \
-        -CAkey "$cert_dir/KM_key.pem" \
+    openssl x509 -req -in "$cert_dir/ra_client.csr" \
+        -CA "$cert_dir/km_cert.pem" \
+        -CAkey "$cert_dir/km_key.pem" \
         -CAcreateserial \
-        -out "$cert_dir/RA_client_cert.pem" \
+        -out "$cert_dir/ra_client_cert.pem" \
         -days 365 -sha256 -extfile <(echo "extendedKeyUsage = clientAuth") || {
         echo "签发客户端证书失败" >&2; exit 1
     }
 
     echo "=== 验证证书 ==="
-    if ! openssl verify -CAfile "$cert_dir/KM_cert.pem" \
+    if ! openssl verify -CAfile "$cert_dir/km_cert.pem" \
         "$cert_dir/key_manager_server_cert.pem" >/dev/null; then
         echo "服务端证书验证失败" >&2
         exit 1
     fi
 
-    if ! openssl verify -CAfile "$cert_dir/KM_cert.pem" \
-        "$cert_dir/RA_client_cert.pem" >/dev/null; then
+    if ! openssl verify -CAfile "$cert_dir/km_cert.pem" \
+        "$cert_dir/ra_client_cert.pem" >/dev/null; then
         echo "客户端证书验证失败" >&2
         exit 1
     fi

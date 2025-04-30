@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 readonly VERSION="0.1.0"
 # 标准化路径声明
 readonly CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

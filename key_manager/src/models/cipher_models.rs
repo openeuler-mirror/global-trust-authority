@@ -69,8 +69,8 @@ fn validate_private_key_format(req: &PutCipherReq) -> Result<(), ValidationError
         })?
     };
     let result = match req.algorithm.as_str() {
-        ALGORITHM_RSA_3072 => validate_rsa3072_key(pem_data),
-        ALGORITHM_RSA_4096 => validate_rsa4096_key(pem_data),
+        ALGORITHM_RSA_3072 => validate_rsa(pem_data, RSA_3072_KEY_SIZE),
+        ALGORITHM_RSA_4096 => validate_rsa(pem_data, RSA_4096_KEY_SIZE),
         ALGORITHM_SM2 => validate_sm2_key(pem_data),
         ALGORITHM_EC => validate_ec_key(pem_data),
         _ => Err(ErrorStack::get().into()),
@@ -90,27 +90,13 @@ fn validate_private_key_format(req: &PutCipherReq) -> Result<(), ValidationError
     })
 }
 
-// rsa 3072校验
-fn validate_rsa3072_key(pem: &[u8]) -> Result<(), ErrorStack> {
-    let pkey = PKey::private_key_from_pem(pem)?;
+fn validate_rsa(pem_data: &[u8], size: u32) -> Result<(), ErrorStack> {
+    let pkey = PKey::private_key_from_pem(pem_data)?;
     let rsa = pkey.rsa()?;
-    if rsa.size() * 8 == RSA_3072_KEY_SIZE {
+    if rsa.size() * 8 == size {
         Ok(())
     } else {
-        log::error!("RSA 3072 key validation failed: Incorrect key size");
-        Err(ErrorStack::get().into())
-    }
-}
-
-// rsa 4096校验
-fn validate_rsa4096_key(pem: &[u8]) -> Result<(), ErrorStack> {
-    let pkey = PKey::private_key_from_pem(pem)?;
-    let rsa = pkey.rsa()?;
-    // 验证密钥长度是否为 4096 位
-    if rsa.size() * 8 == RSA_4096_KEY_SIZE {
-        Ok(())
-    } else {
-        log::error!("RSA 4096 key validation failed: Incorrect key size");
+        log::error!("RSA {} key validation failed: Incorrect key size", size);
         Err(ErrorStack::get().into())
     }
 }

@@ -4,8 +4,10 @@ algorithm=$1
 encoding="pem"
 version=$2
 
+set -e
+
 export BAO_ADDR=http://127.0.0.1:8200/
-export BAO_TOKEN=s.J5mD84berdhG8X6ICpXqdhsj
+export BAO_TOKEN=
 
 validate_input() {
     if [ $# -ne 2 ]; then
