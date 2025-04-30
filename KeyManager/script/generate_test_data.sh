@@ -5,7 +5,29 @@ encoding="pem"
 version=$2
 
 export BAO_ADDR=http://127.0.0.1:8200/
-export BAO_TOKEN=
+export BAO_TOKEN=s.J5mD84berdhG8X6ICpXqdhsj
+
+validate_input() {
+    if [ $# -ne 2 ]; then
+        echo "用法: $0 <algorithm> <version>" >&2
+        echo "支持的算法: rsa_3072, sm2, ec" >&2
+        exit 1
+    fi
+
+    if ! [[ "$version" =~ ^[0-9]+$ ]] || [ "$version" -lt 1 ]; then
+        echo "版本必须是大于0的整数" >&2
+        exit 1
+    fi
+
+    case "$algorithm" in
+        rsa_3072|sm2|ec) ;;
+        *)
+            echo "不支持的算法: $algorithm" >&2
+            echo "支持的算法: rsa_3072, sm2, ec" >&2
+            exit 1
+            ;;
+    esac
+}
 
 generate_key() {
     local algorithm=$1
@@ -41,6 +63,8 @@ if [ $# -ne 2 ]; then
     echo "支持的算法: rsa_3072, sm2, ec" >&2
     exit 1
 fi
+
+validate_input "$@"
 
 for ((i=1; i<=version; i++)); do
     nsk=$(generate_key "$algorithm")
