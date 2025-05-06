@@ -1,50 +1,46 @@
-# 构建阶段
-# 使用rust完整版镜像，生产环境推荐使用轻量级镜像 rust:1.85.0-slim
+# Build stage
+# Using complete rust image, production environment recommends using lightweight image rust:1.85.0-slim
 FROM rust:1.85 AS builder
 
-# 配置 Rust 国内镜像源
+# Configure Rust mirror source in China
 ENV CARGO_HOME=/usr/local/cargo
-RUN echo '[source.crates-io]' > $CARGO_HOME/config \
-    && echo 'replace-with = "ustc"' >> $CARGO_HOME/config \
-    && echo '[source.ustc]' >> $CARGO_HOME/config \
-    && echo 'registry = "sparse+https://mirrors.ustc.edu.cn/crates.io-index/"' >> $CARGO_HOME/config
+RUN echo '[source.crates-io]' > $CARGO_HOME/config.toml \
+    && echo 'replace-with = "ustc"' >> $CARGO_HOME/config.toml \
+    && echo '[source.ustc]' >> $CARGO_HOME/config.toml \
+    && echo 'registry = "sparse+https://mirrors.ustc.edu.cn/crates.io-index/"' >> $CARGO_HOME/config.toml
 
 RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources \
     && sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources
 
 RUN apt update && \
-    apt install -y apt-utils && \
-    apt install -y cmake
+    apt install -y apt-utils
 
-# 安装构建依赖 pkg-config 处理c库   libssl-dev处理OpenSSL
+# Install build dependencies: pkg-config for C libraries, libssl-dev for OpenSSL
 RUN apt-get update && apt-get install -y \
-    pkg-config \
-    zlib1g-dev \
     libssl-dev \
-    git \
-    cmake \
-    make \
-    gcc \
-    g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# 设置环境变量（独立的 ENV 指令）
-ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
+# Create working directory
+WORKDIR /var/test_docker/app
 
-# 创建工作目录
-WORKDIR /var/key_manager/app
+# Copy all source code (this will overwrite dummy files)
+COPY Cargo.toml Cargo.lock ./
+COPY key_manager ./key_manager
+COPY certs ./certs
 
-# 复制所有源码
-COPY . .
+RUN sed -i '/members = \[/,/\]/ {/attestation_*/d}' Cargo.toml
+RUN sed -i '/members = \[/,/\]/ {/plugin_manager/d}' Cargo.toml
 
-# 构建指定包
-RUN cargo build --release --package key_managerd
+WORKDIR /var/test_docker/app/key_manager
 
-# 运行时阶段：-----------------------------
-# 使用轻量级基础镜像
+# Copy rust standard library files to build directory
+RUN cargo build --release --package key_managerd --target-dir ./target
+
+# Runtime stage: -----------------------------
+# Use lightweight base image
 FROM debian:bookworm-slim
 
-# 替换阿里云镜像（适用于 Debian Bookworm）
+# Replace with Aliyun mirror (for Debian Bookworm)
 RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources \
     && sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources
 
@@ -52,32 +48,35 @@ RUN mkdir /opt/key_manager
 RUN mkdir /opt/key_manager/deps
 RUN mkdir /opt/key_manager/script
 
-# 从构建阶段复制可执行
-COPY --from=builder /var/key_manager/app/target/release/key_managerd /opt/key_manager
-COPY --from=builder /var/key_manager/app/target/release/key_manager /opt/key_manager
-COPY --from=builder /var/key_manager/app/.env /opt/key_manager
-COPY --from=builder /var/key_manager/app/deps/* /opt/key_manager/deps/
-COPY --from=builder /var/key_manager/app/script/* /opt/key_manager/script/
-COPY --from=builder /var/key_manager/app/certs/* /tmp/certs/
+# Copy executables from build stage
+COPY --from=builder /var/test_docker/app/key_manager/target/release/key_managerd /opt/key_manager
+COPY --from=builder /var/test_docker/app/key_manager/target/release/key_manager /opt/key_manager
+COPY --from=builder /var/test_docker/app/key_manager/.env /opt/key_manager
+COPY --from=builder /var/test_docker/app/key_manager/deps/* /opt/key_manager/deps/
+COPY --from=builder /var/test_docker/app/key_manager/script/* /opt/key_manager/script/
+COPY --from=builder /var/test_docker/app/certs/* /tmp/certs/
 RUN chmod -R +x /opt/key_manager/*
 
-# 安装运行时依赖  libssl3 OpenSSL 运行时库
+# Install runtime dependencies libssl3 OpenSSL runtime library
 RUN apt-get update && apt-get install -y \
     libssl3 \
-    zlib1g \
-    libcurl4 \
+    wget \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 openssl
+# Install openssl
 RUN apt-get update && \
     apt-get install -y openssl && \
     rm -rf /var/lib/apt/lists/*
 
-# 安裝openbao
-RUN apt-get update && apt-get install bao || apt-get install -f -y
+ARG TARGETARCH
+ARG OPENBAO_VERSION="2.2.0"
+ENV DOWNLOAD_ARCH="${TARGETARCH}"
+# Install openbao
+RUN cd /opt/key_manager/deps &&  wget -q "https://github.com/openbao/openbao/releases/download/v${OPENBAO_VERSION}/bao_${OPENBAO_VERSION}_linux_${DOWNLOAD_ARCH}.deb" && \dpkg -i ./bao_*_linux_*.deb
+# RUN cd /opt/key_manager/deps && \dpkg -i ./bao_*_linux_*.deb
 
 EXPOSE 8082
 
-# 设置入口点
+# Set entry point
 ENTRYPOINT ["/opt/key_manager/deps/openbao_init.sh"]

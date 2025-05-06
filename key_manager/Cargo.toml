@@ -32,3 +32,4 @@ futures.workspace = true
 async-trait.workspace = true
 # 命令行参数处理
 clap.workspace = true
+mockall.workspace = true

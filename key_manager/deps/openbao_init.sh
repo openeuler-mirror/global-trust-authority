@@ -47,6 +47,9 @@ if [ -f /opt/key_manager/bao_init_data.txt ] && [ -f /opt/key_manager/.env ]; th
     {
       if ($1 == "KEY_MANAGER_ROOT_TOKEN") $2 = token
       if ($1 == "KEY_MANAGER_SECRET_ADDR") $2 = addr
+      if ($1 == "ROOT_CA_CERT_PATH") $2 = "/tmp/certs/km_cert.pem"
+      if ($1 == "KEY_MANAGER_CERT_FILE_PATH") $2 = "/tmp/certs/key_manager_server_cert.pem"
+      if ($1 == "KEY_MANAGER_KEY_FILE_PATH") $2 = "/tmp/certs/key_manager_server_key.pem"
       print
     }
     ' /opt/key_manager/.env > /opt/key_manager/.env.tmp && mv /opt/key_manager/.env.tmp /opt/key_manager/.env
