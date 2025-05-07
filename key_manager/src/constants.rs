@@ -9,3 +9,5 @@ pub const ALGORITHM_SM2: &str = "sm2";
 
 pub const RSA_3072_KEY_SIZE: u32 = 3072;
 pub const RSA_4096_KEY_SIZE: u32 = 4096;
+
+pub const MAX_PRIVATE_KEY_SIZE: u64 = 10 * 1024 * 1024; // 10MB
