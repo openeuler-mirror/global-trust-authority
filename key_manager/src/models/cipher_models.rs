@@ -8,9 +8,6 @@ use openssl::nid::Nid;
 use openssl::pkey::PKey;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::fs::metadata;
-use std::io::{Error, ErrorKind};
-use openssl::ec::EcGroup;
 use validator::{Validate, ValidationError};
 
 #[derive(Serialize, Deserialize, Validate, Debug)]
