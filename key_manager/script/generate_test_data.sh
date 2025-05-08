@@ -69,12 +69,22 @@ fi
 validate_input "$@"
 
 for ((i=1; i<=version; i++)); do
+# 生成密钥并写入临时文件
     nsk=$(generate_key "$algorithm")
-    bao kv put -mount="${operator}" NSK private_key="${nsk}" algorithm="${algorithm}" encoding="${encoding}"
+    nsk_file=$(mktemp /tmp/nsk_XXXXXX.pem)
+    echo "$nsk" > "$nsk_file"
+
     fsk=$(generate_key "$algorithm")
-    bao kv put -mount="${operator}" FSK private_key="${nsk}" algorithm="${algorithm}" encoding="${encoding}"
-    ask=$(generate_key "$algorithm")
-    bao kv put -mount="${operator}" TSK private_key="${nsk}" algorithm="${algorithm}" encoding="${encoding}"
+    fsk_file=$(mktemp /tmp/fsk_XXXXXX.pem)
+    echo "$fsk" > "$fsk_file"
+
+    tsk=$(generate_key "$algorithm")
+    tsk_file=$(mktemp /tmp/tsk_XXXXXX.pem)
+    echo "$tsk" > "$tsk_file"
+    ./key_manager put --key_name NSK --algorithm ${algorithm} --encoding pem --key_file ${nsk_file}
+    ./key_manager put --key_name FSK --algorithm ${algorithm} --encoding pem --key_file ${fsk_file}
+    ./key_manager put --key_name TSK --algorithm ${algorithm} --encoding pem --key_file ${tsk_file}
+    rm -f "$nsk_file" "$fsk_file" "$tsk_file"
 done
 
 echo "生成成功"

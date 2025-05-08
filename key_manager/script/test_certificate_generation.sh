@@ -3,12 +3,17 @@ set -euo pipefail  # 启用严格模式，遇到错误自动退出
 
 # 显示用法说明
 usage() {
-    echo "用法: $0 -p <证书生成路径>"
+    echo "用法: $0 -p <证书生成路径> -i <服务器IP>"
     echo "必须选项:"
     echo "  -p, --path <路径>    指定证书生成路径（必须存在且可写）"
+    echo "  -i, --ip <IP地址>    指定服务器IP（用于证书SAN字段）"
     echo "  -h, --help           显示帮助信息"
     exit 1
 }
+
+# 解析命令行参数
+CERT_DIR=""
+SERVER_IP=""
 
 # 解析命令行参数
 CERT_DIR=""
@@ -16,6 +21,10 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -p|--path)
             CERT_DIR="$2"
+            shift 2
+            ;;
+        -i|--ip)
+            SERVER_IP="$2"
             shift 2
             ;;
         -h|--help)
@@ -71,7 +80,7 @@ generate_certs() {
     openssl req -new -key "$cert_dir/key_manager_server_key.pem" \
         -out "$cert_dir/key_manager_server.csr" \
         -subj "/CN=key_manager" \
-        -addext "subjectAltName = DNS:key_manager" || {
+        -addext "subjectAltName = DNS:key_manager, IP:$SERVER_IP" || {
         echo "生成服务端CSR失败" >&2; exit 1
     }
 
@@ -81,7 +90,7 @@ generate_certs() {
         -CAcreateserial \
         -out "$cert_dir/key_manager_server_cert.pem" \
         -days 365 -sha256 \
-        -extfile <(echo "subjectAltName = DNS:key_manager") || {
+        -extfile <(echo "subjectAltName = DNS:key_manager, IP:$SERVER_IP") || {
         echo "签发服务端证书失败" >&2; exit 1
     }
 

@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /var/test_docker/app
 
 # Copy all source code (this will overwrite dummy files)
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 COPY key_manager ./key_manager
 COPY certs ./certs
 
@@ -53,7 +53,7 @@ COPY --from=builder /var/test_docker/app/key_manager/target/release/key_managerd
 COPY --from=builder /var/test_docker/app/key_manager/target/release/key_manager /opt/key_manager
 COPY --from=builder /var/test_docker/app/key_manager/.env /opt/key_manager
 COPY --from=builder /var/test_docker/app/key_manager/deps/* /opt/key_manager/deps/
-COPY --from=builder /var/test_docker/app/key_manager/script/* /opt/key_manager/script/
+COPY --from=builder /var/test_docker/app/key_manager/script/generate_test_data.sh /opt/key_manager/
 COPY --from=builder /var/test_docker/app/certs/* /tmp/certs/
 RUN chmod -R +x /opt/key_manager/*
 
