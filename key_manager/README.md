@@ -28,7 +28,8 @@ apt update && apt install openssl libssl-dev #Linux (Debian/Ubuntu)
 当前Key Manager使用MTLS双向认证进行通信，因此需要进行对应的证书配置。
 使用当前路径下如下脚本进行MTLS证书生成：
 ```shell
-bash script/test_certificate_generation.sh -p <指定路径>
+# 当前部署服务器的IP用于证书SAN字段
+bash script/test_certificate_generation.sh -p <指定路径> -i <当前部署服务器的IP>
 ```
 当前的证书会影响后续docker的安装，建议放置到当前global-trust-authority/certs目录下。
 #### 3.openbao部署
