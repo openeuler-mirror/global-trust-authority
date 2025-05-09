@@ -1,5 +1,6 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -47,7 +48,7 @@ pub struct RefValueDetail {
     #[serde(rename = "fileName")]
     #[validate(length(min = 1, max = 255))]
     pub file_name: String,
-    #[validate(length(min = 1, max = 40))]
+    #[validate(length(min = 1, max = 64))]
     pub sha256: String,
     #[serde(skip)]
     pub ref_value_id: String
@@ -58,11 +59,7 @@ impl RefValueDetail {
         self.ref_value_id = ref_value_id.to_string();
     }
     pub fn set_id(&mut self) {
-        let mut hasher = DefaultHasher::new();
-        self.file_name.hash(&mut hasher);
-        self.ref_value_id.hash(&mut hasher);
-        let id = hasher.finish().to_string();
-        self.id = id;
+        self.id = Uuid::new_v4().to_string();
     }
     
     pub fn set_uid(&mut self, uid: &str) {

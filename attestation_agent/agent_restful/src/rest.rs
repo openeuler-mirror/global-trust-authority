@@ -1,10 +1,10 @@
 use crate::middlewares::request_logger::RequestLogger;
 use crate::middlewares::security_headers::SecurityHeaders;
 use crate::middlewares::trusted_proxies::TrustedProxies;
-use actix_governor::{Governor, GovernorConfigBuilder};
 use actix_web::dev::Service;
 use actix_web::middleware::{Condition, Logger, NormalizePath, TrailingSlash};
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
+use agent_utils::validate_utils::{validate_bind_address, validate_file, validate_rest_path};
 use agent_utils::AgentError;
 use log::{error, info, warn};
 use once_cell::sync::OnceCell;
@@ -15,12 +15,13 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use validator::Validate;
-use agent_utils::validate_utils::{validate_bind_address, validate_file, validate_rest_path};
+use governor::Quota;
+use ratelimit::Governor;
 
 /// Constants used for rate limiting and connection control
 const DEFAULT_PAYLOAD_SIZE: usize = 1024 * 1024 * 10; // 10MB
 const MAX_CONNECTIONS: usize = 3; // Maximum concurrent connections
-const MILLISECONDS_PER_REQUEST: u64 = 500; // Rate limit: 500ms between requests (2 requests/second)
+const MILLISECONDS_PER_REQUEST: u32 = 500; // Rate limit: 500ms between requests (2 requests/second)
 const MAX_REQUESTS_LIMIT: u32 = 5; // Maximum burst size for rate limiting
 
 #[derive(Validate)]
@@ -775,20 +776,15 @@ fn create_app(
 > {
     let json_config = web::JsonConfig::default().limit(DEFAULT_PAYLOAD_SIZE).content_type(|_| true);
 
-    let governor_config = GovernorConfigBuilder::default()
-        .milliseconds_per_request(MILLISECONDS_PER_REQUEST)
-        .burst_size(MAX_REQUESTS_LIMIT)
-        .finish()
-        .unwrap_or_else(|| {
-            error!("Failed to create governor config, using defaults");
-            actix_governor::GovernorConfig::default()
-        });
+    let governor_config = Quota::per_second(std::num::NonZeroU32::new(MILLISECONDS_PER_REQUEST).unwrap())
+        .allow_burst(std::num::NonZeroU32::new(MAX_REQUESTS_LIMIT).unwrap());
+    let governor = Governor::new(governor_config);
 
     let app = App::new()
         .app_data(json_config)
         .wrap(Logger::default())
         .wrap(RequestLogger::new())
-        .wrap(Governor::new(&governor_config))
+        .wrap(governor.clone())
         .wrap(SecurityHeaders::new())
         .wrap(TrustedProxies::new(config))
         .wrap(Condition::new(true, NormalizePath::new(TrailingSlash::Trim)))

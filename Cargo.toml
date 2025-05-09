@@ -86,8 +86,7 @@ libloading = "0.8.6"
 tempfile = "3.19.0"
 serial_test = "3.2.0"
 walkdir = "2.5.0"
-actix-governor = "0.6.0"
-governor = "0.5.1"
+governor = "0.6.0"
 hex = "0.4.3"
 rdkafka = { version = "0.37.0", features = ["dynamic-linking"] }
 reqwest = { version = "0.11"}

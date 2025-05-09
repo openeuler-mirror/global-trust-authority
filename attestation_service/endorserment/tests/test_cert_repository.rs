@@ -1,9 +1,12 @@
+use std::path::{Path, PathBuf};
 use cert_info::ActiveModel;
 use endorserment::entities::cert_revoked_list::Model as CertRevokedListModel;
 use endorserment::entities::{cert_info, cert_revoked_list};
 use endorserment::repositories::cert_repository::CertRepository;
 use endorserment::services::cert_service::DeleteType;
 use sea_orm::{ActiveValue, DatabaseBackend, DbErr, MockDatabase, MockExecResult, TransactionTrait};
+use serde_json::json;
+use config_manager::types::CONFIG;
 
 #[tokio::test]
 async fn test_update_cert_info_when_one_row_affected_then_success() {
@@ -18,23 +21,13 @@ async fn test_update_cert_info_when_one_row_affected_then_success() {
 
     // Create mock database
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 1,
-            },
-        ])
+        .append_exec_results(vec![MockExecResult { last_insert_id: 0, rows_affected: 1 }])
         .into_connection();
 
     // Execute update operation
-    let result = CertRepository::update_cert_info(
-        &db,
-        &"test_id".to_string(),
-        1,
-        cert_info
-    ).await;
+    let result = CertRepository::update_cert_info(&db, &"test_id".to_string(), 1, cert_info).await;
 
-    // Verify results
+
     assert!(result.is_ok());
     let update_result = result.unwrap();
     assert_eq!(update_result.rows_affected, 1);
@@ -44,12 +37,7 @@ async fn test_update_cert_info_when_one_row_affected_then_success() {
 async fn test_update_cert_info_when_no_rows_affected_then_success() {
     // Create mock database, simulate no matching record found
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 0,
-            },
-        ])
+        .append_exec_results(vec![MockExecResult { last_insert_id: 0, rows_affected: 0 }])
         .into_connection();
     let transaction = db.begin().await.unwrap();
 
@@ -62,12 +50,7 @@ async fn test_update_cert_info_when_no_rows_affected_then_success() {
         ..Default::default()
     };
 
-    let result = CertRepository::update_cert_info_when_signature_update(
-        &transaction,
-        &id,
-        version,
-        cert_info
-    ).await;
+    let result = CertRepository::update_cert_info_when_signature_update(&transaction, &id, version, cert_info).await;
 
     assert!(result.is_ok());
     let update_result = result.unwrap();
@@ -78,9 +61,7 @@ async fn test_update_cert_info_when_no_rows_affected_then_success() {
 async fn test_update_cert_info_when_db_error_then_error() {
     // Create mock database, simulate database error
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_errors(vec![
-            DbErr::Custom("Database error".to_string())
-        ])
+        .append_exec_errors(vec![DbErr::Custom("Database error".to_string())])
         .into_connection();
     let transaction = db.begin().await.unwrap();
 
@@ -93,12 +74,7 @@ async fn test_update_cert_info_when_db_error_then_error() {
         ..Default::default()
     };
 
-    let result = CertRepository::update_cert_info_when_signature_update(
-        &transaction,
-        &id,
-        version,
-        cert_info
-    ).await;
+    let result = CertRepository::update_cert_info_when_signature_update(&transaction, &id, version, cert_info).await;
 
     assert!(result.is_err());
     match result {
@@ -111,12 +87,7 @@ async fn test_update_cert_info_when_db_error_then_error() {
 async fn test_update_cert_info_when_version_mismatch_then_success() {
     // Create mock database, simulate version mismatch
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 0,
-            },
-        ])
+        .append_exec_results(vec![MockExecResult { last_insert_id: 0, rows_affected: 0 }])
         .into_connection();
     let transaction = db.begin().await.unwrap();
 
@@ -129,18 +100,13 @@ async fn test_update_cert_info_when_version_mismatch_then_success() {
         ..Default::default()
     };
 
-    let result = CertRepository::update_cert_info_when_signature_update(
-        &transaction,
-        &id,
-        wrong_version,
-        cert_info
-    ).await;
+    let result =
+        CertRepository::update_cert_info_when_signature_update(&transaction, &id, wrong_version, cert_info).await;
 
     assert!(result.is_ok());
     let update_result = result.unwrap();
     assert_eq!(update_result.rows_affected, 0);
 }
-
 
 #[tokio::test]
 async fn test_update_cert_info_when_version_conflict_then_success() {
@@ -154,23 +120,11 @@ async fn test_update_cert_info_when_version_conflict_then_success() {
 
     // Create mock database, return 0 rows affected to indicate version conflict
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 0,
-            },
-        ])
+        .append_exec_results(vec![MockExecResult { last_insert_id: 0, rows_affected: 0 }])
         .into_connection();
 
     // Execute update operation
-    let result = CertRepository::update_cert_info(
-        &db,
-        &"test_id".to_string(),
-        1,
-        cert_info
-    ).await;
-
-    // Verify results
+    let result = CertRepository::update_cert_info(&db, &"test_id".to_string(), 1, cert_info).await;
     assert!(result.is_ok());
     let update_result = result.unwrap();
     assert_eq!(update_result.rows_affected, 0);
@@ -192,28 +146,16 @@ async fn test_update_cert_info_when_multiple_fields_then_success() {
 
     // Create mock database
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 1,
-            },
-        ])
+        .append_exec_results(vec![MockExecResult { last_insert_id: 0, rows_affected: 1 }])
         .into_connection();
 
     // Execute update operation
-    let result = CertRepository::update_cert_info(
-        &db,
-        &"test_id".to_string(),
-        1,
-        cert_info
-    ).await;
+    let result = CertRepository::update_cert_info(&db, &"test_id".to_string(), 1, cert_info).await;
 
-    // Verify results
     assert!(result.is_ok());
     let update_result = result.unwrap();
     assert_eq!(update_result.rows_affected, 1);
 }
-
 
 #[tokio::test]
 async fn test_find_cert_by_id_exists() {
@@ -221,7 +163,7 @@ async fn test_find_cert_by_id_exists() {
     let mock_cert = cert_info::Model {
         id: "test_cert_id".to_string(),
         name: Some("Test Cert".to_string()),
-        cert_type: Some("policy".to_string()),
+        cert_type: Some(json!(["policy"])),
         cert_info: Some(vec![1, 2, 3]),
         user_id: Some("test_user".to_string()),
         version: Some(1),
@@ -243,7 +185,7 @@ async fn test_find_cert_by_id_exists() {
     let cert = cert.unwrap();
     assert_eq!(cert.id, "test_cert_id");
     assert_eq!(cert.name, Some("Test Cert".to_string()));
-    assert_eq!(cert.cert_type, Some("policy".to_string()));
+    assert_eq!(cert.cert_type, Some(json!(["policy"])));
     assert_eq!(cert.cert_info, Some(vec![1, 2, 3]));
     assert_eq!(cert.user_id, Some("test_user".to_string()));
     assert_eq!(cert.version, Some(1));
@@ -282,8 +224,6 @@ async fn test_find_cert_by_id_when_db_error_then_success() {
     }
 }
 
-
-
 #[tokio::test]
 async fn test_find_parent_cert_by_type_and_user_found() {
     // Prepare test data
@@ -307,22 +247,17 @@ async fn test_find_parent_cert_by_type_and_user_found() {
         .into_connection();
 
     // Execute test
-    let result = CertRepository::find_parent_cert_by_type_and_user(
-        &db,
-        "test_user",
-        "policy",
-        "test_issuer"
-    ).await;
+    let result = CertRepository::find_parent_cert_by_type_and_user(&db, "test_user", "policy", "test_issuer").await;
 
-    // Verify results
+
     assert!(result.is_ok());
     let cert_result = result.unwrap();
-    assert!(cert_result.is_some());
-    let (cert_info, revoked_info) = cert_result.unwrap();
-    assert_eq!(cert_info.id, "test_cert");
-    assert_eq!(cert_info.user_id.unwrap(), "test_user");
-    assert_eq!(cert_info.cert_type.unwrap(), "policy");
-    assert_eq!(cert_info.owner.unwrap(), "test_issuer");
+    assert!(!cert_result.is_empty());
+    let (cert_info, revoked_info) = cert_result.get(0).unwrap();
+    assert_eq!(cert_info.clone().id, "test_cert");
+    assert_eq!(cert_info.clone().user_id.unwrap(), "test_user");
+    assert_eq!(cert_info.clone().cert_type.unwrap(), json!(["policy"]));
+    assert_eq!(cert_info.clone().owner.unwrap(), "test_issuer");
     assert!(revoked_info.is_some());
 }
 
@@ -334,41 +269,31 @@ async fn test_find_parent_cert_by_type_and_user_when_db_error_then_error() {
         .into_connection();
 
     // Execute test
-    let result = CertRepository::find_parent_cert_by_type_and_user(
-        &db,
-        "test_user",
-        "policy",
-        "test_issuer"
-    ).await;
+    let result = CertRepository::find_parent_cert_by_type_and_user(&db, "test_user", "policy", "test_issuer").await;
 
-    // Verify results
+
     assert!(result.is_err());
-    assert_eq!(
-        result.unwrap_err().to_string(),
-        "Custom Error: Database error"
-    );
+    assert_eq!(result.unwrap_err().to_string(), "Custom Error: Database error");
 }
 
 #[tokio::test]
 async fn test_insert_cert_revoked_success() {
     // Create mock database with expected query result
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_query_results(vec![vec![
-            cert_revoked_list::Model {
-                id: "test_id".to_string(),
-                serial_num: Some("123456".to_string()),
-                user_id: Some("test_user".to_string()),
-                cert_revoked_date: Some(1234567890),
-                issuer: Some("test_issuer".to_string()),
-                signature: Some(vec![1, 2, 3]),
-                key_version: Some("v1".to_string()),
-                key_id: Some("test_key_id".to_string()),
-                valid_code: Some(0),
-                cert_revoked_reason: Some("test reason".to_string()),
-            }
-        ]])
+        .append_query_results(vec![vec![cert_revoked_list::Model {
+            id: "test_id".to_string(),
+            serial_num: Some("123456".to_string()),
+            user_id: Some("test_user".to_string()),
+            cert_revoked_date: Some(1234567890),
+            issuer: Some("test_issuer".to_string()),
+            signature: Some(vec![1, 2, 3]),
+            key_version: Some("v1".to_string()),
+            key_id: Some("test_key_id".to_string()),
+            valid_code: Some(0),
+            cert_revoked_reason: Some("test reason".to_string()),
+        }]])
         .into_connection();
-
+    let tx = db.begin().await.unwrap();
     // Prepare test data
     let cert_revoked = endorserment::entities::cert_revoked_list::ActiveModel {
         id: ActiveValue::Set("test_id".to_string()),
@@ -384,12 +309,11 @@ async fn test_insert_cert_revoked_success() {
     };
 
     // Execute test
-    let result = CertRepository::insert_cert_revoked(&db, cert_revoked).await;
+    let result = CertRepository::insert_cert_revoked(&tx, cert_revoked).await;
 
     // Verify result
     assert!(result.is_ok());
 }
-
 
 #[tokio::test]
 async fn test_find_certs_by_type_and_user_when_db_error_then_error() {
@@ -399,14 +323,8 @@ async fn test_find_certs_by_type_and_user_when_db_error_then_error() {
         .into_connection();
 
     // Execute test
-    let result = CertRepository::find_certs_by_type_and_user(
-        &db,
-        "user1",
-        "policy",
-    )
-        .await;
+    let result = CertRepository::find_certs_by_type_and_user(&db, "user1", "policy").await;
 
-    // Verify results
     assert!(result.is_err());
     match result {
         Err(DbErr::Custom(err)) => assert_eq!(err, "Database error"),
@@ -419,21 +337,12 @@ async fn test_find_certs_by_type_and_user_when_db_error_then_error() {
 async fn test_batch_get_revoke_certs_with_data_success() {
     // Create mock database with expected query result
     let mock_certs = vec![
-        cert_revoked_list::Model {
-            id: "cert1".to_string(),
-            key_version: Some("v2".to_string()),
-            ..Default::default()
-        },
-        cert_revoked_list::Model {
-            id: "cert2".to_string(),
-            key_version: Some("v2".to_string()),
-            ..Default::default()
-        },
+        cert_revoked_list::Model { id: "cert1".to_string(), key_version: Some("v2".to_string()), ..Default::default() },
+        cert_revoked_list::Model { id: "cert2".to_string(), key_version: Some("v2".to_string()), ..Default::default() },
     ];
 
-    let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_query_results(vec![mock_certs.clone()])
-        .into_connection();
+    let db =
+        MockDatabase::new(DatabaseBackend::Postgres).append_query_results(vec![mock_certs.clone()]).into_connection();
     let transaction = db.begin().await.unwrap();
 
     let result = CertRepository::batch_get_revoke_certs(&transaction, 0, 10, "v1").await;
@@ -448,20 +357,16 @@ async fn test_batch_get_revoke_certs_with_data_success() {
 #[tokio::test]
 async fn test_batch_get_revoke_certs_pagination_success() {
     // Create mock database with expected query result
-    let page_1 = vec![
-        cert_revoked_list::Model {
-            id: "cert1".to_string(),
-            key_version: Some("v2".to_string()),
-            ..Default::default()
-        },
-    ];
-    let page_2 = vec![
-        cert_revoked_list::Model {
-            id: "cert2".to_string(),
-            key_version: Some("v2".to_string()),
-            ..Default::default()
-        },
-    ];
+    let page_1 = vec![cert_revoked_list::Model {
+        id: "cert1".to_string(),
+        key_version: Some("v2".to_string()),
+        ..Default::default()
+    }];
+    let page_2 = vec![cert_revoked_list::Model {
+        id: "cert2".to_string(),
+        key_version: Some("v2".to_string()),
+        ..Default::default()
+    }];
 
     let db = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results(vec![page_1.clone(), page_2.clone()])
@@ -494,10 +399,7 @@ async fn test_batch_get_revoke_certs_when_db_error_then_error() {
     let result = CertRepository::batch_get_revoke_certs(&transaction, 0, 10, "v1").await;
 
     assert!(result.is_err());
-    assert_eq!(
-        result.unwrap_err().to_string(),
-        "Custom Error: Database error"
-    );
+    assert_eq!(result.unwrap_err().to_string(), "Custom Error: Database error");
 }
 
 
@@ -505,39 +407,25 @@ async fn test_batch_get_revoke_certs_when_db_error_then_error() {
 async fn test_batch_get_all_revoke_certs_total_pages_when_db_error_then_error() {
     // Create mock database, simulate database error
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_query_errors(vec![
-            DbErr::Custom("Database error".to_string())
-        ])
+        .append_query_errors(vec![DbErr::Custom("Database error".to_string())])
         .into_connection();
     let transaction = db.begin().await.unwrap();
 
     let result = CertRepository::batch_get_all_revoke_certs_total_pages(&transaction, 10, "v1").await;
 
     assert!(result.is_err());
-    assert_eq!(
-        result.unwrap_err().to_string(),
-        "Custom Error: Database error"
-    );
+    assert_eq!(result.unwrap_err().to_string(), "Custom Error: Database error");
 }
 
 #[tokio::test]
 async fn test_batch_get_certs_with_data_success() {
     let mock_certs = vec![
-        cert_info::Model {
-            id: "cert1".to_string(),
-            key_version: Some("v2".to_string()),
-            ..Default::default()
-        },
-        cert_info::Model {
-            id: "cert2".to_string(),
-            key_version: Some("v2".to_string()),
-            ..Default::default()
-        },
+        cert_info::Model { id: "cert1".to_string(), key_version: Some("v2".to_string()), ..Default::default() },
+        cert_info::Model { id: "cert2".to_string(), key_version: Some("v2".to_string()), ..Default::default() },
     ];
 
-    let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_query_results(vec![mock_certs.clone()])
-        .into_connection();
+    let db =
+        MockDatabase::new(DatabaseBackend::Postgres).append_query_results(vec![mock_certs.clone()]).into_connection();
     let transaction = db.begin().await.unwrap();
 
     let result = CertRepository::batch_get_certs(&transaction, 0, 2, "v1").await;
@@ -551,21 +439,11 @@ async fn test_batch_get_certs_with_data_success() {
 
 #[tokio::test]
 async fn test_batch_get_certs_pagination_success() {
-    let mock_certs_page1 = vec![
-        cert_info::Model {
-            id: "cert1".to_string(),
-            key_version: Some("v2".to_string()),
-            ..Default::default()
-        },
-    ];
+    let mock_certs_page1 =
+        vec![cert_info::Model { id: "cert1".to_string(), key_version: Some("v2".to_string()), ..Default::default() }];
 
-    let mock_certs_page2 = vec![
-        cert_info::Model {
-            id: "cert2".to_string(),
-            key_version: Some("v2".to_string()),
-            ..Default::default()
-        },
-    ];
+    let mock_certs_page2 =
+        vec![cert_info::Model { id: "cert2".to_string(), key_version: Some("v2".to_string()), ..Default::default() }];
 
     let db = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results(vec![mock_certs_page1.clone(), mock_certs_page2.clone()])
@@ -607,9 +485,7 @@ async fn test_batch_get_certs_when_db_error_then_error() {
 async fn test_batch_get_all_certs_total_pages_when_db_error_then_error() {
     // Create mock database, simulate database error
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_query_errors(vec![
-            DbErr::Custom("Database error".to_string())
-        ])
+        .append_query_errors(vec![DbErr::Custom("Database error".to_string())])
         .into_connection();
     let transaction = db.begin().await.unwrap();
 
@@ -623,39 +499,26 @@ async fn test_batch_get_all_certs_total_pages_when_db_error_then_error() {
 async fn test_get_user_revoke_cert_num_when_db_error_then_error() {
     // Create mock database, return error
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_query_errors(vec![
-            DbErr::Custom("Database error".to_string())
-        ])
+        .append_query_errors(vec![DbErr::Custom("Database error".to_string())])
         .into_connection();
 
     let result = CertRepository::get_user_revoke_cert_num(&db, "user1").await;
     assert!(result.is_err());
-    assert_eq!(
-        result.unwrap_err().to_string(),
-        "Custom Error: Database error"
-    );
+    assert_eq!(result.unwrap_err().to_string(), "Custom Error: Database error");
 }
 
 #[tokio::test]
 async fn test_verify_name_is_duplicated_when_db_error_then_error() {
     // Set up mock database, return error
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_query_errors(vec![
-            DbErr::Custom("Database error".to_string())
-        ])
+        .append_query_errors(vec![DbErr::Custom("Database error".to_string())])
         .into_connection();
 
-    let result = CertRepository::verify_name_is_duplicated(
-        &db,
-        Some("test_cert".to_string()),
-        Some("cert1".to_string())
-    ).await;
+    let result =
+        CertRepository::verify_name_is_duplicated(&db, Some("test_cert".to_string()), Some("cert1".to_string())).await;
 
     assert!(result.is_err());
-    assert_eq!(
-        result.unwrap_err().to_string(),
-        "Custom Error: Database error"
-    );
+    assert_eq!(result.unwrap_err().to_string(), "Custom Error: Database error");
 }
 
 #[tokio::test]
@@ -678,16 +541,12 @@ async fn test_find_all_when_db_error_then_error() {
 async fn test_verify_name_when_db_error_then_error() {
     // Create mock database, return error
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_query_errors(vec![
-            DbErr::Custom("Database error".to_string())
-        ])
+        .append_query_errors(vec![DbErr::Custom("Database error".to_string())])
         .into_connection();
 
-    let result = CertRepository::verify_name_is_duplicated(
-        &db,
-        Some("test_cert".to_string()),
-        Some("existing_id".to_string())
-    ).await;
+    let result =
+        CertRepository::verify_name_is_duplicated(&db, Some("test_cert".to_string()), Some("existing_id".to_string()))
+            .await;
 
     assert!(result.is_err());
     match result {
@@ -698,16 +557,19 @@ async fn test_verify_name_when_db_error_then_error() {
 
 #[tokio::test]
 async fn test_delete_certs_by_id_success() {
+    let config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join(Path::new("server_config.yaml"))
+        .display()
+        .to_string();
+    CONFIG.initialize(config_path).unwrap();
     let db = MockDatabase::new(DatabaseBackend::Postgres)
         .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 2,
-            },
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 1,
-            },
+            MockExecResult { last_insert_id: 0, rows_affected: 2 },
+            MockExecResult { last_insert_id: 0, rows_affected: 1 },
         ])
         .into_connection();
 
@@ -716,8 +578,9 @@ async fn test_delete_certs_by_id_success() {
         DeleteType::Id,
         Some(vec!["cert1".to_string(), "cert2".to_string()]),
         None,
-        "user1"
-    ).await;
+        "user1",
+    )
+        .await;
 
     assert!(result.is_ok());
     assert_eq!(result.unwrap().rows_affected, 2);
@@ -727,24 +590,12 @@ async fn test_delete_certs_by_id_success() {
 async fn test_delete_certs_all_success() {
     let db = MockDatabase::new(DatabaseBackend::Postgres)
         .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 5,
-            },
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 2,
-            },
+            MockExecResult { last_insert_id: 0, rows_affected: 5 },
+            MockExecResult { last_insert_id: 0, rows_affected: 2 },
         ])
         .into_connection();
 
-    let result = CertRepository::delete_certs(
-        &db,
-        DeleteType::All,
-        None,
-        None,
-        "user1"
-    ).await;
+    let result = CertRepository::delete_certs(&db, DeleteType::All, None, None, "user1").await;
 
     assert!(result.is_ok());
     assert_eq!(result.unwrap().rows_affected, 5);
@@ -759,7 +610,7 @@ async fn test_insert_cert_info_success() {
         id: ActiveValue::Set("test_id".to_string()),
         serial_num: ActiveValue::Set(Option::from("123456".to_string())),
         user_id: ActiveValue::Set(Option::from("test_user".to_string())),
-        cert_type: ActiveValue::Set(Option::from("policy".to_string())),
+        cert_type: ActiveValue::Set(Option::from(json!(["policy"]))),
         name: ActiveValue::Set(Option::from("test_cert".to_string())),
         issuer: ActiveValue::Set(Option::from("test_issuer".to_string())),
         owner: ActiveValue::Set(Option::from("test_owner".to_string())),
@@ -777,12 +628,7 @@ async fn test_insert_cert_info_success() {
 
     // Create mock database
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 1,
-                rows_affected: 1,
-            },
-        ])
+        .append_exec_results(vec![MockExecResult { last_insert_id: 1, rows_affected: 1 }])
         .into_connection();
 
     // Execute test
@@ -799,7 +645,7 @@ async fn test_insert_cert_info_when_exceed_limit_then_success() {
         id: ActiveValue::Set("test_id".to_string()),
         serial_num: ActiveValue::Set(Option::from("123456".to_string())),
         user_id: ActiveValue::Set(Option::from("test_user".to_string())),
-        cert_type: ActiveValue::Set(Option::from("policy".to_string())),
+        cert_type: ActiveValue::Set(Option::from(json!(["policy"]))),
         name: ActiveValue::Set(Option::from("test_cert".to_string())),
         issuer: ActiveValue::Set(Option::from("test_issuer".to_string())),
         owner: ActiveValue::Set(Option::from("test_owner".to_string())),
@@ -817,12 +663,7 @@ async fn test_insert_cert_info_when_exceed_limit_then_success() {
 
     // Create mock database, set to not insert any row (exceed limit)
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 0,
-            },
-        ])
+        .append_exec_results(vec![MockExecResult { last_insert_id: 0, rows_affected: 0 }])
         .into_connection();
 
     // Execute test
@@ -839,7 +680,7 @@ async fn test_insert_cert_info_when_db_error_then_error() {
         id: ActiveValue::Set("test_id".to_string()),
         serial_num: ActiveValue::Set(Option::from("123456".to_string())),
         user_id: ActiveValue::Set(Option::from("test_user".to_string())),
-        cert_type: ActiveValue::Set(Option::from("policy".to_string())),
+        cert_type: ActiveValue::Set(Option::from(json!(["policy"]))),
         name: ActiveValue::Set(Option::from("test_cert".to_string())),
         issuer: ActiveValue::Set(Option::from("test_issuer".to_string())),
         owner: ActiveValue::Set(Option::from("test_owner".to_string())),
@@ -857,9 +698,7 @@ async fn test_insert_cert_info_when_db_error_then_error() {
 
     // Create mock database, set to return error
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_errors(vec![
-            DbErr::Custom("Database error".to_string())
-        ])
+        .append_exec_errors(vec![DbErr::Custom("Database error".to_string())])
         .into_connection();
 
     // Execute test
@@ -876,7 +715,7 @@ async fn test_insert_cert_info_duplicate_success() {
         id: ActiveValue::Set("test_id".to_string()),
         serial_num: ActiveValue::Set(Option::from("123456".to_string())),
         user_id: ActiveValue::Set(Option::from("test_user".to_string())),
-        cert_type: ActiveValue::Set(Option::from("policy".to_string())),
+        cert_type: ActiveValue::Set(Option::from(json!(["policy"]))),
         name: ActiveValue::Set(Option::from("test_cert".to_string())),
         issuer: ActiveValue::Set(Option::from("test_issuer".to_string())),
         owner: ActiveValue::Set(Option::from("test_owner".to_string())),
@@ -894,12 +733,7 @@ async fn test_insert_cert_info_duplicate_success() {
 
     // Create mock database, set to not insert any row (duplicate data)
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 0,
-            },
-        ])
+        .append_exec_results(vec![MockExecResult { last_insert_id: 0, rows_affected: 0 }])
         .into_connection();
 
     // Execute test
@@ -914,12 +748,7 @@ async fn test_insert_cert_info_duplicate_success() {
 async fn test_update_revoke_cert_info_success() {
     // Create mock database
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 1,
-            },
-        ])
+        .append_exec_results(vec![MockExecResult { last_insert_id: 0, rows_affected: 1 }])
         .into_connection();
 
     // Start transaction
@@ -952,20 +781,18 @@ async fn test_update_revoke_cert_info_success() {
 #[tokio::test]
 async fn test_update_cert_revoked_valid_code_success() {
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_query_results(vec![vec![
-            CertRevokedListModel {
-                id: "test_id".to_string(),
-                serial_num: Some("123456".to_string()),
-                user_id: Some("test_user".to_string()),
-                cert_revoked_date: Some(1234567890),
-                issuer: Some("test_issuer".to_string()),
-                signature: Some(vec![1, 2, 3]),
-                key_version: Some("v1".to_string()),
-                key_id: Some("test_key_id".to_string()),
-                valid_code: Some(1),
-                cert_revoked_reason: Some("test reason".to_string()),
-            }
-        ]])
+        .append_query_results(vec![vec![CertRevokedListModel {
+            id: "test_id".to_string(),
+            serial_num: Some("123456".to_string()),
+            user_id: Some("test_user".to_string()),
+            cert_revoked_date: Some(1234567890),
+            issuer: Some("test_issuer".to_string()),
+            signature: Some(vec![1, 2, 3]),
+            key_version: Some("v1".to_string()),
+            key_id: Some("test_key_id".to_string()),
+            valid_code: Some(1),
+            cert_revoked_reason: Some("test reason".to_string()),
+        }]])
         .into_connection();
 
     // Start transaction
@@ -1027,35 +854,26 @@ async fn test_update_cert_revoked_valid_code_when_db_error_then_error() {
 #[tokio::test]
 async fn test_find_all_without_ids_with_cert_type_success() {
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 1,
-            },
-        ])
-        .append_query_results(vec![
-            vec![
-                cert_info::Model {
-                    id: "test_id".to_string(),
-                    serial_num: None,
-                    user_id: Option::from("test_user".to_string()),
-                    cert_type: None,
-                    name: Some("test_cert".to_string()),
-                    issuer: None,
-                    owner: None,
-                    cert_info: None,
-                    is_default: None,
-                    description: None,
-                    version: Some(1),
-                    create_time: None,
-                    update_time: None,
-                    signature: None,
-                    key_version: None,
-                    key_id: None,
-                    valid_code: None,
-                }
-            ]
-        ])
+        .append_exec_results(vec![MockExecResult { last_insert_id: 0, rows_affected: 1 }])
+        .append_query_results(vec![vec![cert_info::Model {
+            id: "test_id".to_string(),
+            serial_num: None,
+            user_id: Option::from("test_user".to_string()),
+            cert_type: None,
+            name: Some("test_cert".to_string()),
+            issuer: None,
+            owner: None,
+            cert_info: None,
+            is_default: None,
+            description: None,
+            version: Some(1),
+            create_time: None,
+            update_time: None,
+            signature: None,
+            key_version: None,
+            key_id: None,
+            valid_code: None,
+        }]])
         .into_connection();
 
     let ids = None;
@@ -1074,35 +892,26 @@ async fn test_find_all_without_ids_with_cert_type_success() {
 #[tokio::test]
 async fn test_find_all_without_ids_and_cert_type_success() {
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 1,
-            },
-        ])
-        .append_query_results(vec![
-            vec![
-                cert_info::Model {
-                    id: "test_id".to_string(),
-                    serial_num: None,
-                    user_id: Option::from("test_user".to_string()),
-                    cert_type: None,
-                    name: Some("test_cert".to_string()),
-                    issuer: None,
-                    owner: None,
-                    cert_info: None,
-                    is_default: None,
-                    description: None,
-                    version: Some(1),
-                    create_time: None,
-                    update_time: None,
-                    signature: None,
-                    key_version: None,
-                    key_id: None,
-                    valid_code: None,
-                }
-            ]
-        ])
+        .append_exec_results(vec![MockExecResult { last_insert_id: 0, rows_affected: 1 }])
+        .append_query_results(vec![vec![cert_info::Model {
+            id: "test_id".to_string(),
+            serial_num: None,
+            user_id: Option::from("test_user".to_string()),
+            cert_type: None,
+            name: Some("test_cert".to_string()),
+            issuer: None,
+            owner: None,
+            cert_info: None,
+            is_default: None,
+            description: None,
+            version: Some(1),
+            create_time: None,
+            update_time: None,
+            signature: None,
+            key_version: None,
+            key_id: None,
+            valid_code: None,
+        }]])
         .into_connection();
 
     let ids = None;

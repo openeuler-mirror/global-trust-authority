@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 
-use config::ConfigManager;
 use config::config::{Config, PluginParams};
+use config::ConfigManager;
 use config::AGENT_CONFIG;
 use std::env;
 use std::fs;
@@ -9,7 +9,7 @@ use std::io::Write;
 use tempfile::{NamedTempFile, TempDir};
 
 /// Create a valid configuration YAML string
-/// 
+///
 /// Returns a valid configuration string containing all required fields for testing normal configuration loading
 fn create_valid_config_yaml() -> String {
     r#"
@@ -25,6 +25,7 @@ server:
     enabled: true
     cert_path: "/path/to/cert.pem"
     key_path: "/path/to/key.pem"
+    ca_path: "/path/to/ca.pem"
 plugins:
   - name: "tpm-plugin"
     path: "/usr/lib/plugins/tpm.so"
@@ -32,7 +33,7 @@ plugins:
     enabled: true
     params:
       attester_type: tpm_boot
-      tcti_config: "device:/dev/tpm0"
+      tcti_config: "device"
       log_file_path: "/sys/kernel/security/tpm0/binary_bios_measurements"
   - name: "ima-plugin"
     path: "/usr/lib/plugins/ima.so"
@@ -40,7 +41,7 @@ plugins:
     enabled: true
     params:
       attester_type: tpm_ima
-      tcti_config: "device:/dev/tpm0"
+      tcti_config: "device"
       log_file_path: "/sys/kernel/security/ima/ascii_runtime_measurements"
 schedulers:
   - name: "challenge"
@@ -56,12 +57,13 @@ schedulers:
     cron_expression: "0 */5 * * * *"
 logging:
   level: "info"
-  file: "/home/abcd/log/ra-agent.log"
-"#.to_string()
+  file: "/home/hisec/log/hra-agent.log"
+"#
+    .to_string()
 }
 
 /// Create a temporary configuration file
-/// 
+///
 /// Writes the provided content to a temporary file and returns the file handle for testing different configurations
 fn create_temp_config_file(content: &str) -> NamedTempFile {
     let mut file = NamedTempFile::new().expect("Failed to create temp file");
@@ -79,7 +81,7 @@ fn test_config_manager_single_init() {
     let config_content = create_valid_config_yaml();
     let temp_file = create_temp_config_file(&config_content);
     let config_path = temp_file.path().to_str().unwrap();
-    
+
     // Initialize ConfigManager and get configuration
     let config_manager = ConfigManager::new(config_path).expect("Failed to load config");
     let config = AGENT_CONFIG.get_instance().expect("Failed to get config instance");
@@ -95,12 +97,12 @@ fn test_config_manager_single_init() {
     let tpm_plugin = &config.plugins[0];
     assert_eq!(tpm_plugin.name, "tpm-plugin");
     if let Some(PluginParams::TpmBoot(tpm_config)) = &tpm_plugin.params {
-        assert_eq!(tpm_config.tpm_base.tcti_config, "device:/dev/tpm0");
+        assert_eq!(tpm_config.tpm_base.tcti_config, "device");
         assert_eq!(tpm_config.log_file_path, "/sys/kernel/security/tpm0/binary_bios_measurements");
     } else {
         panic!("Expected TPM plugin params");
     }
-    
+
     // Verify IMA plugin configuration
     let ima_plugin = &config.plugins[1];
     if let Some(PluginParams::TpmIma(ima_config)) = &ima_plugin.params {
@@ -109,16 +111,16 @@ fn test_config_manager_single_init() {
         panic!("Expected IMA plugin params");
     }
 
-     // Serialize config to JSON
-     let json_str = ConfigManager::to_json(&config).expect("Failed to serialize config to JSON");
-     // Optionally: print JSON for debug
-     // println!("Config JSON: {}", json_str);
- 
-     // Parse back to serde_json::Value for field checking
-     let json_value: serde_json::Value = serde_json::from_str(&json_str).expect("JSON parse error");
-     // Check some key fields
-     assert_eq!(json_value["agent"]["listen_port"], 8080);
-     assert_eq!(json_value["server"]["server_url"], "https://attestation-server.example.com");
-     assert_eq!(json_value["plugins"].as_array().unwrap().len(), 2);
-     assert_eq!(json_value["schedulers"].as_array().unwrap().len(), 2);
+    // Serialize config to JSON
+    let json_str = ConfigManager::to_json(&config).expect("Failed to serialize config to JSON");
+    // Optionally: print JSON for debug
+    // println!("Config JSON: {}", json_str);
+
+    // Parse back to serde_json::Value for field checking
+    let json_value: serde_json::Value = serde_json::from_str(&json_str).expect("JSON parse error");
+    // Check some key fields
+    assert_eq!(json_value["agent"]["listen_port"], 8080);
+    assert_eq!(json_value["server"]["server_url"], "https://attestation-server.example.com");
+    assert_eq!(json_value["plugins"].as_array().unwrap().len(), 2);
+    assert_eq!(json_value["schedulers"].as_array().unwrap().len(), 2);
 }

@@ -3,6 +3,7 @@
 use sea_orm::entity::prelude::*;
 use sea_orm::FromQueryResult;
 use serde::Serialize;
+use serde_json::Value;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Default)]
 #[sea_orm(table_name = "t_cert_info")]
@@ -13,8 +14,9 @@ pub struct Model {
     pub serial_num: Option<String>,
     #[sea_orm(column_name = "user_id")]
     pub user_id: Option<String>,
+    #[sea_orm(column_type = Json)]
     #[sea_orm(column_name = "type")]
-    pub cert_type: Option<String>,
+    pub cert_type: Option<Value>,
     #[sea_orm(column_name = "name", unique)]
     pub name: Option<String>,
     #[sea_orm(column_name = "issuer")]

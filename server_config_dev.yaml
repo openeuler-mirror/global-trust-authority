@@ -7,9 +7,12 @@ attestation_service:
   token_management:
     jku: "jku"
     kid: "kid"
-    exist_time: "600000"
+    exist_time: 600000
     iss: "iss"
     eat_profile: "eat_profile"
+    mq_enabled: false
+
+    token_topic: "huawei_token_topic"
   policy:
     export_policy_file:
       - name: "tpm_boot"

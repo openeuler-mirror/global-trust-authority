@@ -1,8 +1,5 @@
-use log::{error, info};
 use serde::Serialize;
-use key_management::api::{CryptoOperations, DefaultCryptoImpl, SignResponse};
 use crate::entities::db_model::rv_db_model::{ActiveModel, Model};
-use crate::error::ref_value_error::RefValueError;
 
 #[derive(Clone, Serialize)]
 pub struct RefValueModel {

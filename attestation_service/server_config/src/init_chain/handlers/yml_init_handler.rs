@@ -3,8 +3,12 @@ use config_manager::types::context::{ServerConfig, CONFIG};
 use env_config_parse::find_file;
 use std::future::Future;
 use std::pin::Pin;
-#[cfg(not(debug_assertions))]
+use std::path::PathBuf;
+
 const CONFIG_FILE_NAME: &str = "server_config.yaml";
+
+#[cfg(feature = "rpm_build")]
+const CONFIG_FILE_NAME_RPM: &str = "/etc/attestation_server/server_config_rpm.yaml";
 
 #[derive(Debug)]
 pub struct ConfigInitHandler {
@@ -19,13 +23,25 @@ impl ConfigInitHandler {
     fn load_config(&self) -> Result<ServerConfig, String> {
         // Actual configuration loading logic
         println!("Loading configuration...");
+        
         #[cfg(not(debug_assertions))]
-        let config_path = find_file(CONFIG_FILE_NAME)?;
-        #[cfg(debug_assertions)]
-        let config_path = find_file("server_config_dev.yaml")?;
+        {
+            #[cfg(feature = "docker_build")]
+            let config_path = find_file(CONFIG_FILE_NAME).map(|path_buf| {
+                path_buf
+            }).expect("file to load configuration");
 
-        CONFIG.initialize(config_path.to_str().ok_or("Invalid server_config path")?)?;
-        Ok(CONFIG.get_instance()?.clone())
+            #[cfg(feature = "rpm_build")]
+            let config_path = std::path::PathBuf::from(CONFIG_FILE_NAME_RPM);
+            CONFIG.initialize(config_path.to_str().ok_or("Invalid server_config path")?)?;
+            Ok(CONFIG.get_instance()?.clone())
+        }
+        #[cfg(debug_assertions)]
+        {
+            let config_path = find_file("server_config_dev.yaml").expect("file to load configuration");
+            CONFIG.initialize(config_path.to_str().ok_or("Invalid server_config path")?)?;
+            Ok(CONFIG.get_instance()?.clone())
+        }
     }
 }
 
@@ -57,8 +73,7 @@ mod tests {
     use config_manager::types::context::CONFIG;
 
     fn write_yaml_config() {
-        let yaml_content: String = format!(
-            r#"---
+        let yaml_content: String = r#"---
 attestation_common:
   yaml_parse_support: "current support yaml parse"
 attestation_service:
@@ -88,8 +103,7 @@ attestation_service:
       path: "/opt/project/target/debug/libtpm_boot_verifier.so"
     - name: "tpm_ima"
       path: "/opt/project/target/debug/libtpm_ima_verifier.so"
-"#
-        );
+"#.to_string();
         let mut file = File::create("server_config.yaml").unwrap();
         let _ = file.write_all(yaml_content.as_bytes());
         let mut file = File::create("server_config_dev.yaml").unwrap();

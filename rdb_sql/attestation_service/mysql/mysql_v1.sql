@@ -36,7 +36,7 @@ create table IF NOT EXISTS t_cert_info
     primary key,
     serial_num  varchar(40)            null comment 'Certificate serial number',
     user_id     varchar(64)            null comment 'User ID',
-    type        varchar(32)            null comment 'Certificate type',
+    type        JSON                   null comment 'Certificate type',
     name        varchar(255)           null comment 'Certificate name',
     issuer      varchar(255)           null comment 'Certificate issuer',
     owner       varchar(255)           null comment 'Certificate owner',
@@ -93,6 +93,6 @@ CREATE TABLE IF NOT EXISTS T_REF_VALUE_DETAIL
     uid                 VARCHAR(40)     NOT NULL    COMMENT 'User ID',
     attester_type       VARCHAR(32)     NOT NULL    COMMENT 'Challenge plugin type',
     file_name           VARCHAR(255)    NOT NULL    COMMENT 'Measurement file name',
-    sha256              VARCHAR(40)     NOT NULL    COMMENT 'Measurement value',
+    sha256              VARCHAR(64)     NOT NULL    COMMENT 'Measurement value',
     ref_value_id        VARCHAR(32)                 COMMENT 'Baseline ID'
 );

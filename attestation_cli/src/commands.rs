@@ -1,6 +1,5 @@
 use clap::Subcommand;
-use serde::Deserialize;
-use crate::entities::{CertType, ContentType, DeleteType, NonceType};
+use crate::entities::{CertType, ContentType, DeleteCertType, DeleteType, NonceType, PolicyDeleteType};
 
 #[derive(Subcommand)]
 pub enum CertificateCommands {
@@ -15,12 +14,12 @@ pub enum CertificateCommands {
         description: Option<String>,
 
         /// Certificate type
-        #[clap(short, long, required = true, value_enum)]
-        cert_type: CertType,
+        #[clap(long, required = true, value_enum, num_args = 1.., value_delimiter = ' ')]
+        cert_type: Vec<CertType>,
 
-        /// Certificate file address
-        #[clap(short, long)]
-        file: Option<String>,
+        /// Certificate content, starting with @ indicates the file path
+        #[clap(long, allow_hyphen_values = true)]
+        content: Option<String>,
 
         /// Revoked certificate file address, cert-type must be crl
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
@@ -43,7 +42,7 @@ pub enum CertificateCommands {
 
         /// Certificate type
         #[clap(short, long, value_enum)]
-        cert_type: Option<CertType>,
+        cert_type: Option<DeleteCertType>,
     },
 
     /// Update certificate information
@@ -61,12 +60,8 @@ pub enum CertificateCommands {
         description: Option<String>,
 
         /// Certificate type
-        #[clap(short, long, value_enum)]
-        cert_type: Option<CertType>,
-
-        /// Certificate file address
-        #[clap(short, long)]
-        file: Option<String>,
+        #[clap(short, long, value_enum, num_args = 1.., value_delimiter = ' ')]
+        cert_type: Option<Vec<CertType>>,
 
         /// Is default certificate
         #[clap(short, long)]
@@ -102,12 +97,12 @@ pub enum PolicyCommands {
         attester_type: Vec<String>,
 
         /// Content type
-        #[clap(short, long, required = true, value_enum)]
+        #[clap(long, required = true, value_enum)]
         content_type: ContentType,
 
-        /// Policy file address
-        #[clap(short, long, required = true)]
-        file: String,
+        /// Policy content, starting with @ indicates the file path
+        #[clap(long, required = true)]
+        content: String,
 
         /// Is default policy, default is' No '
         #[clap(short, long)]
@@ -117,7 +112,7 @@ pub enum PolicyCommands {
     Delete {
         /// Delete type
         #[clap(short, long, required = true, value_enum)]
-        delete_type: DeleteType,
+        delete_type: PolicyDeleteType,
 
         /// Policy id list
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
@@ -146,12 +141,12 @@ pub enum PolicyCommands {
         attester_type: Option<Vec<String>>,
 
         /// Content type
-        #[clap(short, long, required = true, value_enum)]
+        #[clap(long, required = true, value_enum)]
         content_type: Option<ContentType>,
 
-        /// Policy file address
-        #[clap(short, long)]
-        file: Option<String>,
+        /// Policy content, starting with @ indicates the file path
+        #[clap(long)]
+        content: Option<String>,
 
         /// Is default policy, default is' No '
         #[clap(short, long)]
@@ -185,9 +180,9 @@ pub enum BaselineCommands {
         #[clap(short, long, default_value = "tpm_ima")]
         attester_type: String,
 
-        /// Baseline file address
+        /// Baseline content, starting with @ indicates the file path
         #[clap(short, long, required = true)]
-        file: String,
+        content: String,
 
         /// Is default baseline, default is' No '
         #[clap(short, long)]
@@ -225,9 +220,9 @@ pub enum BaselineCommands {
         #[clap(short, long)]
         attester_type: Option<String>,
 
-        /// Baseline file address
+        /// Baseline content, starting with @ indicates the file path
         #[clap(short, long)]
-        file: Option<String>,
+        content: Option<String>,
 
         /// Is default baseline, default is' No '
         #[clap(short, long)]
@@ -267,13 +262,13 @@ pub enum EvidenceCommands {
         #[clap(short, long)]
         user_nonce: Option<String>,
 
-        /// Nonce file address
+        /// Nonce info, starting with @ indicates the file path
         #[clap(short, long)]
-        file: String,
+        content: String,
 
         /// Output file address
-        #[clap(short, long)]
-        out: Option<String>,
+        #[clap(short, long, required = true)]
+        out: String,
 
         /// User data, reserved fields
         #[clap(short, long)]

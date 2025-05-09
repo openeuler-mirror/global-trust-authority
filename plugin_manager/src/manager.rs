@@ -44,6 +44,7 @@ impl<T: PluginBase + ?Sized + 'static, H: HostFunctions> PluginManager<T, H> {
         let entry = PluginEntry {
             _lib: lib,
         };
+        
         plugins.insert(name, (Arc::from(plugin), entry));
     }
     

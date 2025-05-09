@@ -17,7 +17,7 @@ pub struct NonceResponse {
     pub nonce: Option<NonceInfo>,
 }
 
-#[derive(clap::ValueEnum, Clone, Debug, Serialize)]
+#[derive(clap::ValueEnum, Clone, Debug, Serialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 #[clap(rename_all = "lowercase")]
 pub enum CertType {
@@ -36,12 +36,40 @@ pub enum CertType {
     Crl,
 }
 
+#[derive(clap::ValueEnum, Clone, Debug, Serialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+#[clap(rename_all = "lowercase")]
+pub enum DeleteCertType {
+    RefValue,
+
+    Policy,
+
+    #[serde(rename = "tpm_boot")]
+    #[clap(name = "tpm_boot")]
+    TpmBoot,
+
+    #[serde(rename = "tpm_ima")]
+    #[clap(name = "tpm_ima")]
+    TpmIma,
+}
+
 #[derive(clap::ValueEnum, Clone, Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 #[clap(rename_all = "lowercase")]
 pub enum DeleteType {
     Id,
     Type,
+    All,
+}
+
+#[derive(clap::ValueEnum, Clone, Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+#[clap(rename_all = "lowercase")]
+pub enum PolicyDeleteType {
+    Id,
+    #[serde(rename = "attester_type")]
+    #[clap(name = "attester_type")]
+    AttesterType,
     All,
 }
 

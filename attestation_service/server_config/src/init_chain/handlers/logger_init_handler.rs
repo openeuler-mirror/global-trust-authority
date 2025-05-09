@@ -14,7 +14,14 @@ impl LoggerInitHandler {
     }
 
     pub fn init_logger(&self) {
-        common_log::init().expect("Failed to initialize logger");
+        #[cfg(feature = "docker_build")]
+        {
+            common_log::init_docker().expect("failed to init docker logger");
+        }
+        #[cfg(feature = "rpm_build")]
+        {
+            common_log::init_rpm().expect("failed to init rpm logger");
+        }
         info!("Logger initialized");
     }
 }

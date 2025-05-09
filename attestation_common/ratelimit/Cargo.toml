@@ -7,4 +7,5 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
-actix-governor.workspace = true
+actix-web.workspace = true
+governor.workspace = true

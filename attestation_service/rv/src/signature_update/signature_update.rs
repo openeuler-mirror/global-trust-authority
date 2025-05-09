@@ -9,7 +9,7 @@ use key_management::key_manager::error::KeyManagerError;
 use key_management::key_manager::lifecycle::key_observer::observer_init::register::register_observer;
 use key_management::key_manager::lifecycle::key_observer::KeyLifecycleObserver;
 use key_management::key_manager::model::VerifyAndUpdateParam;
-use sea_orm::{ActiveValue, DatabaseTransaction};
+use sea_orm::{DatabaseTransaction};
 use std::{future::Future, pin::Pin, sync::Arc};
 use key_management::api::VerifyAndUpdateResponse;
 
@@ -54,7 +54,7 @@ impl RvSigUpdate {
         tx: &DatabaseTransaction,
         key_version: &str,
     ) -> Result<u64, KeyManagerError> {
-        RvDbRepo::query_ref_value_total_pages_by_key_version(tx, key_version, 100)
+        RvDbRepo::count_pages_by_key_version(tx, key_version, 100)
             .await
             .map_err(|e| {
                 error!("Failed to query ref_value page size: {}", e);
@@ -67,7 +67,7 @@ impl RvSigUpdate {
         page: u64,
         key_version: &str,
     ) -> Result<Vec<Model>, KeyManagerError> {
-        RvDbRepo::query_page_ref_value_by_key_version(tx, page, 100, key_version)
+        RvDbRepo::query_page_by_key_version(tx, page, 100, key_version)
             .await
             .map_err(|e| {
                 error!("Failed to query ref_value by page {}: {}", page, e);
@@ -120,7 +120,7 @@ impl RvSigUpdate {
             .version(model.version + 1)
             .build();
 
-        RvDbRepo::update_rv_main_by_id_and_version(tx, update_model, &model.id, model.version)
+        RvDbRepo::update_by_id_and_version(tx, update_model, &model.id, model.version)
             .await
             .map_err(|e| {
                 error!("Failed to update signature for model {}: {}", model.id, e);
@@ -139,7 +139,7 @@ impl RvSigUpdate {
             .version(model.version + 1)
             .build();
 
-        RvDbRepo::update_rv_main_by_id_and_version(tx, update_model, &model.id, model.version)
+        RvDbRepo::update_by_id_and_version(tx, update_model, &model.id, model.version)
             .await
             .map_err(|e| {
                 error!("Failed to mark model {} as invalid: {}", model.id, e);

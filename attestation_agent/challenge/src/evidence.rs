@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use crate::challenge_error::ChallengeError;
 use crate::challenge::{
-    AttesterInfo, GetEvidenceResponse, Nonce, acquire_tpm_lock, collect_evidences_core, get_node_id, validate_nonce_fields
+    AttesterInfo, GetEvidenceResponse, Nonce, collect_evidences_core, get_node_id, validate_nonce_fields
 };
 
 /// Request structure for evidence collection, including nonce and attester info
@@ -79,9 +79,16 @@ impl EvidenceManager {
         let nonce_value = match nonce_type.as_str() {
             "ignore" => None,
             "user" => {
-                let user_nonce_str = user_nonce.ok_or(ChallengeError::UserNonceNotProvided)?;
+                let user_nonce_str = match user_nonce {
+                    Some(n) => n,
+                    None => {
+                        log::error!("User nonce not provided but nonce_type is 'user'");
+                        return Err(ChallengeError::UserNonceNotProvided);
+                    }
+                };
                 let user_nonce_len = user_nonce_str.as_bytes().len();
                 if user_nonce_len < 64 || user_nonce_len > 1024 {
+                    log::error!("user_nonce length invalid: {} bytes", user_nonce_len);
                     return Err(ChallengeError::NonceInvalid(format!(
                         "user_nonce length must be between 64 and 1024 bytes, got {} bytes",
                         user_nonce_len
@@ -90,11 +97,21 @@ impl EvidenceManager {
                 user_nonce_str.clone().into()
             },
             "default" => {
-                let nonce = nonce.ok_or(ChallengeError::NonceNotProvided)?;
-                validate_nonce_fields(nonce)?;
+                let nonce = match nonce {
+                    Some(n) => n,
+                    None => {
+                        log::error!("Nonce not provided but nonce_type is 'default'");
+                        return Err(ChallengeError::NonceNotProvided);
+                    }
+                };
+                if let Err(e) = validate_nonce_fields(nonce) {
+                    log::error!("Nonce validation failed: {}", e);
+                    return Err(e);
+                }
                 Some(nonce.value.clone())
             },
             _ => {
+                log::error!("Invalid nonce_type: '{}'", nonce_type);
                 return Err(ChallengeError::NonceTypeError(
                     format!("Invalid nonce_type: '{}'. Must be one of: ignore, user, default", nonce_type)
                 ));
@@ -106,8 +123,7 @@ impl EvidenceManager {
 
     /// Main function to collect evidence based on the request
     pub fn get_evidence(request: &GetEvidenceRequest) -> Result<GetEvidenceResponse, ChallengeError> {
-        let _tpm_lock = acquire_tpm_lock()?;
-        log::info!("TPM lock acquired, starting evidence collection");
+        log::info!("Starting evidence collection");
 
         let (nonce_type, nonce_value) = Self::process_nonce(
             request.nonce_type.as_deref(),

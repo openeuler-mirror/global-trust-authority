@@ -1,64 +1,59 @@
 use crate::entities::db_model::rv_db_model::{
-    ActiveModel as RvDbActiveModel, ActiveModelBuilder, Column as RvDbColumn, Entity as RvDbEntity, Model as RvDbModel,
+    ActiveModel, ActiveModelBuilder, Column, Entity, Model,
 };
 use crate::entities::db_model::rv_detail_db_model::{Column as RvDetailDbColumn, Entity as RvDetailDbEntity};
-use crate::entities::inner_model::rv_content::RefValueDetails;
 use crate::entities::inner_model::rv_model::RefValueModel;
 use crate::entities::request_body::rv_update_req_body::RvUpdateReqBody;
 use crate::error::ref_value_error::RefValueError;
+use crate::repositories::repo_ext::RepoExt;
 use crate::repositories::rv_dtl_db_repo::RvDtlDbRepo;
 use crate::utils::utils::Utils;
 use config_manager::types::CONFIG;
 use key_management::api::{CryptoOperations, DefaultCryptoImpl};
 use log::error;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ColumnTrait, DatabaseTransaction, DbErr, PaginatorTrait, QueryOrder, QuerySelect, TransactionTrait};
+use sea_orm::{ColumnTrait, Condition, DatabaseTransaction, DbBackend, DbErr, QueryOrder, QuerySelect, TransactionTrait};
 use sea_orm::{ConnectionTrait, DatabaseConnection, EntityTrait, QueryFilter, Statement};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct RvDbRepo {}
 
+const SELECT_COLUMNS_NEED_VERIFY_SIG: &[Column] = &[
+    Column::Id,
+    Column::Uid,
+    Column::Name,
+    Column::AttesterType,
+    Column::Content,
+    Column::IsDefault,
+    Column::KeyVersion,
+    Column::Signature,
+    Column::Version,
+];
+
+const SELECT_COLUMNS_IN_ALL: &[Column] = &[Column::Id, Column::Name, Column::AttesterType];
+
 impl RvDbRepo {
-    pub async fn add_ref_value(
-        db: &DatabaseConnection,
+    pub async fn add<C>(
+        db: &C,
         rv_model: &RefValueModel,
         rv_limit: u64,
-    ) -> Result<(), RefValueError> {
+    ) -> Result<(), RefValueError>
+    where
+        C: ConnectionTrait,
+    {
         let rv_db_model = rv_model.clone().into();
-        // todo: In exceptional scenarios, the main table may have data while the detail table has no data
-        match Self::add_ref_value_main(db, rv_db_model, rv_limit).await {
-            Ok(_) => {
-                let txn = db.begin().await.map_err(|e| RefValueError::DbError(e.to_string()))?;
-                RvDtlDbRepo::add_ref_value_detail(&txn, &rv_model).await?;
-                txn.commit().await.map_err(|e| RefValueError::DbError(e.to_string()))?;
-                Ok(())
-            },
-            Err(e) => Err(e),
-        }
+        Self::add_rv(db, rv_db_model, rv_limit).await
     }
 
-    pub async fn update_ref_value(
-        db: &DatabaseConnection,
+    pub async fn update<C>(
+        db: &C,
         user_id: &str,
         id: &str,
         update_rv_body: &RvUpdateReqBody,
-    ) -> Result<(i32, String), RefValueError> {
-        let txn = db.begin().await.map_err(|e| RefValueError::DbError(e.to_string()))?;
-        let (is_name_changed, new_name) =
-            update_rv_body.name.as_ref().map(|name| (true, name.to_string())).unwrap_or((false, String::new()));
-
-        let (is_attester_type_changed, new_attester_type) = update_rv_body
-            .attester_type
-            .as_ref()
-            .map(|attester_type| (true, attester_type.to_string()))
-            .unwrap_or((false, String::new()));
-
-        let (is_content_changed, new_content) = update_rv_body
-            .content
-            .as_ref()
-            .map(|content| (true, content.to_string()))
-            .unwrap_or((false, String::new()));
-
+    ) -> Result<(i32, String, String), RefValueError>
+    where
+        C: ConnectionTrait,
+    {
         let rv_update_model = ActiveModelBuilder::new()
             .id(&update_rv_body.id)
             .uid(&user_id)
@@ -71,47 +66,16 @@ impl RvDbRepo {
             .build();
 
         let (version, org_name, org_attester_type) =
-            match Self::update_ref_value_main(&txn, user_id, id, rv_update_model).await {
+            match Self::update_rv(db, user_id, id, rv_update_model).await {
                 Err(e) => return Err(e),
                 Ok(res) => res,
             };
-        if is_attester_type_changed {
-            if let Err(e) = RvDtlDbRepo::update_rv_detail_type_by_rv_id(&txn, user_id, id, &new_attester_type).await {
-                return Err(e);
-            }
-        }
-        if is_content_changed {
-            let mut details = match Utils::parse_rv_detail_from_jwt_content(&new_content) {
-                Ok(details) => details,
-                Err(e) => return Err(e),
-            };
-            details.set_all_ids(id);
-            details.set_uid(user_id);
-            if is_attester_type_changed {
-                details.set_attester_type(&new_attester_type);
-            } else {
-                details.set_attester_type(&org_attester_type);
-            }
-
-            if let Err(e) = RvDetailDbEntity::delete_many()
-                .filter(RvDetailDbColumn::Uid.eq(user_id).and(RvDetailDbColumn::RefValueId.eq(id)))
-                .exec(&txn)
-                .await
-            {
-                return Err(RefValueError::DbError(e.to_string()));
-            };
-
-            if let Err(e) = RvDtlDbRepo::add_ref_value_details(&txn, &details).await {
-                return Err(e);
-            };
-        }
-        txn.commit().await.map_err(|e| RefValueError::DbError(e.to_string()))?;
-        Ok((version, if is_name_changed { new_name } else { org_name }))
+        Ok((version, org_name, org_attester_type))
     }
 
-    pub async fn del_all_ref_value(db: &DatabaseConnection, user_id: &str) -> Result<(), RefValueError> {
+    pub async fn del_all(db: &DatabaseConnection, user_id: &str) -> Result<(), RefValueError> {
         let txn = db.begin().await.map_err(|e| RefValueError::DbError(e.to_string()))?;
-        if let Err(e) = RvDbEntity::delete_many().filter(RvDbColumn::Uid.eq(user_id)).exec(&txn).await {
+        if let Err(e) = Entity::delete_many().filter(Column::Uid.eq(user_id)).exec(&txn).await {
             return Err(RefValueError::DbError(e.to_string()));
         };
         if let Err(e) = RvDetailDbEntity::delete_many().filter(RvDetailDbColumn::Uid.eq(user_id)).exec(&txn).await {
@@ -121,91 +85,92 @@ impl RvDbRepo {
         Ok(())
     }
 
-    pub async fn del_ref_value_by_id(
-        db: &DatabaseConnection,
+    pub async fn del_by_id<C>(
+        conn: &C,
         user_id: &str,
         ids: &Vec<String>,
-    ) -> Result<(), RefValueError> {
-        let txn = db.begin().await.map_err(|e| RefValueError::DbError(e.to_string()))?;
-        if let Err(e) = RvDbEntity::delete_many()
-            .filter(RvDbColumn::Uid.eq(user_id).and(RvDbColumn::Id.is_in(ids.clone())))
-            .exec(&txn)
+    ) -> Result<(), RefValueError>
+    where C: ConnectionTrait
+    {
+        Entity::delete_many()
+            .filter(Column::Uid.eq(user_id).and(Column::Id.is_in(ids.clone())))
+            .exec(conn)
             .await
-        {
-            return Err(RefValueError::DbError(e.to_string()));
-        };
-        if let Err(e) = RvDetailDbEntity::delete_many()
-            .filter(RvDetailDbColumn::Uid.eq(user_id).and(RvDetailDbColumn::RefValueId.is_in(ids.clone())))
-            .exec(&txn)
-            .await
-        {
-            return Err(RefValueError::DbError(e.to_string()));
-        };
-        txn.commit().await.map_err(|e| RefValueError::DbError(e.to_string()))?;
+            .map_err(|e| RefValueError::DbError(e.to_string()))?;
         Ok(())
     }
 
-    pub async fn del_ref_value_by_type(
+    pub async fn del_by_type(
         db: &DatabaseConnection,
         user_id: &str,
         attester_type: &str,
     ) -> Result<(), RefValueError> {
-        let txn = db.begin().await.map_err(|e| RefValueError::DbError(e.to_string()))?;
-        if let Err(e) = RvDbEntity::delete_many()
-            .filter(RvDbColumn::Uid.eq(user_id).and(RvDbColumn::AttesterType.eq(attester_type)))
+        Entity::delete_many()
+            .filter(Column::Uid.eq(user_id).and(Column::AttesterType.eq(attester_type)))
             .exec(db)
-            .await
-        {
-            return Err(RefValueError::DbError(e.to_string()));
-        };
-        if let Err(e) = RvDetailDbEntity::delete_many()
-            .filter(RvDetailDbColumn::Uid.eq(user_id).and(RvDetailDbColumn::AttesterType.eq(attester_type)))
-            .exec(db)
-            .await
-        {
-            return Err(RefValueError::DbError(e.to_string()));
-        };
-        txn.commit().await.map_err(|e| RefValueError::DbError(e.to_string()))?;
+            .await.map_err(|e| RefValueError::DbError(e.to_string()))?;
         Ok(())
     }
 
-    pub async fn query_all_ref_value_ids(
-        db: &DatabaseConnection,
+    pub async fn query_all(
+        conn: &DatabaseConnection,
         user_id: &str,
-    ) -> Result<Vec<RvDbModel>, RefValueError> {
-        let res = RvDbEntity::find()
-            .select_only()
-            .column(RvDbColumn::Id)
-            .column(RvDbColumn::Name)
-            .column(RvDbColumn::AttesterType)
-            .filter(RvDbColumn::Uid.eq(user_id))
-            .order_by_asc(RvDbColumn::CreateTime)
-            .into_model::<RvDbModel>()
-            .all(db)
-            .await
-            .map_err(|e| RefValueError::DbError(e.to_string()))?;
-        Ok(res)
+    ) -> Result<Vec<Model>, RefValueError> {
+        let condition = Condition::all().add(Column::Uid.eq(user_id));
+
+        RepoExt::query_all::<Entity, Column>(
+            conn,
+            // todo need to define a new model here to receive return values
+            vec![],
+            condition,
+            Column::CreateTime,
+        )
+        .await
+        .map_err(|e| RefValueError::DbError(e.to_string()))
     }
 
-    pub async fn query_ref_value_by_ids(
-        db: &DatabaseConnection,
+    pub async fn query_all_by_attester_type(
+        conn: &DatabaseConnection,
+        user_id: &str,
+        attester_type: &str,
+    ) -> Result<Vec<Model>, RefValueError> {
+        let condition =
+            Condition::all().add(Column::AttesterType.eq(attester_type)).add(Column::Uid.eq(user_id));
+
+        RepoExt::query_all::<Entity, Column>(
+            conn,
+            // todo need to define a new model here to receive return values
+            vec![],
+            condition,
+            Column::CreateTime,
+        )
+        .await
+        .map_err(|e| RefValueError::DbError(e.to_string()))
+    }
+
+    pub async fn query_by_ids(
+        conn: &DatabaseConnection,
         user_id: &str,
         ids: &Vec<String>,
     ) -> Result<Vec<RefValueModel>, RefValueError> {
-        let models = RvDbEntity::find()
-            .filter(RvDbColumn::Id.is_in(ids.clone()).and(RvDbColumn::Uid.eq(user_id)))
-            .order_by_asc(RvDbColumn::CreateTime)
-            .into_model::<RvDbModel>()
-            .all(db)
-            .await
-            .map_err(|e| RefValueError::DbError(e.to_string()))?;
+        let condition = Condition::all().add(Column::Id.is_in(ids.clone())).add(Column::Uid.eq(user_id));
+        let models = RepoExt::query_all::<Entity, Column>(
+            conn,
+            // todo need to define a new model here to receive return values
+            vec![],
+            condition,
+            Column::CreateTime,
+        )
+        .await
+        .map_err(|e| RefValueError::DbError(e.to_string()))?;
+
         let is_require_sign = CONFIG.get_instance().unwrap().attestation_service.key_management.is_require_sign;
         if !is_require_sign {
             return Ok(models.into_iter().map(|m| m.into()).collect());
         }
         let mut response: Vec<RefValueModel> = Vec::new();
         for model in models {
-            let mut rv_db_model: RvDbActiveModel = model.into();
+            let mut rv_db_model: ActiveModel = model.into();
             let rv_db_model_clone = rv_db_model.clone();
             let data = Utils::encode_rv_db_model_to_bytes(rv_db_model_clone.clone())?;
             match DefaultCryptoImpl
@@ -222,8 +187,7 @@ impl RvDbRepo {
                     let id = rv_db_model_clone.id.unwrap();
                     let version = rv_db_model_clone.version.unwrap();
                     let update_valid_code_model = ActiveModelBuilder::new().valid_code(1).build();
-                    if let Err(e) =
-                        Self::update_rv_main_by_id_and_version(db, update_valid_code_model, &id, version).await
+                    if let Err(e) = Self::update_by_id_and_version(conn, update_valid_code_model, &id, version).await
                     {
                         error!("Failed to update invalid code by query: {}", e);
                     };
@@ -239,113 +203,81 @@ impl RvDbRepo {
         Ok(response)
     }
 
-    pub async fn query_page_ref_value_by_attester_type_and_uid(
+    pub async fn count_pages_by_key_version(
+        db: &DatabaseTransaction,
+        key_version: &str,
+        page_size: u64,
+    ) -> Result<u64, DbErr> {
+        let condition = Condition::all().add(Column::KeyVersion.ne(key_version));
+
+        RepoExt::count_pages_with_condition::<Entity, Column>(db, page_size, condition, Column::Id).await
+    }
+
+    pub async fn count_pages_by_attester_type_and_uid(
+        db: &DatabaseConnection,
+        attester_type: &str,
+        uid: &str,
+        page_size: u64,
+    ) -> Result<u64, DbErr> {
+        let condition = Condition::all().add(Column::AttesterType.ne(attester_type)).add(Column::Uid.eq(uid));
+
+        RepoExt::count_pages_with_condition::<Entity, Column>(db, page_size, condition, Column::Id).await
+    }
+
+    pub async fn query_page_by_attester_type_and_uid(
         conn: &DatabaseConnection,
         attester_type: &str,
         uid: &str,
         page_num: u64,
         page_size: u64,
-    ) -> Result<Vec<RvDbModel>, RefValueError> {
-        RvDbEntity::find()
-            .select_only()
-            .column(RvDbColumn::Id)
-            .column(RvDbColumn::Uid)
-            .column(RvDbColumn::Name)
-            .column(RvDbColumn::AttesterType)
-            .column(RvDbColumn::Content)
-            .column(RvDbColumn::IsDefault)
-            .column(RvDbColumn::KeyVersion)
-            .column(RvDbColumn::Signature)
-            .column(RvDbColumn::Version)
-            .filter(RvDbColumn::AttesterType.ne(attester_type).and(RvDbColumn::Uid.eq(uid)))
-            .order_by_asc(RvDbColumn::Id)
-            .paginate(conn, page_size)
-            .fetch_page(page_num)
-            .await.map_err(|e| RefValueError::DbError(e.to_string()))
+    ) -> Result<Vec<Model>, RefValueError> {
+        let condition = Condition::all().add(Column::AttesterType.eq(attester_type)).add(Column::Uid.eq(uid));
+
+        RepoExt::query_with_pagination::<Entity, Column>(
+            conn,
+            page_num,
+            page_size,
+            // SELECT_COLUMNS_NEED_VERIFY_SIG.to_vec(),
+            vec![],
+            condition,
+            Column::Id,
+        )
+        .await
+        .map_err(|e| RefValueError::DbError(e.to_string()))
     }
 
-    pub async fn query_ref_value_ids_by_attester_type(
-        db: &DatabaseConnection,
-        user_id: &str,
-        attester_type: &str,
-    ) -> Result<Vec<RvDbModel>, RefValueError> {
-        let res = RvDbEntity::find()
-            .select_only()
-            .column(RvDbColumn::Id)
-            .column(RvDbColumn::Name)
-            .column(RvDbColumn::AttesterType)
-            .filter(RvDbColumn::AttesterType.eq(attester_type).and(RvDbColumn::Uid.eq(user_id)))
-            .order_by_asc(RvDbColumn::CreateTime)
-            .into_model::<RvDbModel>()
-            .all(db)
-            .await
-            .map_err(|e| RefValueError::DbError(e.to_string()))?;
-        Ok(res)
-    }
-
-    pub async fn query_ref_value_total_pages_by_key_version(
-        db: &DatabaseTransaction,
-        key_version: &str,
-        page_size: u64,
-    ) -> Result<u64, DbErr> {
-        RvDbEntity::find()
-            .filter(RvDbColumn::KeyVersion.ne(key_version))
-            .order_by_asc(RvDbColumn::Id)
-            .paginate(db, page_size)
-            .num_pages()
-            .await
-    }
-
-    pub async fn query_rv_total_pages_by_attester_type_and_uid(
-        db: &DatabaseConnection,
-        attester_type: &str,
-        uid: &str,
-        page_size: u64,
-    ) -> Result<u64, DbErr> {
-        RvDbEntity::find()
-            .filter(RvDbColumn::AttesterType.ne(attester_type).and(RvDbColumn::Uid.eq(uid)))
-            .order_by_asc(RvDbColumn::Id)
-            .paginate(db, page_size)
-            .num_pages()
-            .await
-    }
-
-    pub async fn query_page_ref_value_by_key_version(
+    pub async fn query_page_by_key_version(
         txn: &DatabaseTransaction,
         page_num: u64,
         page_size: u64,
         key_version: &str,
-    ) -> Result<Vec<RvDbModel>, DbErr> {
-        RvDbEntity::find()
-            .select_only()
-            .column(RvDbColumn::Id)
-            .column(RvDbColumn::Uid)
-            .column(RvDbColumn::Name)
-            .column(RvDbColumn::AttesterType)
-            .column(RvDbColumn::Content)
-            .column(RvDbColumn::IsDefault)
-            .column(RvDbColumn::KeyVersion)
-            .column(RvDbColumn::Signature)
-            .column(RvDbColumn::Version)
-            .filter(RvDbColumn::KeyVersion.ne(key_version))
-            .order_by_asc(RvDbColumn::Id)
-            .paginate(txn, page_size)
-            .fetch_page(page_num)
-            .await
+    ) -> Result<Vec<Model>, DbErr> {
+        let condition = Condition::all().add(Column::KeyVersion.ne(key_version));
+
+        RepoExt::query_with_pagination::<Entity, Column>(
+            txn,
+            page_num,
+            page_size,
+            // SELECT_COLUMNS_NEED_VERIFY_SIG.to_vec(),
+            vec![],
+            condition,
+            Column::Id,
+        )
+        .await
     }
 
-    pub async fn update_rv_main_by_id_and_version<C>(
+    pub async fn update_by_id_and_version<C>(
         conn: &C,
-        model: RvDbActiveModel,
+        model: ActiveModel,
         id: &str,
         cur_version: i32,
     ) -> Result<(), RefValueError>
     where
         C: ConnectionTrait,
     {
-        let affected = RvDbEntity::update_many()
+        let affected = Entity::update_many()
             .set(model)
-            .filter(RvDbColumn::Id.eq(id).and(RvDbColumn::Version.eq(cur_version)))
+            .filter(Column::Id.eq(id).and(Column::Version.eq(cur_version)))
             .exec(conn)
             .await
             .map_err(|e| RefValueError::DbError(e.to_string()))?
@@ -359,11 +291,13 @@ impl RvDbRepo {
 }
 
 impl RvDbRepo {
-    async fn add_ref_value_main(
-        db: &DatabaseConnection,
-        rv_info: RvDbActiveModel,
+    async fn add_rv<C>(
+        db: &C,
+        rv_info: ActiveModel,
         rv_limit: u64,
-    ) -> Result<(), RefValueError> {
+    ) -> Result<(), RefValueError>
+    where C: ConnectionTrait
+    {
         let sql = r#"
             INSERT INTO T_REF_VALUE (
                 id, name, uid, description, attester_type, content,
@@ -417,15 +351,17 @@ impl RvDbRepo {
         }
     }
 
-    async fn update_ref_value_main(
-        db: &DatabaseTransaction,
+    async fn update_rv<C>(
+        conn: &C,
         user_id: &str,
         id: &str,
-        mut db_model: RvDbActiveModel,
-    ) -> Result<(i32, String, String), RefValueError> {
-        let result = db
+        mut db_model: ActiveModel,
+    ) -> Result<(i32, String, String), RefValueError>
+    where C: ConnectionTrait
+    {
+        let result = conn
             .query_one(Statement::from_sql_and_values(
-                db.get_database_backend(),
+                conn.get_database_backend(),
                 "SELECT version, name, attester_type, is_default, content FROM T_REF_VALUE WHERE id = ? and uid = ?",
                 [id.into(), user_id.into()],
             ))
@@ -460,7 +396,7 @@ impl RvDbRepo {
             db_model.set_signature(Set(signature));
             db_model.set_key_version(Set(key_version));
         }
-        Self::update_rv_main_by_id_and_version(db, db_model, id, version).await?;
+        Self::update_by_id_and_version(conn, db_model, id, version).await?;
         Ok((version, org_name, org_attester_type))
     }
 }

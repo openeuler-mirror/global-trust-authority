@@ -11,7 +11,7 @@ fn mock_query_configuration(_key: String) -> Option<String> {
 fn get_test_host_functions() -> ServiceHostFunctions {
     ServiceHostFunctions::new(
         Box::new(|_user_id, _node_id, _cert_chain| Box::pin(async { true })),
-        Box::new(|_hashes, _attester_type, _user_id| Box::pin(async { Vec::new() })),
+        Box::new(|_hashes, _attester_type, _user_id| Box::pin(async { Ok(Vec::new()) })),
         mock_query_configuration
     )
 }

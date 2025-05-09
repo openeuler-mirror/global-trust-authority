@@ -4,6 +4,8 @@ use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use tpm_common_verifier::PcrValues;
 use plugin_manager::{PluginError, ServiceHostFunctions};
 use std::str::{self, FromStr};
+use std::fs::File;
+use std::io::{Write, Read};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImaLogEntry {
@@ -85,40 +87,83 @@ impl ImaLog {
     }
 
     pub async fn verify(&mut self, pcr_values: &mut PcrValues, service_host_functions: &ServiceHostFunctions, user_id: &str) -> Result<bool, PluginError> {
-        for log in &mut self.logs {
-            // Find the PCR value with the matching index
-            let pcr_index = log.pcr_index;
-            let pcr_value = pcr_values.pcr_values.iter()
-                .find(|pcr| pcr.pcr_index == pcr_index)
-                .ok_or_else(|| PluginError::InputError(format!("PCR index {} not found in PCR values", pcr_index)))?;
-            
-            // Create a vector with a single file hash for the replay function
-            let file_hashes = vec![log.file_hash.clone()];
-            
-            let replay_value = PcrValues::replay(
-                &pcr_values.hash_alg,
-                &pcr_value.pcr_value,
-                &file_hashes,
-            )?;
-            log.ref_value_matched = Some(pcr_value.pcr_value == replay_value);
-        }
+        // First, replay using template_hash values to update PCR replay values
+        self.replay_pcr_values(pcr_values)?;
         
-        // Extract file hashes from logs
-        let file_hashes: Vec<String> = self.logs.iter().map(|log| log.file_hash.clone()).collect();
+        // Check if PCR values match replay values and update is_matched fields
+        let pcr_match_result = pcr_values.check_is_matched()?;
         
-        // Call the get_unmatched_measurements function pointer
-        let unmatched_hashes: std::collections::HashSet<String> = (service_host_functions
-            .get_unmatched_measurements)(&file_hashes, "tpm_ima", user_id).await
-            .into_iter()
-            .collect();
+        // Extract file hashes from logs, skipping 'boot_aggregate' entries
+let file_hashes: Vec<String> = self.logs.iter()
+    .filter(|log| log.file_path != "boot_aggregate" && !log.template_hash.chars().all(|c| c == '0'))
+    .map(|log| log.file_hash.clone())
+    .collect();
+        
+        // Call the get_unmatched_measurements function pointer to check reference values
+        let unmatched_hashes: std::collections::HashSet<String> = match (service_host_functions
+            .get_unmatched_measurements)(&file_hashes, "tpm_ima", user_id).await {
+                Ok(values) => values.into_iter().collect(),
+                Err(err) => return Err(PluginError::InternalError(format!("Failed to get unmatched measurements: {}", err))),
+            };
             
+        // Update ref_value_matched in logs based on unmatched hashes
         for log in &mut self.logs {
             log.ref_value_matched = Some(!unmatched_hashes.contains(&log.file_hash));
         }
-        Ok(true)
+        
+        Ok(pcr_match_result)
     }
 
     pub fn to_json_value(&self) -> Result<Value, PluginError> {
         serde_json::to_value(self).map_err(|e| PluginError::InternalError(e.to_string()))
+    }
+
+    /// Replay PCR values using template_hash values from IMA logs
+    ///
+    /// This function replays the PCR values by extending them with template_hash values
+    /// from the IMA logs, updating the replay_value field in each PCR entry.
+    ///
+    /// # Parameters
+    /// * `pcr_values` - PCR values to update
+    ///
+    /// # Returns
+    /// * `Result<(), PluginError>` - Success or error
+    pub fn replay_pcr_values(&self, pcr_values: &mut PcrValues) -> Result<(), PluginError> {
+        // First, check if there are any logs to process
+        if self.logs.is_empty() {
+            return Ok(());
+        }
+        // Get the PCR index from the first log (all logs should have the same PCR index for IMA)
+        let pcr_index = self.logs[0].pcr_index;
+
+        // Get the digest size based on the hash algorithm
+        let digest_size = match pcr_values.hash_alg.as_str() {
+            "sha1" => 20,
+            "sha256" => 32,
+            "sha384" => 48,
+            "sha512" => 64,
+            _ => return Err(PluginError::InputError("Unsupported hash algorithm".to_string())),
+        };
+        
+        // Create the initial PCR value (all zeros)
+        let initial_value = vec![0u8; digest_size].into_iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        
+        // Collect all template hashes from the logs
+        let template_hashes: Vec<String> = self.logs.iter()
+            .map(|log| log.template_hash.clone())
+            .collect();
+        
+        // Calculate the replay value by extending with all template hashes at once
+        let replay_value = PcrValues::replay_with_target(
+            &pcr_values.hash_alg,
+            &initial_value,
+            &pcr_values.get_pcr_value(pcr_index).unwrap(),
+            &template_hashes,
+        )?;
+        
+        // Update the replay value in the PCR values
+        pcr_values.update_replay_value(pcr_index, replay_value);
+        
+        Ok(())
     }
 }

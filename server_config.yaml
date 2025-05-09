@@ -1,13 +1,15 @@
 attestation_service:
   key_management:
-    vault_get_key_url: "http://attestation_mock:8082/v1/vault/get_signing_keys"
+    vault_get_key_url: "https://10.10.0.180:8082/v1/vault/get_signing_keys"
     is_require_sign: true
   token_management:
     jku: "jku"
     kid: "kid"
-    exist_time: "600000"
+    exist_time: 600000
     iss: "iss"
     eat_profile: "eat_profile"
+    mq_enabled: false
+    token_topic: "huawei_token_topic"
   policy:
     export_policy_file:
       - name: "tpm_boot"

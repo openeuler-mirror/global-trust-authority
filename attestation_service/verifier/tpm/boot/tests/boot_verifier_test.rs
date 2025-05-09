@@ -12,7 +12,7 @@ use utils::{read_file_as_base64, corrupt_base64_data};
 fn create_default_host_functions() -> ServiceHostFunctions {
     ServiceHostFunctions {
         validate_cert_chain: Box::new(|_, _, _| Box::pin(async { true })),
-        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Vec::new() })),
+        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Ok(Vec::new()) })),
         query_configuration: |_key| None,
     }
 }
@@ -21,7 +21,7 @@ fn create_default_host_functions() -> ServiceHostFunctions {
 fn create_host_functions_with_cert_validation(validation_result: bool) -> ServiceHostFunctions {
     ServiceHostFunctions {
         validate_cert_chain: Box::new(move |_, _, _| Box::pin(async move { validation_result })),
-        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Vec::new() })),
+        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Ok(Vec::new()) })),
         query_configuration: |_key| None,
     }
 }

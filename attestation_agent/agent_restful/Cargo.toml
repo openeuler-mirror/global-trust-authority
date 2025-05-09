@@ -21,8 +21,9 @@ chrono.workspace = true
 log.workspace = true
 openssl.workspace = true
 env_logger.workspace = true
-actix-governor.workspace = true
 validator.workspace = true
+governor.workspace = true
+ratelimit.workspace = true
 
 [dev-dependencies]
 tempfile = "3.5.0"

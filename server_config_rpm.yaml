@@ -1,0 +1,32 @@
+attestation_service:
+  key_management:
+    vault_get_key_url: "https://10.10.0.180:8082/v1/vault/get_signing_keys"
+    is_require_sign: true
+  token_management:
+    jku: "jku"
+    kid: "kid"
+    exist_time: 600000
+    iss: "iss"
+    eat_profile: "eat_profile"
+    mq_enabled: false
+    token_topic: "huawei_token_topic"
+  policy:
+    export_policy_file:
+      - name: "tpm_boot"
+        path: "/var/test_docker/app/export_policy/tpm_boot"
+      - name: "tpm_ima"
+        path: "/var/test_docker/app/export_policy/tpm_ima"
+    is_verify_policy_signature: false
+    single_user_policy_limit: 30
+    policy_content_size_limit: 500
+    query_user_policy_limit: 10
+  cert:
+    single_user_cert_limit: 10
+  nonce:
+    nonce_valid_period: 120
+    nonce_bytes: 64
+  plugins:
+    - name: "tpm_boot"
+      path: "/usr/lib64/libtpm_boot_verifier.so"
+    - name: "tpm_ima"
+      path: "/usr/lib64/libtpm_ima_verifier.so"

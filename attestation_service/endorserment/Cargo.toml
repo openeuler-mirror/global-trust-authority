@@ -21,9 +21,9 @@ ctor.workspace = true
 futures.workspace = true
 hex.workspace = true
 validator.workspace = true
-
 env_config_parse.workspace = true
 rdb.workspace = true
 common_log.workspace = true
 mockall.workspace = true
 tokio.workspace = true
+config_manager.workspace = true

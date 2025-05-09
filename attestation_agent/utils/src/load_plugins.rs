@@ -11,7 +11,7 @@ use config::{
     ConfigManager,
     AGENT_CONFIG
 };
-use agent_utils::AgentError;
+use crate::AgentError;
 
 /// Configuration query function for plugin manager
 /// This function will be dynamically called by the plugin manager
@@ -46,7 +46,7 @@ pub fn query_configuration(plugin_name: String) -> Option<String> {
 
 /// Load and initialize plugins based on configuration
 /// Iterates all plugins in config and loads them into the plugin manager
-pub(crate) fn load_plugins(config: &Config) -> Result<(), AgentError> {
+pub fn load_plugins(config: &Config) -> Result<(), AgentError> {
     // Get AgentPlugin manager instance
     let plugin_manager = PluginManager::<dyn AgentPlugin, AgentHostFunctions>::get_instance();
 

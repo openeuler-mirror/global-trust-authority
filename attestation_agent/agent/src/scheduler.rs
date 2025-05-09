@@ -1,12 +1,11 @@
 use agent_utils::AgentError;
+use chrono::Local;
 use chrono::Utc;
-use cron::Schedule;
 use log::{debug, error, info, warn};
 use rand::Rng;
 use std::future::Future;
 use std::ops::RangeInclusive;
 use std::pin::Pin;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::select;
@@ -49,8 +48,8 @@ impl SchedulerBuilders {
 pub struct SchedulerConfig {
     /// Task name (used for logging)
     pub name: String,
-    /// Cron expression for task scheduling
-    pub cron_expr: String,
+    /// Time interval in seconds for the task to run
+    pub intervals: u64,
     /// Delay range before the first execution (min..=max)
     pub initial_delay_range: RangeInclusive<Duration>,
     /// Whether retry is enabled for failed executions
@@ -61,18 +60,21 @@ pub struct SchedulerConfig {
     pub retry_delay_range: RangeInclusive<Duration>,
     /// Maximum queue size (must be at least 1)
     pub max_queue_size: usize,
+    /// Whether enable scheduling based on intervals
+    pub enabled: bool,
 }
 
 impl Default for SchedulerConfig {
     fn default() -> Self {
         Self {
             name: "unnamed_task".to_string(),
-            cron_expr: "".to_string(), // Default is empty string
             initial_delay_range: Duration::from_secs(0)..=Duration::from_secs(0), // Default no delay
             retry_enabled: false,
             retry_max_attempts: 1,
             retry_delay_range: Duration::from_secs(0)..=Duration::from_secs(0), // Default no delay
             max_queue_size: 3,                                                  // Default queue size limit of 3
+            enabled: true,
+            intervals: 0,
         }
     }
 }
@@ -191,42 +193,20 @@ impl SchedulerConfig {
         Ok(self)
     }
 
-    /// Sets a cron expression for task execution.
+    /// Sets or updates the interval time of the instance.
+    ///
+    /// This method uses a fluent interface (method chaining) to allow setting the interval time
+    /// when creating or configuring an instance. It is mainly used to configure the instance
+    /// to perform certain operations at specified time intervals.
     ///
     /// # Arguments
-    ///
-    /// * `cron_expr` - Cron expression string
+    /// - `time`: A 64-bit unsigned integer representing the interval time. The unit is second.
     ///
     /// # Returns
-    ///
-    /// Result containing Self for method chaining, or an error if the cron expression is invalid
-    pub fn cron(mut self, cron_expr: &str) -> Result<Self, AgentError> {
-        let standard_expr = match cron_expr.split_whitespace().count() {
-            5 => format!("0 {}", cron_expr), // min hour day month weekday -> sec min hour day month weekday
-            6 => cron_expr.to_string(),      // sec min hour day month weekday
-            7 => cron_expr.to_string(),      // sec min hour day month weekday year
-            n => {
-                return Err(AgentError::ConfigError(format!(
-                    "Invalid cron expression '{}': expected 5-7 fields, got {}.\n\
-                     Format: (5) min hour day month weekday\n\
-                     Format: (6) sec min hour day month weekday\n\
-                     Format: (7) sec min hour day month weekday year",
-                    cron_expr, n
-                )));
-            },
-        };
-
-        // Use Schedule::from_str to parse, it handles all valid formats
-        match Schedule::from_str(&standard_expr) {
-            Ok(_schedule) => {
-                self.cron_expr = standard_expr;
-                Ok(self)
-            },
-            Err(e) => {
-                error!("Failed to parse cron expression '{}': {}", cron_expr, e);
-                Err(AgentError::ConfigError(format!("Invalid cron expression '{}': {}", cron_expr, e)))
-            },
-        }
+    /// Returns the instance itself after configuration, allowing further method chaining.
+    pub fn intervals(mut self, time: u64) -> Self {
+        self.intervals = time;
+        self
     }
 
     /// Set the maximum queue size for tasks
@@ -258,6 +238,20 @@ impl SchedulerConfig {
     /// Self for method chaining
     pub fn max_retries(mut self, max: usize) -> Self {
         self.retry_max_attempts = max;
+        self
+    }
+
+    /// Enables or disables scheduled task
+    ///
+    /// # Arguments
+    ///
+    /// * `enabled` - Whether to enable or disable scheduled task
+    ///
+    /// # Returns
+    ///
+    /// Self for method chaining
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
         self
     }
 }
@@ -350,7 +344,6 @@ impl SingleTaskScheduler {
     /// This function will return an error if:
     /// - No task has been set
     /// - The scheduler is already running
-    /// - No valid cron_expr is set
     async fn start(&self) -> Result<(), AgentError> {
         self.validate_scheduler().await?;
 
@@ -373,7 +366,12 @@ impl SingleTaskScheduler {
                 return;
             }
 
-            Self::handle_cron_execution(task, config, state, rx, queue_size).await;
+            if config.enabled {
+                Self::handle_cron_execution(task, config, state, rx, queue_size).await;
+            } else {
+                Self::finish_execution(&state, &config.name).await;
+                info!("The {} task is not scheduled to run periodically", config.name);
+            }
         });
 
         Ok(())
@@ -382,14 +380,6 @@ impl SingleTaskScheduler {
     async fn validate_scheduler(&self) -> Result<(), AgentError> {
         if self.task.is_none() {
             return Err(AgentError::ConfigError("No task set".to_string()));
-        }
-
-        if self.config.cron_expr.is_empty() {
-            return Err(AgentError::ConfigError("Cron expression must be set".to_string()));
-        }
-
-        if let Err(e) = Schedule::from_str(&self.config.cron_expr) {
-            return Err(AgentError::ConfigError(format!("Invalid cron expression: {}", e)));
         }
 
         let state = self.state.lock().await;
@@ -528,7 +518,7 @@ impl SingleTaskScheduler {
         rx: Arc<Mutex<mpsc::Receiver<()>>>,
         queue_size: Arc<Mutex<usize>>,
     ) {
-        info!("Starting scheduled execution of task '{}' with cron expression '{}'", config.name, config.cron_expr);
+        info!("Starting scheduled execution of task '{}' with intervals '{}' seconds", config.name, config.intervals);
 
         while !Self::should_stop(&state).await {
             match Self::wait_and_execute(&task, &config, &rx, &queue_size).await {
@@ -581,39 +571,10 @@ impl SingleTaskScheduler {
         config: &SchedulerConfig,
         rx: &Arc<Mutex<mpsc::Receiver<()>>>,
     ) -> Result<WaitResult, AgentError> {
-        let now = Utc::now();
-
-        match Self::get_next_execution_time(config, now) {
-            Ok((next, wait_duration)) => {
-                debug!("Calculated next execution time for task '{}': {}", config.name, next);
-                Self::wait_with_cancellation(wait_duration, rx).await
-            },
-            Err(e) => {
-                error!("Failed to calculate next execution time for task '{}': {}", config.name, e);
-                Err(e)
-            },
-        }
-    }
-
-    fn get_next_execution_time(
-        config: &SchedulerConfig,
-        now: chrono::DateTime<Utc>,
-    ) -> Result<(chrono::DateTime<Utc>, Duration), AgentError> {
-        let schedule = match Schedule::from_str(&config.cron_expr) {
-            Ok(s) => s,
-            Err(e) => return Err(AgentError::ConfigError(format!("Invalid cron expression: {}", e))),
-        };
-
-        if let Some(next) = schedule.after(&now).next() {
-            if next > now {
-                if let Ok(wait_duration) = (next - now).to_std() {
-                    return Ok((next, wait_duration));
-                }
-            }
-            return Ok((now, Duration::from_secs(0)));
-        }
-
-        Err(AgentError::ExecutionError("Could not determine next execution time".to_string()))
+        let interval = Duration::from_secs(config.intervals);
+        let next = Utc::now() + interval;
+        info!("The next trigger time for the scheduled task is: {}", next.with_timezone(&Local));
+        Self::wait_with_cancellation(interval, rx).await
     }
 
     async fn wait_with_cancellation(
@@ -775,7 +736,7 @@ mod tests {
     async fn test_default_scheduler_config() {
         let config = SchedulerConfig::default();
         assert_eq!(config.name, "unnamed_task");
-        assert_eq!(config.cron_expr, "");
+        assert_eq!(config.intervals, 0);
         assert_eq!(*config.initial_delay_range.start(), Duration::from_secs(0));
         assert_eq!(*config.initial_delay_range.end(), Duration::from_secs(0));
         assert!(!config.retry_enabled);
@@ -783,6 +744,7 @@ mod tests {
         assert_eq!(*config.retry_delay_range.start(), Duration::from_secs(0));
         assert_eq!(*config.retry_delay_range.end(), Duration::from_secs(0));
         assert_eq!(config.max_queue_size, 3);
+        asserq_eq!(config.enabled, true);
     }
 
     #[tokio::test]
@@ -799,13 +761,13 @@ mod tests {
             .max_retries(3)
             .max_queue_size(5)
             .unwrap()
-            .cron("0 0 * * * *")
-            .unwrap();
+            .intervals(10)
+            .enabled(false);
 
         let scheduler = create_scheduler(config.clone(), || async { Ok(()) });
 
         assert_eq!(scheduler.config.name, "test_builder");
-        assert_eq!(scheduler.config.cron_expr, "0 0 * * * *");
+        assert_eq!(scheduler.config.intervals, 10);
         assert_eq!(*scheduler.config.initial_delay_range.start(), Duration::from_secs(2));
         assert_eq!(*scheduler.config.initial_delay_range.end(), Duration::from_secs(5));
         assert!(scheduler.config.retry_enabled);
@@ -813,48 +775,7 @@ mod tests {
         assert_eq!(*scheduler.config.retry_delay_range.start(), Duration::from_secs(1));
         assert_eq!(*scheduler.config.retry_delay_range.end(), Duration::from_secs(3));
         assert_eq!(scheduler.config.max_queue_size, 5);
-    }
-
-    #[tokio::test]
-    async fn test_invalid_cron_expressions() {
-        // Test case 1: Invalid format during config creation
-        let test_cases = vec![
-            ("* *", "Incomplete cron expression"),
-            ("* * * * invalid", "Invalid day of week"),
-            ("", "Empty cron expression"),
-            ("invalid * * * *", "Invalid minute field"),
-            ("* * * * * invalid", "Invalid seconds field"),
-            ("*/70 * * * *", "Invalid minute range"),
-        ];
-
-        // Test invalid expressions during config creation
-        for (expr, desc) in &test_cases {
-            let result = SchedulerConfig::new().cron(expr);
-            assert!(result.is_err(), "Expected error for invalid cron expression '{}' ({}), but got Ok", expr, desc);
-        }
-
-        // Test invalid expressions during scheduler execution
-        for (expr, desc) in &test_cases {
-            // Create scheduler with default config
-            let mut scheduler = create_scheduler(SchedulerConfig::new(), || async { Ok(()) });
-
-            // Set invalid cron expression
-            scheduler.config.cron_expr = expr.to_string();
-
-            // Attempt to start scheduler
-            let result = scheduler.start().await;
-            assert!(
-                result.is_err(),
-                "Expected scheduler start to fail with invalid cron expression '{}' ({}), but got Ok",
-                expr,
-                desc
-            );
-        }
-
-        // Test empty cron in config with retry enabled
-        let scheduler = create_scheduler(SchedulerConfig::new().retry_enabled(true), || async { Ok(()) });
-        let result = scheduler.start().await;
-        assert!(result.is_err(), "Expected error when starting scheduler with empty cron expression and retry enabled");
+        asserq_eq!(scheduler.config.enabled, false);
     }
 
     #[tokio::test]
@@ -1041,52 +962,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_next_execution_time() {
-        let now = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
-
-        let config = SchedulerConfig {
-            name: "hourly_test".to_string(),
-            cron_expr: "0 0 * * * *".to_string(), // Every hour at minute 0
-            ..Default::default()
-        };
-
-        let (next, duration) = SingleTaskScheduler::get_next_execution_time(&config, now).unwrap();
-        assert!(next > now, "Next execution time should be in the future");
-
-        let hour_secs = 60 * 60;
-        assert!(
-            duration.as_secs() >= hour_secs - 5 && duration.as_secs() <= hour_secs + 5,
-            "Duration should be approximately 1 hour, got {}s",
-            duration.as_secs()
-        );
-
-        // Test non-standard format (5-field expression)
-        let config2 = SchedulerConfig {
-            name: "five_field_test".to_string(),
-            cron_expr: "0 0 0 * * *".to_string(), // Midnight every day (6-field format)
-            ..Default::default()
-        };
-
-        let (next, duration) = SingleTaskScheduler::get_next_execution_time(&config2, now).unwrap();
-        assert!(next > now, "Next execution time should be in the future");
-        assert!(duration.as_secs() > 60 * 60, "Duration should be more than 1 hour");
-
-        // Test when next execution is now (should return 0 duration)
-        let exact_now = Utc::now();
-        let hour = exact_now.hour();
-        let min = exact_now.minute();
-
-        let config3 = SchedulerConfig {
-            name: "now_test".to_string(),
-            cron_expr: format!("* {} {} * * *", min, hour), // Match current minute and hour
-            ..Default::default()
-        };
-
-        let (_next, duration) = SingleTaskScheduler::get_next_execution_time(&config3, exact_now).unwrap();
-        assert!(duration.as_secs() < 60, "Duration should be less than 60 seconds, got {:?}", duration);
-    }
-
-    #[tokio::test]
     async fn test_start_error_conditions() {
         // 1. Test starting without a task
         let scheduler_no_task = SingleTaskScheduler {
@@ -1109,14 +984,6 @@ mod tests {
         let result = scheduler_no_cron.start().await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Cron expression must be set"));
-
-        // 3. Test invalid cron field format
-        let mut invalid_cron_config = SchedulerConfig::new();
-        invalid_cron_config.cron_expr = "a b c d e".to_string();
-        let scheduler_invalid_cron = create_scheduler(invalid_cron_config, || async { Ok(()) });
-
-        let result = scheduler_invalid_cron.start().await;
-        assert!(result.is_err());
 
         // 4. Test if scheduler is already in running state
         let running_config = SchedulerConfig::new().cron("* * * * * *").unwrap();

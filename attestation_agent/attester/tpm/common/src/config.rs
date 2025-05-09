@@ -7,13 +7,13 @@ use std::str::FromStr;
 #[derive(Debug)]
 pub struct PcrSelection {
     pub banks: Vec<i32>,
-    pub hash_algo: String,
+    pub hash_alg: String,
 }
 
 #[derive(Debug)]
 pub struct QuoteSignatureScheme {
     pub signature_algo: String,
-    pub hash_algo: String,
+    pub hash_alg: String,
 }
 
 #[derive(Debug)]
@@ -57,8 +57,8 @@ impl TpmPluginConfig {
             .ok_or_else(|| PluginError::InternalError("PCR banks not found or invalid".to_string()))?;
         
         // Extract hash algorithm
-        let pcr_hash_algo: String = pcr_selection_obj
-            .get("hash_algo")
+        let pcr_hash_alg: String = pcr_selection_obj
+            .get("hash_alg")
             .and_then(|v| v.as_str())
             .map(String::from)
             .ok_or_else(|| PluginError::InternalError("PCR hash algorithm not found".to_string()))?;
@@ -72,12 +72,12 @@ impl TpmPluginConfig {
                             .map(String::from)
                             .ok_or_else(|| PluginError::InternalError("Quote signature algorithm not found".to_string()))?;
                         
-                        let hash_algo = scheme_obj.get("hash_algo")
+                        let hash_alg = scheme_obj.get("hash_alg")
                             .and_then(|v| v.as_str())
                             .map(String::from)
                             .ok_or_else(|| PluginError::InternalError("Quote hash algorithm not found".to_string()))?;
                         
-                        Some(QuoteSignatureScheme { signature_algo, hash_algo })
+                        Some(QuoteSignatureScheme { signature_algo, hash_alg })
                     },
                     None => return Err(PluginError::InternalError("Quote signature scheme is not an object".to_string()))
                 }
@@ -87,7 +87,7 @@ impl TpmPluginConfig {
 
         let pcr_selection = PcrSelection {
             banks: pcr_banks,
-            hash_algo: pcr_hash_algo,
+            hash_alg: pcr_hash_alg,
         };
         
         // Get log file path

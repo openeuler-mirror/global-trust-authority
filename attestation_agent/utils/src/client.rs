@@ -1,6 +1,7 @@
 use crate::agent_error::AgentError;
 use crate::validate::validate_utils::validate_file;
 use log::{error, info, debug};
+use config::AGENT_CONFIG;
 use once_cell::sync::OnceCell;
 use reqwest::{Client as ReqwestClient, Method, Proxy, Response};
 use serde_json::Value;
@@ -239,7 +240,19 @@ impl Client {
                 error!("Failed to serialize JSON: {}", e);
                 AgentError::ConfigError(format!("Failed to serialize JSON: {}", e))
             })?;
-            req = req.header("Content-Type", "application/json").body(json_str);
+
+            // Dynamically get user_id from config
+            let user_id = AGENT_CONFIG.get_instance()
+                .map_err(|e| {
+                    error!("Failed to get global config: {}", e);
+                    AgentError::ConfigError(format!("Failed to get global config: {}", e))
+                })?
+                .agent.user_id.clone()
+                .ok_or_else(|| {
+                    error!("agent.user_id field not found in config");
+                    AgentError::ConfigError("agent.user_id field not found in config".to_string())
+                })?;
+            req = req.header("Content-Type", "application/json").header("User-Id", user_id).body(json_str);
         }
 
         info!("Sending {} request to {}", method.clone(), Self::mask_sensitive_info(&request_url));

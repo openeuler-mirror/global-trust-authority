@@ -115,6 +115,22 @@ fn get_postgresql_sql_file(db_version: &str) -> String {
 }
 
 fn get_mysql_sql_file(db_version: &str) -> String {
-    let path = find_file(format!("mysql_{}.sql", db_version).as_str());
-    path.map(|p| p.to_str().unwrap().to_string()).expect("Failed to get mysql_sql file")
+    #[cfg(feature = "docker_build")]
+    {
+        println!("docker_build");
+        return find_file(format!("mysql_{}.sql", db_version).as_str()).map(|path_buf: PathBuf| {
+            path_buf.to_str().unwrap().to_string()
+        }).expect("Failed to get mysql_sql file");
+    }
+    #[cfg(feature = "rpm_build")]
+    {
+        println!(" cfg(feature = rpm_build)]");
+        return String::from(format!("/etc/attestation_server/mysql_{}.sql", db_version));
+    }
+    #[cfg(not(any(feature = "docker_build", feature = "rpm_build")))]
+    {
+        return find_file(format!("mysql_{}.sql", db_version).as_str()).map(|path_buf: PathBuf| {
+            path_buf.to_str().unwrap().to_string()
+        }).unwrap_or_else(|e| String::from(format!("/etc/attestation_server/mysql_{}.sql", db_version)));
+    }
 }

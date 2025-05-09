@@ -35,9 +35,9 @@ use tss_esapi::{
 
 pub trait TpmPluginBase: PluginBase + AgentPlugin {
     fn config(&self) -> &TpmPluginConfig;
-    
+
     // --- Utility functions for hash algorithm and PCR slots conversion ---
-    fn hash_algo_from_str(algo: &str) -> Result<HashingAlgorithm, PluginError> {
+    fn hash_alg_from_str(algo: &str) -> Result<HashingAlgorithm, PluginError> {
         match algo {
             "sha1" => Ok(HashingAlgorithm::Sha1),
             "sha256" => Ok(HashingAlgorithm::Sha256),
@@ -102,18 +102,17 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
             session_attributes,
             session_attributes_mask,
         )
-        .unwrap();
+            .unwrap();
         ctx.set_sessions((session, None, None));
-    
+
         Ok(ctx)
     }
 
-    // Read X509 certificate from TPM NV
-    fn read_cert_from_nv(ctx: &mut Context, nv_index: u64) -> Result<X509, PluginError> {
+    fn get_nv_cert_data(ctx: &mut Context, nv_index: u64) -> Result<Option<Vec<u8>>, PluginError> {
         // Create NV index handle
         let nv_index_handle = NvIndexTpmHandle::new(nv_index as u32)
             .map_err(|e| PluginError::InternalError(format!("Invalid NV index value: {}", e)))?;
-        
+
         // Get handle from TPM
         let nv_handle = ctx
             .tr_from_tpm_public(nv_index_handle.into())
@@ -123,20 +122,35 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         // Get NV index public data to determine size
         let (nv_public, _) = ctx.nv_read_public(nv_handle)
             .map_err(|e| PluginError::InternalError(format!("Failed to read NV public data: {}", e)))?;
-        
-        let size = nv_public.data_size();
-        
+
+        let nvSize = nv_public.data_size();
+
         // Read certificate data from NV
         let cert_data = ctx.nv_read(
             resource_handles::NvAuth::NvIndex(nv_handle),
             nv_handle,
-            size as u16,
+            nvSize as u16,
             0,  // Starting offset
         )
-        .map_err(|e| PluginError::InternalError(format!("Failed to read certificate from NV index: {}", e)))?;
+            .map_err(|e| PluginError::InternalError(format!("Failed to read certificate from NV index: {}", e)))?;
+        Ok(Some(cert_data.value().to_vec()))
+    }
 
+    // Read X509 certificate from TPM NV
+    fn read_cert_from_nv(ctx: &mut Context, nv_index: u64) -> Result<X509, PluginError> {
+        let cert1_data = Self::get_nv_cert_data(ctx, nv_index)?;
+        let cert2_data = match Self::get_nv_cert_data(ctx, nv_index + 1) {
+            Ok(data) => data,
+            Err(_) => None,
+        };
+
+        // combine cert1_data and cert2_data
+        let mut cert_data = cert1_data.unwrap_or_default();
+        if let Some(data2) = cert2_data {
+            cert_data.extend_from_slice(&data2);
+        }
         // Convert to X509 certificate format
-        X509::from_der(cert_data.value())
+        X509::from_der(&cert_data)
             .map_err(|e| PluginError::InternalError(format!("Invalid certificate format: {}", e)))
     }
 
@@ -153,7 +167,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
                     rsa_p,
                     rsa_q // Default exponent
                 )
-                .map_err(|e| PluginError::InternalError(format!("Failed to create RSA key: {}", e)))?;
+                    .map_err(|e| PluginError::InternalError(format!("Failed to create RSA key: {}", e)))?;
                 PKey::from_rsa(rsa)
                     .map_err(|e| PluginError::InternalError(format!("Failed to get p key from rsa: {}", e)))
             },
@@ -180,7 +194,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
                     &ecc_x,
                     &ecc_y
                 )
-                .map_err(|e| PluginError::InternalError(format!("Failed to create ECC key: {}", e)))?;
+                    .map_err(|e| PluginError::InternalError(format!("Failed to create ECC key: {}", e)))?;
                 PKey::from_ec_key(ec_key)
                     .map_err(|e| PluginError::InternalError(format!("Failed to create PKey from ECC: {}", e)))
             },
@@ -199,42 +213,42 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
                 .to_string(),
             None => return Err(PluginError::InternalError("Common name not found in certificate".to_string())),
         };
-        
+
         // Check if the node_id matches the common name
         if common_name != node_id {
             return Err(PluginError::InternalError("Node ID does not match the common name in the certificate".to_string()));
         }
-        
+
         Ok(())
     }
 
     // Check if PCRs exist for the specified hash algorithm
-    fn check_pcr_availability(context: &mut Context, pcr_hash_algo: HashingAlgorithm) -> Result<(), PluginError> {
+    fn check_pcr_availability(context: &mut Context, pcr_hash_alg: HashingAlgorithm) -> Result<(), PluginError> {
         // Query TPM supported PCRs and algorithms
         let (capability_data, _more_data) = context.get_capability(
             CapabilityType::AssignedPcr,
             0,              // starting property
             20              // maximum count to return
         ).map_err(|e| PluginError::InternalError(format!("Failed to get TPM capabilities: {}", e)))?;
-        
+
         // check PCRs for specified algorithm
         match capability_data {
             CapabilityData::AssignedPcr(pcrs_data) => {
                 let mut found_matching_algo = false;
-                
+
                 for pcr_select in pcrs_data.get_selections() {
-                    if pcr_select.hashing_algorithm() == pcr_hash_algo {
+                    if pcr_select.hashing_algorithm() == pcr_hash_alg {
                         found_matching_algo = true;
                         if pcr_select.selected().is_empty() {
                             return Err(PluginError::InternalError(
-                                format!("No PCRs available for hash algorithm {:?}", pcr_hash_algo)
+                                format!("No PCRs available for hash algorithm {:?}", pcr_hash_alg)
                             ));
                         }
                     }
                 }
                 if !found_matching_algo {
                     return Err(PluginError::InternalError(
-                        format!("Hash algorithm {:?} is not supported by TPM", pcr_hash_algo)
+                        format!("Hash algorithm {:?} is not supported by TPM", pcr_hash_alg)
                     ));
                 }
             },
@@ -248,7 +262,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
     // Common methods shared by all TPM plugins
     fn collect_aik(&self, node_id: &str) -> Result<String, PluginError> {
         let mut ctx = self.create_ctx_with_session()?;
-        
+
         // Get the persistent AK handle and check if it exists
         let persistent_handle = PersistentTpmHandle::new(self.config().ak_handle as u32)
             .map_err(|e| PluginError::InternalError(format!("Invalid AK handle value: {}", e)))?;
@@ -256,7 +270,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         let tpm_handle = TpmHandle::Persistent(persistent_handle);
         let ak_handle = ctx.tr_from_tpm_public(tpm_handle)
             .map_err(|e| PluginError::InternalError(format!("AK key does not exist in TPM: {}", e)))?;
-        
+
         // Read the AK public key from TPM
         let (ak_public, _, _) = ctx.execute_with_nullauth_session(|ctx| {
             ctx.read_public(ak_handle.into())
@@ -264,44 +278,44 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
 
         // Read certificate from TPM NV index
         let ak_cert = Self::read_cert_from_nv(&mut ctx, self.config().ak_nv_index.try_into().unwrap())?;
-        
+
         // Verify that certificate's public key matches the AK public key
         let cert_pubkey = ak_cert.public_key()
             .map_err(|e| PluginError::InternalError(format!("Failed to extract public key from certificate: {}", e)))?;
-        
+
         // Convert TPM public key to OpenSSL format for comparison
         let tpm_pubkey_openssl = Self::convert_tpm_pubkey_to_openssl(ak_public)?;
-        
+
         // Compare the public keys
         if !tpm_pubkey_openssl.public_eq(&cert_pubkey) {
             return Err(PluginError::InternalError(
                 "AK public key does not match the key in certificate".to_string()
             ));
         }
-        
+
         // Validates that certificate's common name matches the node_id
         Self::validate_cert_common_name(&ak_cert, node_id)?;
-        
+
         // Return base64 encoded certificate
         let cert_der = ak_cert.to_der()
             .map_err(|e| PluginError::InternalError(format!("Failed to convert certificate to DER: {}", e)))?;
-        
+
         let encoded_cert = STANDARD.encode(cert_der);
         let pem_cert = format!("-----BEGIN CERTIFICATE-----\n{}\n-----END CERTIFICATE-----", encoded_cert);
-        
+
         Ok(pem_cert)
     }
-    
+
     fn collect_pcrs(&self) -> Result<Pcrs, PluginError> {
         // Implementation of collect_pcrs (same for all plugins)
         // Create a new TPM context
         let mut context = Context::new(self.config().tcti_config.clone())
             .map_err(|e| PluginError::InternalError(format!("Failed to create TPM context: {}", e)))?;
 
-        let pcr_hash_algo = Self::hash_algo_from_str(self.config().pcr_selection.hash_algo.as_str())?;
+        let pcr_hash_alg = Self::hash_alg_from_str(self.config().pcr_selection.hash_alg.as_str())?;
 
         // Check if PCRs exist for the specified hash algorithm
-        Self::check_pcr_availability(&mut context, pcr_hash_algo)?;
+        Self::check_pcr_availability(&mut context, pcr_hash_alg)?;
 
         // Build PCR selection list based on configured PCR selections
         let mut pcr_selection_builder = PcrSelectionListBuilder::new();
@@ -315,7 +329,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         }
         let pcr_slots: Vec<PcrSlot> = Self::pcr_slots_from_indices(&pcr_banks);
         // Add the PCR selection to the builder
-        pcr_selection_builder = pcr_selection_builder.with_selection(pcr_hash_algo, &pcr_slots);
+        pcr_selection_builder = pcr_selection_builder.with_selection(pcr_hash_alg, &pcr_slots);
 
         // Build the PCR selection list
         let pcr_selection_list = pcr_selection_builder.build()
@@ -347,14 +361,14 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         }
         // Return the Pcrs struct
         Ok(Pcrs {
-            hash_algo: self.config().pcr_selection.hash_algo.clone(),
+            hash_alg: self.config().pcr_selection.hash_alg.clone(),
             pcr_values,
         })
     }
     
     fn collect_quote(&self, nonce: &[u8]) -> Result<Quote, PluginError> {
-        // Trim the nonce to 64 bytes if it exceeds 64 bytes
-        let nonce = &nonce[..std::cmp::min(nonce.len(), 64)];
+        // Trim the nonce to 32 bytes if it exceeds 32 bytes
+        let nonce = &nonce[..std::cmp::min(nonce.len(), 32)];
 
         // Create a new TPM context
         let mut context = Context::new(self.config().tcti_config.clone())
@@ -372,7 +386,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         let mut pcr_selection_builder = PcrSelectionListBuilder::new();
         
         // Convert the hash algorithm string to HashingAlgorithm
-        let pcr_hash_algo = Self::hash_algo_from_str(self.config().pcr_selection.hash_algo.as_str())?;
+        let pcr_hash_alg = Self::hash_alg_from_str(self.config().pcr_selection.hash_alg.as_str())?;
 
         let pcr_banks = self.config().pcr_selection.banks.clone();
         // Check if any PCR bank index is out of valid range (0-23)
@@ -385,7 +399,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         let pcr_slots: Vec<PcrSlot> = Self::pcr_slots_from_indices(&pcr_banks);
         
         // Add the PCR selection to the builder
-        pcr_selection_builder = pcr_selection_builder.with_selection(pcr_hash_algo, &pcr_slots);
+        pcr_selection_builder = pcr_selection_builder.with_selection(pcr_hash_alg, &pcr_slots);
         
         // Build the PCR selection list
         let pcr_selection_list = pcr_selection_builder.build()
@@ -397,16 +411,16 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
 
         let signature_scheme = match &self.config().quote_signature_scheme {
             Some(quote_signature_scheme) => {
-                let hash_algo = &quote_signature_scheme.hash_algo;
+                let hash_alg = &quote_signature_scheme.hash_alg;
                 let signature_algo = &quote_signature_scheme.signature_algo;
                 
-                let hash_scheme = match hash_algo.as_str() {
+                let hash_scheme = match hash_alg.as_str() {
                     "sha1" => HashScheme::new(HashingAlgorithm::Sha1),
                     "sha256" => HashScheme::new(HashingAlgorithm::Sha256),
                     "sha384" => HashScheme::new(HashingAlgorithm::Sha384),
                     "sha512" => HashScheme::new(HashingAlgorithm::Sha512),
                     "sm3" => HashScheme::new(HashingAlgorithm::Sm3_256),
-                    _ => return Err(PluginError::InternalError(format!("Unsupported hash algorithm: {}", hash_algo))),
+                    _ => return Err(PluginError::InternalError(format!("Unsupported hash algorithm: {}", hash_alg))),
                 };
                 
                 match signature_algo.as_str() {
@@ -475,14 +489,14 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         let pcrs = self.collect_pcrs()?;
         
         // Use the plugin's own collect_log implementation
-        let log = self.collect_log()?;
+        let logs = self.collect_log()?;
 
         // Create Evidence struct instance
         let evidence = Evidence {
             ak_cert,
             quote,
             pcrs,
-            log,
+            logs,
         };
         
         serde_json::to_value(evidence)

@@ -16,4 +16,3 @@ config = { path = "../attestation_agent/config" }
 lazy_static.workspace = true
 agent_utils = { path = "../attestation_agent/utils", features = ["client"] }
 challenge = { path = "../attestation_agent/challenge" }
-agent_restful = { path = "../attestation_agent/agent_restful" }

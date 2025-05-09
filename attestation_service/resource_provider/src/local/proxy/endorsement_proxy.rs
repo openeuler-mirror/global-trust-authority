@@ -42,7 +42,7 @@ impl Endorsement for EndorsementProxy {
                 });
             }
         }
-        HttpResponse::BadRequest().body("Failed to query cert")
+        HttpResponse::BadRequest().body("Failed get User-Id")
     }
 
     async fn add_cert(
@@ -64,7 +64,7 @@ impl Endorsement for EndorsementProxy {
                 });
             }
         }
-        HttpResponse::BadRequest().body("Failed to add cert")
+        HttpResponse::BadRequest().body("Failed get User-Id")
     }
 
     async fn delete_cert(
@@ -86,7 +86,7 @@ impl Endorsement for EndorsementProxy {
                 });
             }
         }
-        HttpResponse::BadRequest().body("Failed to delete certs")
+        HttpResponse::BadRequest().body("Failed get User-Id")
     }
 
     async fn update_cert(
@@ -95,6 +95,10 @@ impl Endorsement for EndorsementProxy {
         update_cert: web::Json<Value>,
         req: HttpRequest,
     ) -> HttpResponse {
+        if update_cert.get("content").is_some() {
+            error!("When updating the certificate, it is not supported to pass in the content field");
+            return HttpResponse::BadRequest().body("When updating the certificate, it is not supported to pass in the content field".to_string())
+        }
         let json_string = update_cert.to_string();
         let update_cert: UpdateCertRequest = match serde_json::from_str(&json_string) {
             Ok(update_cert) => update_cert,
@@ -108,6 +112,6 @@ impl Endorsement for EndorsementProxy {
                 });
             }
         }
-        HttpResponse::BadRequest().body("Failed to add cert")
+        HttpResponse::BadRequest().body("Failed get User-Id")
     }
 }

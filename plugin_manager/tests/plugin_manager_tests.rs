@@ -18,10 +18,8 @@ async fn async_validate_cert_chain(cert_data: &[u8]) -> bool {
     !cert_data.is_empty()
 }
 
-async fn async_get_unmatched_measurements(measured_values: &Vec<String>, _attester_type: &str, _user_id: &str) -> Vec<String> {
-    use tokio::time::{sleep, Duration};
-    sleep(Duration::from_millis(10)).await;
-    measured_values.clone()
+async fn async_get_unmatched_measurements(measured_values: &Vec<String>, _attester_type: &str, _user_id: &str) -> Result<Vec<String>, String> {
+    Ok(measured_values.clone())
 }
 
 // Mock implementation of ServiceHostFunctions for testing
