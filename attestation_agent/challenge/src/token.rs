@@ -1,5 +1,5 @@
 use crate::challenge_error::TokenError;
-use crate::challenge::{AttesterInfo, do_challenge, get_cached_token};
+use crate::challenge::{AttesterInfo, do_challenge, get_cached_token_for_current_node};
 use serde::{Serialize, Deserialize};
 
 /// Request structure for token acquisition, including attester info and challenge flag
@@ -52,17 +52,13 @@ impl TokenManager {
     /// Main function to get a token, using cache if possible or performing a challenge if needed
     pub async fn get_token(token_request: &TokenRequest) -> Result<serde_json::Value, TokenError> {
         if !token_request.challenge.unwrap_or(false) {
-            if let Some(token) = get_cached_token() {
+            if let Some(token) = get_cached_token_for_current_node() {
                 return Ok(token);
             }
         }
 
         match do_challenge(&token_request.attester_info, &token_request.attester_data).await {
-            Ok(true) => {
-                get_cached_token()
-                    .ok_or_else(|| TokenError::token_not_found("Challenge succeeded but token not found"))
-            },
-            Ok(false) => Err(TokenError::challenge_error("Challenge failed, no token was obtained")),
+            Ok(token) => Ok(token),
             Err(e) => {
                 log::error!("Challenge failed, {}", e.to_string());
                 Err(TokenError::challenge_error(e.to_string()))

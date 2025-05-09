@@ -16,14 +16,36 @@ static mut LOGGER: Option<logger::Logger> = None;
 /// }
 /// ```
 pub fn init() -> Result<(), Box<dyn std::error::Error>> {
+    init_with_config("logging.yaml")
+}
+
+pub fn init_docker() -> Result<(), Box<dyn std::error::Error>> {
     let file = find_file("logging.yaml")
         .map(|path_buf| {
             let path = path_buf.to_str().unwrap();
             path.to_string()
-        })
-        .unwrap_or_else(|_| "logging.yaml".to_string());
+        }).expect(&format!("Failed to find logging file: logging.yaml"));
     init_with_config(file)
 }
+
+pub fn init_rpm() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(not(debug_assertions))]
+    {
+        let file = String::from("/etc/attestation_server/logging.yaml");
+        init_with_config(file)
+    }
+    #[cfg(debug_assertions)]
+    {
+        let file = find_file("logging.yaml")
+            .map(|path_buf| {
+                let path = path_buf.to_str().unwrap();
+                path.to_string()
+            })
+            .unwrap_or_else(|_| "logging.yaml".to_string());
+        init_with_config(file)
+    }
+}
+
 
 /// Initialize logging system
 ///

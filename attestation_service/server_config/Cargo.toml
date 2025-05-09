@@ -19,3 +19,11 @@ common_log.workspace = true
 sea-orm.workspace = true
 rdb.workspace = true
 plugin_manager.workspace = true
+serde_json.workspace = true
+endorserment.workspace = true
+rv = { workspace = true, features = ["mysql_mode"]}
+
+
+[features]
+rpm_build = []
+docker_build = []

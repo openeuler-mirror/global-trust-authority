@@ -17,3 +17,5 @@ uuid.workspace = true
 thiserror.workspace = true
 mockall.workspace = true
 env_config_parse.workspace = true
+mq.workspace = true
+config_manager.workspace = true

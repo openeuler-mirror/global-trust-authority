@@ -1,4 +1,4 @@
-pub mod ref_value;
+pub mod rv_trait;
 #[cfg(feature = "redis_mode")]
 pub mod redis_mode;
 #[cfg(feature = "mysql_mode")]

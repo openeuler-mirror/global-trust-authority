@@ -2,7 +2,7 @@ use crate::resource_facade::Rv;
 use actix_web::{web, HttpRequest, HttpResponse};
 use common_log::info;
 use rv::services::rv_factory::RvFactory;
-use rv::services::ref_value::RefValue;
+use rv::services::rv_trait::RefValueTrait;
 use sea_orm::DatabaseConnection;
 use std::sync::{Arc, OnceLock};
 

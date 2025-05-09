@@ -14,3 +14,4 @@ key_management.workspace = true
 log.workspace = true
 serde.workspace = true
 config_manager.workspace = true
+tokio.workspace = true

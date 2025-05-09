@@ -80,7 +80,11 @@ async fn main() -> std::io::Result<()> {
             // .configure(|cfg| configure_user_routes(cfg, create_challenge_governor(), create_management_governor()))
             .configure(|cfg| configure_user_routes(cfg, challenge_governor.clone(), management_governor.clone()))
             .default_service(web::route().to(default_not_found_page))
-    });
+    })
+        // Add TCP layer restriction configuration
+        .workers(1)
+        .max_connections(50)
+        .backlog(0);  // Set the waiting queue to 0 and directly reject new connections
 
     let https_switch = get_env_value_or_default("HTTPS_SWITCH",HTTPS_SWITCH_OFF);
     let server = if https_switch == HTTPS_SWITCH_ON {

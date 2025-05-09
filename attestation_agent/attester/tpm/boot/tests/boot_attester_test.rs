@@ -9,8 +9,8 @@ fn mock_boot_configuration(_plugin_type: String) -> Option<String> {
         "tcti_config": "device:/dev/tpm0",
         "ak_handle": 0x81010020_i64,
         "ak_nv_index": 0x150001b_i64,
-        "pcr_selections": {"banks": [0, 1, 2, 3, 4, 5, 6, 7], "hash_algo": "sha256"},
-        "quote_signature_scheme": {"hash_algo": "sha256", "signature_algo": "rsassa"},
+        "pcr_selections": {"banks": [0, 1, 2, 3, 4, 5, 6, 7], "hash_alg": "sha256"},
+        "quote_signature_scheme": {"hash_alg": "sha256", "signature_algo": "rsassa"},
         "log_file_path": "/sys/kernel/security/tpm0/binary_bios_measurements",
         "quote_hash_algo": "sha256"
     });
@@ -29,8 +29,8 @@ fn mock_missing_ak_handle_configuration(_plugin_type: String) -> Option<String> 
         "tcti_config": "device:/dev/tpm0",
         // ak_handle is missing
         "ak_nv_index": 0x150001b_i64,
-        "pcr_selections": {"banks": [0, 1, 2, 3, 4, 5, 6, 7], "hash_algo": "sha256"},
-        "quote_signature_scheme": {"hash_algo": "sha256", "signature_algo": "rsassa"},
+        "pcr_selections": {"banks": [0, 1, 2, 3, 4, 5, 6, 7], "hash_alg": "sha256"},
+        "quote_signature_scheme": {"hash_alg": "sha256", "signature_algo": "rsassa"},
         "log_file_path": "/sys/kernel/security/tpm0/binary_bios_measurements",
         "quote_hash_algo": "sha256"
     });
@@ -44,8 +44,8 @@ fn mock_missing_ak_nv_index_configuration(_plugin_type: String) -> Option<String
         "tcti_config": "device:/dev/tpm0",
         "ak_handle": 0x81010020_i64,
         // ak_nv_index is missing
-        "pcr_selections": {"banks": [0, 1, 2, 3, 4, 5, 6, 7], "hash_algo": "sha256"},
-        "quote_signature_scheme": {"hash_algo": "sha256", "signature_algo": "rsassa"},
+        "pcr_selections": {"banks": [0, 1, 2, 3, 4, 5, 6, 7], "hash_alg": "sha256"},
+        "quote_signature_scheme": {"hash_alg": "sha256", "signature_algo": "rsassa"},
         "log_file_path": "/sys/kernel/security/tpm0/binary_bios_measurements",
         "quote_hash_algo": "sha256"
     });
@@ -73,8 +73,8 @@ fn mock_missing_quote_hash_algo_configuration(_plugin_type: String) -> Option<St
         "tcti_config": "device:/dev/tpm0",
         "ak_handle": 0x81010020_i64,
         "ak_nv_index": 0x150001b_i64,
-        "pcr_selections": {"banks": [0, 1, 2, 3, 4, 5, 6, 7], "hash_algo": "sha256"},
-        "quote_signature_scheme": {"hash_algo": "sha256", "signature_algo": "rsassa"},
+        "pcr_selections": {"banks": [0, 1, 2, 3, 4, 5, 6, 7], "hash_alg": "sha256"},
+        "quote_signature_scheme": {"hash_alg": "sha256", "signature_algo": "rsassa"},
         "log_file_path": "/sys/kernel/security/tpm0/binary_bios_measurements"
         // quote_hash_algo is missing
     });
@@ -88,8 +88,8 @@ fn mock_missing_log_file_path_configuration(_plugin_type: String) -> Option<Stri
         "tcti_config": "device:/dev/tpm0",
         "ak_handle": 0x81010020_i64,
         "ak_nv_index": 0x150001b_i64,
-        "pcr_selections": {"banks": [0, 1, 2, 3, 4, 5, 6, 7], "hash_algo": "sha256"},
-        "quote_signature_scheme": {"hash_algo": "sha256", "signature_algo": "rsassa"},
+        "pcr_selections": {"banks": [0, 1, 2, 3, 4, 5, 6, 7], "hash_alg": "sha256"},
+        "quote_signature_scheme": {"hash_alg": "sha256", "signature_algo": "rsassa"},
         // log_file_path is missing
         "quote_hash_algo": "sha256"
     });

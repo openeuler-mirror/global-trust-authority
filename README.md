@@ -1,37 +1,98 @@
-# global-trust-authority
+# HRA (Huawei Remote Attestation)
 
-#### 介绍
-A framework to support remote attestation of trusted computing and confidential computing,making remote attestation flow unified and simpler
+## Introduction
+Unified Remote Attestation is an open-source confidential computing project dedicated to providing a unified architecture for confidential computing and trusted computing remote attestation, promoting the development of confidential computing ecosystem. This project provides a complete remote attestation solution, including client agent and server-side service components.
 
-#### 软件架构
-软件架构说明
+## Features
 
+### 1. Remote Attestation Challenge Generation and Verification
 
-#### 安装教程
+Remote attestation challenge generation and verification is the core functionality of Unified Remote Attestation. It includes the following steps:
+1. Client agent generates remote attestation challenge.
+2. Server verifies remote attestation challenge.
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+## External Interfaces
 
-#### 使用说明
+Please refer to the [API documentation](./docs/hra_api.md) for external interfaces.
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+## Components
 
-#### 参与贡献
+| Directory           | Description          | Detailed Documentation |
+| ------------------- | -------------------- | --------------------- |
+| attestation_agent   | Remote attestation agent module | [Development Guide](docs/attestation_agent.md) |
+| attestation_service | Remote attestation service module | [Development Guide](docs/attestation_service.md) |
+| attestation_common  | Common code          | [Development Guide](docs/attestation_common.md) |
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+## Development
 
+### Environment Requirements
 
-#### 特技
+* Processor: Must support Intel SGX (Intel Software Guard Extensions)
+* Operating System:
+  - Windows 10/11 (Development Environment)
+  - openEuler 21.03 or higher (Production Environment)
+  - openEuler 20.03 LTS SP2 or higher (Production Environment)
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+### Dependencies
+
+* Rust 1.70.0 or higher
+* PostgreSQL 14.0 or higher
+* OpenSSL development library
+* libssl-dev (for OpenSSL)
+* pkg-config
+
+Windows environment dependency installation:
+```bash
+winget install Rust.Rust
+winget install PostgreSQL.PostgreSQL
+winget install OpenSSL
+```
+
+### Build
+
+```
+# Full build
+cargo clean
+cargo build
+# Build specific package
+cargo build -p *
+# Run specific package
+cargo run -p *
+# Build and run tests
+cargo test
+# Build and run specific package tests
+cargo test -p *
+# Build and run specific test case
+cargo test * -p *
+# Build release version
+cargo build --release
+```
+
+## Usage Guide
+
+### Clone Code
+git clone https://gitee.com/openeuler/global-trust-authority.git
+cd global-trust-authority
+
+### Build Project
+cargo build --release
+
+### Run Project
+- Run server
+  cargo run -p attestation_service
+- Run client
+  cargo run -p attestation_agent
+
+## Contribution Guide
+- Fork this repository
+- Create a feature branch ( git checkout -b feature/AmazingFeature )
+- Commit your changes ( git commit -m 'Add some AmazingFeature' )
+- Push to the branch ( git push origin feature/AmazingFeature )
+- Create Pull Reques
+
+## License
+This project is licensed under Mulan PSL v2
+
+## Contact
+- Project URL: https://gitee.com/openeuler/global-trust-authority
+- Issue Tracker: https://gitee.com/openeuler/global-trust-authority/issues

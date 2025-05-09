@@ -1,6 +1,5 @@
 // 3. Observer (Key Management)
 use crate::key_manager::algorithm::create_algorithm;
-use crate::key_manager::cache::entity::key_pair::KeyPair;
 use crate::key_manager::cache::store::KeyStore;
 use crate::key_manager::error::KeyManagerError;
 use crate::key_manager::lifecycle::key_observer::observer_init::register::OBSERVER_REGISTRY;
@@ -10,7 +9,6 @@ use crate::key_manager::model::{VaultResponse, Version};
 use crate::key_manager::orm::entity::key_manager_key_version::get_current_key_version;
 use crate::key_manager::orm::entity::key_manager_key_version::update_key_version;
 use distributed_lock::Lock as DistributedLock;
-use once_cell::sync::OnceCell;
 use sea_orm::TransactionTrait;
 use std::sync::Arc;
 use std::thread;

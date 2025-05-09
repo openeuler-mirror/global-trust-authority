@@ -73,7 +73,7 @@ async fn test_evidence_verification() {
         "tpm_boot".to_string(),
         ServiceHostFunctions {
             validate_cert_chain: Box::new(|_, _, _| Box::pin(async { true })),
-            get_unmatched_measurements: Box::new(|_, _, _| Box::pin(async { Vec::new() })),
+            get_unmatched_measurements: Box::new(|_, _, _| Box::pin(async { Ok(Vec::new()) })),
             query_configuration: |_| None
         }
     );

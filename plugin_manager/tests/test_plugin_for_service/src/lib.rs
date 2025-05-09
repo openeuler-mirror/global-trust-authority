@@ -44,7 +44,10 @@ impl<'a> ServicePlugin for TestServicePlugin<'a> {
     
     async fn verify_evidence(&self, _user_id: &str, _node_id: Option<&str>, _evidence: &serde_json::Value, _nonce: Option<&[u8]>) -> Result<serde_json::Value, PluginError> {
         let cert_verification_result = (self.validate_cert_chain)("test_cert_type", "test_user_id", b"test").await;
-        let unmatched_value = (self.get_unmatched_measurements)(&vec![String::from("test")], "test", "test").await;
+        let unmatched_value = match (self.get_unmatched_measurements)(&vec![String::from("test")], "test", "test").await {
+            Ok(values) => values,
+            Err(err) => return Err(PluginError::InternalError(format!("Failed to get unmatched measurements: {}", err))),
+        };
         let config = (self.query_configuration)(String::from("test"));
         Ok(serde_json::json!({
             "cert_verification_result": cert_verification_result,

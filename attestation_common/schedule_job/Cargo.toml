@@ -25,7 +25,6 @@ redis.workspace = true
 parking_lot.workspace = true
 cron.workspace = true
 walkdir.workspace = true
-actix-governor.workspace = true
 rdkafka.workspace = true
 cache.workspace = true
 env_config_parse.workspace = true

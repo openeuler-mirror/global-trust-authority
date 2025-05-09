@@ -23,6 +23,7 @@ impl DbTableInitHandler {
         info!("will init DB sql file!");
         let conn = get_connection().await?.clone();
         let db_version = "v1".to_string();
+        println!("db_version: {}", db_version);
         execute_sql_file(&conn, &db_version).await
     }
 }

@@ -1,7 +1,8 @@
 agent:
   listen_address: "0.0.0.0"
-  listen_port: 8080
+  listen_port: 8088
   uuid: "TPM AK"  # Unique agent identifier
+  user_id: "test_lyz" # Unique user identifier
 
 server:
   server_url: "http://127.0.0.1:8080"  # Base URL, API paths will be automatically appended
@@ -17,61 +18,50 @@ logging:
 plugins:
   - name: "tpm_boot"
     path: "/usr/lib64/libtpm_boot_attester.so"
-    policy_id: ["tpm_policy_id1", "tpm_policy_id2"]
+    policy_id: []
     enabled: true
     params:
       attester_type: "tpm_boot"
-      tcti_config: "device"
+      tcti_config: "device" # options: device, mssim, swtpm, tabrmd, libtpm
       ak_handle: 0x81010020
       ak_nv_index: 0x150001b
       pcr_selections: 
-        banks: [0, 1, 2, 3, 4, 5, 6, 7]
-        hash_algo: "sha256"
+        banks: [0, 1, 2, 3, 4, 5, 6, 7] # options: 0-23
+        hash_alg: "sha256" # options: sha1, sha256, sha384, sha512, sm3
+      quote_signature_scheme: # optional
+        signature_algo: "rsassa" # options: rsapss, rsassa, ecdsa
+        hash_alg: "sha256" # options: sha1, sha256, sha384, sha512, sm3
       log_file_path: "/sys/kernel/security/tpm0/binary_bios_measurements"
 
   - name: "tpm_ima"
     path: "/usr/lib64/libtpm_ima_attester.so"
-    policy_id: ["ima_policy_id1"]
+    policy_id: []
     enabled: true
     params:
       attester_type: "tpm_ima"
-      tcti_config: "device"
+      tcti_config: "device" # options: device, mssim, swtpm, tabrmd, libtpm
       ak_handle: 0x81010020
       ak_nv_index: 0x150001b
       pcr_selections: 
-        banks: [10]
-        hash_algo: "sha256"
-      quote_signature_scheme:
-        signature_algo: "rsassa"
-        hash_algo: "sha256"
+        banks: [10] # options: 10
+        hash_alg: "sha256" # options: sha1, sha256, sha384, sha512, sm3
+      quote_signature_scheme: # optional
+        signature_algo: "rsassa" # options: rsapss, rsassa, ecdsa
+        hash_alg: "sha256" # options: sha1, sha256, sha384, sha512, sm3
       log_file_path: "/sys/kernel/security/ima/ascii_runtime_measurements"
-    
-  - name: "tpm_dim"
-    path: "/usr/lib64/libtpm_dim_attester.so"
-    policy_id: ["dim_policy_id1"]
-    enabled: false
-    params:
-      attester_type: "tpm_dim"
-      tcti_config: "device"
-      ak_handle: 0x81000002
-      ak_nv_index: 0x01800001
-      pcr_selections: 
-        banks: [11]
-        hash_algo: "sha256"
-      dim_mode: "full"
-      dim_path: "/var/lib/dim"
-      cache_dir: "/var/cache/dim"
 
 schedulers:
   - name: "challenge"      # Remote attestation task
     retry_enabled: true
-    cron_expression: "*/10 * * * * *"  # Execute every 10 seconds
+    intervals: 86400        # 24 * 60 * 60 = 86400 = 1 day
     initial_delay:                   # Random delay configuration at startup
       min_seconds: 1                 # Minimum delay 1 second
       max_seconds: 60               # Maximum delay 60 seconds
     max_retries: 1
+    enabled: true
 
-  - name: "config_sync"             # Configuration synchronization task
-    retry_enabled: false                  # Temporarily disabled
-    cron_expression: "0 */5 * * * *"   # Execute every 5 minutes
-    # No initial_delay configuration means no initial random delay is needed 
+  - name: "config_sync"     # Configuration synchronization task
+    retry_enabled: false    # Temporarily disabled
+    intervals: 300          # Execute every 5 minutes
+    enabled: true           # No initial_delay configuration means no initial random delay is needed 
+    

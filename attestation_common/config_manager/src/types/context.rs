@@ -68,6 +68,8 @@ pub struct AttestationService {
     pub token_management: TokenManagement,
     /// Policy configuration
     pub policy: Policy,
+    /// Cert configuration
+    pub cert: Cert,
     /// Nonce configuration
     pub nonce: NonceConfig,
     /// Plugin configurations
@@ -90,11 +92,22 @@ pub struct TokenManagement {
     /// Key ID
     pub kid: String,
     /// Token existence time in milliseconds
-    pub exist_time: String,
+    pub exist_time: u128,
     /// Token issuer
     pub iss: String,
     /// EAT profile identifier
     pub eat_profile: String,
+    /// Is it enabled to send token information to MQ
+    pub mq_enabled: bool,
+    /// Send token information to MQ's topic
+    pub token_topic: String,
+}
+
+/// Cert configuration
+#[derive(Debug, Deserialize, Clone)]
+pub struct Cert {
+    /// Single user cert limit
+    pub single_user_cert_limit: u64,
 }
 
 impl ServerConfig {

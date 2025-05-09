@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/agent
-ExecReload=/usr/bin/agent
+ExecStart=/usr/bin/attestation_agent
+ExecReload=/usr/bin/attestation_agent
 Restart=always
 RestartSec=10s
 TimeoutStopSec=90

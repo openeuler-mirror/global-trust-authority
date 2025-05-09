@@ -13,3 +13,7 @@ dotenv.workspace = true
 tokio.workspace = true
 thiserror.workspace = true
 env_config_parse.workspace = true
+
+[features]
+rpm_build = []
+docker_build = []

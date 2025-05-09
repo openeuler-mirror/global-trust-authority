@@ -177,20 +177,20 @@ impl StandardHandler {
         for policy in policies {
             let evaluate_result = match evaluate_policy(verify_evidence, &policy.content) {
                 Ok(result) => {
-                    let attestation_valid = result.get("attestation_valid").and_then(|v| v.as_bool()).ok_or_else(|| {
+                    let policy_matched = result.get("policy_matched").and_then(|v| v.as_bool()).ok_or_else(|| {
                         let err_msg = format!(
-                            "Failed to extract boolean 'attestation_valid' from policy evaluation result for policy {}",
+                            "Failed to extract boolean 'policy_matched' from policy evaluation result for policy {}",
                             policy.id
                         );
                         error!("{}", err_msg);
                         AttestationError::PolicyVerificationError(err_msg)
                     })?;
 
-                    verify_results.push(attestation_valid);
+                    verify_results.push(policy_matched);
                     PolicyInfo {
                         appraisal_policy_id: policy.id.clone(),
                         policy_version: policy.version,
-                        attestation_valid,
+                        policy_matched,
                         custom_data: result.get("custom_data").map(|v| v.clone()),
                     }
                 },
@@ -230,14 +230,7 @@ impl StandardHandler {
         measurement: &Measurement,
     ) -> AttestationResponse {
         AttestationResponse {
-            status: if evidence_token_responses.values().any(|result| result.attestation_status == "unknown") {
-                "unknown".to_string()
-            } else if evidence_token_responses.values().all(|result| result.attestation_status == "pass") {
-                "pass".to_string()
-            } else {
-                "fail".to_string()
-            },
-            eat_nonce: if nonce_type == "default" { measurement.nonce.as_ref().map(|n| n.value.clone()) } else { None },
+            eat_nonce: if nonce_type == "default" { measurement.nonce.clone() } else { None },
             attester_data: measurement.attester_data.clone(),
             results: evidence_token_responses.clone(),
             intuse: Some("Generic".to_string()),
@@ -246,7 +239,7 @@ impl StandardHandler {
     }
 
     pub async fn generate_token(attestation_response: &AttestationResponse) -> Result<String, AttestationError> {
-        info!("Generating token for attestation response with status: {}", attestation_response.status);
+        info!("Generating token for attestation response");
         let mut json_body = serde_json::to_value(attestation_response)
             .map_err(|e| AttestationError::TokenGenerationError(e.to_string()))?;
 

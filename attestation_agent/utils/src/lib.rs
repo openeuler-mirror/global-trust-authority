@@ -12,3 +12,6 @@ pub use crate::validate::validate_utils;
 mod client;
 #[cfg(feature = "client")]
 pub use crate::client::{Client, ClientConfig};
+
+pub mod load_plugins;
+pub use load_plugins::load_plugins;

@@ -1,15 +1,15 @@
-use actix_web::HttpResponse;
 use crate::entities::prelude::{CertInfo, CertRevokedList};
 use crate::entities::{cert_info, cert_revoked_list};
 use crate::services::cert_service;
 use crate::services::cert_service::DeleteType;
+use config_manager::types::CONFIG;
+use common_log::info;
+use sea_orm::sea_query::Expr;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, DatabaseBackend, DatabaseConnection,
     DatabaseTransaction, DbErr, DeleteResult, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
     Statement, UpdateResult,
 };
-use env_config_parse::{yaml_get, YamlValue};
-use common_log::{error, info};
 
 pub struct CertRepository;
 
@@ -37,14 +37,19 @@ impl CertRepository {
             None => {
                 // If cert_type is not empty, add cert_type filter condition
                 if let Some(cert_type) = cert_type {
-                    query = query.filter(cert_info::Column::CertType.eq(cert_type.as_str()));
+                    query = query.filter(
+                        cert_info::Column::UserId
+                            .eq(user_id)
+                            .and(Expr::cust(&format!("JSON_CONTAINS(type, '\"{}\"')", &cert_type))),
+                    );
+                } else {
+                    query = query.filter(cert_info::Column::UserId.eq(user_id));
                 }
                 query
                     .select_only()
                     .column_as(cert_info::Column::Id, "id")
                     .column_as(cert_info::Column::Name, "name")
                     .column_as(cert_info::Column::Version, "version")
-                    .filter(cert_info::Column::UserId.eq(user_id))
                     .order_by_desc(cert_info::Column::UpdateTime)
                     .into_model::<cert_info::SimpleInfo>()
                     .all(db)
@@ -154,8 +159,11 @@ impl CertRepository {
         // Build base query
         let query = CertInfo::find();
         query
-            .filter(cert_info::Column::UserId.eq(user_id))
-            .filter(cert_info::Column::CertType.eq(cert_type))
+            .filter(
+                cert_info::Column::UserId
+                    .eq(user_id)
+                    .and(Expr::cust(&format!("JSON_CONTAINS(type, '\"{}\"')", &cert_type))),
+            )
             .find_also_related(CertRevokedList)
             .all(db)
             .await
@@ -166,15 +174,18 @@ impl CertRepository {
         user_id: &str,
         cert_type: &str,
         issuer: &str,
-    ) -> Result<Option<(cert_info::Model, Option<cert_revoked_list::Model>)>, DbErr> {
+    ) -> Result<Vec<(cert_info::Model, Option<cert_revoked_list::Model>)>, DbErr> {
         // Build base query
         let query = CertInfo::find();
         query
-            .filter(cert_info::Column::UserId.eq(user_id))
-            .filter(cert_info::Column::CertType.eq(cert_type))
+            .filter(
+                cert_info::Column::UserId
+                    .eq(user_id)
+                    .and(Expr::cust(&format!("JSON_CONTAINS(type, '\"{}\"')", &cert_type))),
+            )
             .filter(cert_info::Column::Owner.eq(issuer))
             .find_also_related(CertRevokedList)
-            .one(db)
+            .all(db)
             .await
     }
 
@@ -191,16 +202,11 @@ impl CertRepository {
     ) -> Result<DeleteResult, DbErr> {
         match delete_type {
             DeleteType::Id => {
-                // Check if ids exceed 10
+                // Check if there are more than 10 IDs
                 if let Some(ids) = &ids {
-                    let yaml = YamlValue::from_default_yaml()
-                        .map_err(|e| {
-                            error!("get default yaml error: {}", e.to_string());
-                            HttpResponse::InternalServerError().body("get config yaml error")
-                        })
-                        .unwrap();
-                    let limit_count = yaml_get!(yaml.clone(), "attestation_service.cert.single_user_cert_limit" => u64).unwrap_or_else(|| 10);
-                    if ids.len() > limit_count as usize {
+                    if ids.len()
+                        > CONFIG.get_instance().unwrap().attestation_service.cert.single_user_cert_limit as usize
+                    {
                         return Err(DbErr::Custom("IDs exceed maximum limit of 10".to_string()));
                     }
                 }
@@ -208,14 +214,14 @@ impl CertRepository {
                     return Err(DbErr::Custom("IDs not set".to_string()));
                 }
 
-                // Delete certificate info
+                // Delete certificate information
                 let cert_delete_result = CertInfo::delete_many()
                     .filter(cert_info::Column::Id.is_in(ids.clone().unwrap_or_default()))
                     .filter(cert_info::Column::UserId.eq(user_id))
                     .exec(db)
                     .await?;
 
-                // Delete certificate revocation info
+                // Delete certificate revocation information
                 CertRevokedList::delete_many()
                     .filter(cert_revoked_list::Column::Id.is_in(ids.unwrap_or_default()))
                     .filter(cert_revoked_list::Column::UserId.eq(user_id))
@@ -225,13 +231,12 @@ impl CertRepository {
                 Ok(cert_delete_result)
             },
             DeleteType::Type => {
-                // Check if cert_type is valid
+                // Check if the certificate type is legal
                 let valid_types = [
                     cert_service::CertificateType::REFVALUE,
                     cert_service::CertificateType::POLICY,
                     cert_service::CertificateType::TPM_BOOT,
                     cert_service::CertificateType::TPM_IMA,
-                    cert_service::CertificateType::CRL,
                 ];
                 if let Some(cert_type) = &cert_type {
                     if !valid_types.contains(&cert_type.as_str()) {
@@ -241,29 +246,23 @@ impl CertRepository {
                 if cert_type.is_none() {
                     return Err(DbErr::Custom("certificate type not set".to_string()));
                 }
-                if cert_type == Some(cert_service::CertificateType::CRL.to_string()) {
-                    // Delete all certificate revocation info
-                    let revoked_delete_result = CertRevokedList::delete_many()
-                        .filter(cert_revoked_list::Column::UserId.eq(user_id))
-                        .exec(db)
-                        .await?;
-                    Ok(revoked_delete_result)
-                } else {
-                    // Delete certificate info
-                    let cert_delete_result = CertInfo::delete_many()
-                        .filter(cert_info::Column::CertType.eq(cert_type.unwrap_or_default()))
-                        .filter(cert_info::Column::UserId.eq(user_id))
-                        .exec(db)
-                        .await?;
-                    Ok(cert_delete_result)
-                }
+                // Delete certificate information
+                let cert_delete_result = CertInfo::delete_many()
+                    .filter(
+                        cert_info::Column::UserId
+                            .eq(user_id)
+                            .and(Expr::cust(&format!("JSON_CONTAINS(type, '\"{}\"')", cert_type.unwrap()))),
+                    )
+                    .exec(db)
+                    .await?;
+                Ok(cert_delete_result)
             },
             DeleteType::All => {
-                // Delete all certificate info
+                // Delete all certificate information
                 let cert_delete_result =
                     CertInfo::delete_many().filter(cert_info::Column::UserId.eq(user_id)).exec(db).await?;
 
-                // Delete all certificate revocation info
+                // Delete all certificate revocation information
                 CertRevokedList::delete_many().filter(cert_revoked_list::Column::UserId.eq(user_id)).exec(db).await?;
 
                 Ok(cert_delete_result)
@@ -271,7 +270,7 @@ impl CertRepository {
         }
     }
 
-    /// Insert certificate info
+    /// Insert certificate information
     pub async fn insert_cert_info(
         db: &DatabaseConnection,
         cert_info: cert_info::ActiveModel,
@@ -380,7 +379,7 @@ impl CertRepository {
 
     /// Insert certificate revocation info
     pub async fn insert_cert_revoked(
-        db: &DatabaseConnection,
+        db: &DatabaseTransaction,
         cert_revoked: cert_revoked_list::ActiveModel,
     ) -> Result<(), DbErr> {
         cert_revoked.insert(db).await?;
@@ -456,7 +455,6 @@ impl CertRepository {
         cert_revoked.update(db).await
     }
 }
-
 
 // test begin
 use sea_orm::{MockDatabase};

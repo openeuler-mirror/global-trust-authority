@@ -23,7 +23,8 @@ rv = { workspace = true, optional = true, features = ["mysql_mode"]}
 actix-web.workspace = true
 sea-orm.workspace = true
 serde_json.workspace = true
-actix-governor.workspace = true
+governor.workspace = true
+ratelimit.workspace = true
 
 # Remote mode dependencies (only compiled when independent-deployment is enabled)
 awc = { workspace = true, optional = true }

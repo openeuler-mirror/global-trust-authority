@@ -10,7 +10,6 @@ pub fn find_file(file_name: &str) -> Result<PathBuf, String> {
     // Normalize paths (handle '.' and '.. `）
     let current_dir = current_dir.canonicalize()
         .map_err(|e| format!("Failed to canonicalize path: {}", e))?;
-
     // Recursively traverses the current directory
     for entry in WalkDir::new(&current_dir).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();

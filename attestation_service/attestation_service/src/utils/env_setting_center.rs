@@ -1,5 +1,7 @@
 use std::env;
 use actix_web::HttpResponse;
+
+#[cfg(any(debug_assertions, feature = "docker_build"))]
 use env_config_parse::find_file;
 
 pub async fn default_not_found_page() -> HttpResponse {
@@ -7,7 +9,19 @@ pub async fn default_not_found_page() -> HttpResponse {
 }
 
 pub fn load_env()  {
-    dotenv::dotenv().ok();
+    #[cfg(not(debug_assertions))]
+    {
+        #[cfg(feature = "rpm_build")]
+        {
+            dotenv::from_filename("/etc/attestation_server/.env.rpm").expect("Failed to load .env.rpm");
+        }
+        #[cfg(feature = "docker_build")]
+        {
+            let env_file = find_file(".env")
+                .map(|file| file.to_str().unwrap().to_string()).expect("failed to load .env");
+            dotenv::from_filename(env_file).expect("Failed to load .env.dev");
+        }
+    }
     #[cfg(debug_assertions)]
     {
         dotenv::dotenv().ok().map(|_| std::env::vars().for_each(|(k, _)| std::env::remove_var(&k)));

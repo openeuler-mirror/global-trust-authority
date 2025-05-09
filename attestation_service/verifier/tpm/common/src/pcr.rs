@@ -244,4 +244,51 @@ impl PcrValues {
 
         Ok(hex::encode(current_value))
     }
+
+    /// Calculates the final PCR value by extending log entries according to TPM's PCR extension logic
+    pub fn replay_with_target(
+        algorithm: &str,
+        initial_value: &str,
+        target_value: &str,
+        log_values: &Vec<String>
+    ) -> Result<String, PluginError> {
+        let digest_alg = CryptoVerifier::hash_str_to_message_digest(algorithm)?;
+
+        let mut target_value = hex::decode(target_value)
+            .map_err(|e| PluginError::InputError(format!("Failed to decode target value: {}", e)))?;
+
+        let mut current_value = hex::decode(initial_value)
+            .map_err(|e| PluginError::InputError(format!("Failed to decode initial value: {}", e)))?;
+        
+        for log_value in log_values {
+            let log_bytes = hex::decode(log_value)
+                .map_err(|e| PluginError::InputError(format!("Failed to decode log value: {}", e)))?;
+
+            let log_bytes = if log_bytes.iter().all(|b| *b == 0) {
+                // Create a new vector filled with 0xff instead of trying to modify the existing one
+                vec![0xff; log_bytes.len()]
+            } else {
+                log_bytes
+            };
+            
+            let mut hasher = openssl::hash::Hasher::new(digest_alg)
+                .map_err(|e| PluginError::InternalError(format!("Failed to create hasher: {}", e)))?;
+
+            hasher.update(&current_value)
+                .map_err(|e| PluginError::InternalError(format!("Failed to update hash with current value: {}", e)))?;
+
+            hasher.update(&log_bytes)
+                .map_err(|e| PluginError::InternalError(format!("Failed to update hash with log value: {}", e)))?;
+
+            current_value = hasher.finish()
+                .map_err(|e| PluginError::InternalError(format!("Failed to finalize hash: {}", e)))?
+                .to_vec();
+            
+            if current_value == target_value {
+                break;
+            }
+        }
+
+        Ok(hex::encode(current_value))
+    }
 }

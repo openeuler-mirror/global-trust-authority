@@ -1,9 +1,7 @@
-use std::sync::Arc;
-use actix_governor::governor::middleware::NoOpMiddleware;
-use actix_governor::{Governor, PeerIpKeyExtractor};
 use crate::resource_facade::{Endorsement, Policy, Rv};
 use crate::local::proxy::{EndorsementProxy, PolicyProxy, RvProxy};
 use actix_web::web;
+use ratelimit::Governor;
 
 pub struct LocalRouteConfigurator;
 
@@ -14,7 +12,7 @@ impl LocalRouteConfigurator {
 }
 
 impl super::register::RouteConfigurator for LocalRouteConfigurator {
-    fn register_routes(&self, cfg: &mut web::ServiceConfig, management_governor: Arc<Governor<PeerIpKeyExtractor, NoOpMiddleware>>) {
+    fn register_routes(&self, cfg: &mut web::ServiceConfig, management_governor: Governor) {
         cfg.service(
             web::scope("/policy")
                 .wrap(management_governor.clone())

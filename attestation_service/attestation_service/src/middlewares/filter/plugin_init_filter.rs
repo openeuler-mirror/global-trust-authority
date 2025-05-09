@@ -1,12 +1,19 @@
-use plugin_manager::init_plugin::check_plugin_initialized;
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::error::InternalError;
 use actix_web::HttpResponse;
 use futures::future::{ok, Ready};
 use log::error;
+use plugin_manager::{PluginManager, PluginManagerInstance, ServiceHostFunctions, ServicePlugin};
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
+
+
+/// Check if the plugin manager is initialized
+fn check_plugin_initialized() -> bool {
+    let manager = PluginManager::<dyn ServicePlugin, ServiceHostFunctions>::get_instance();
+    manager.is_initialized()
+}
 
 // PluginInitFilter
 pub struct PluginInitFilter;

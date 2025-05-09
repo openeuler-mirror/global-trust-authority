@@ -5,7 +5,7 @@ default is_log_valid = false
 is_log_valid {
     some i
     logs := input.evidence.logs
-    logs[i].log_type == "tpm_ima"
+    logs[i].log_type == "ImaLog"
     logs[i].is_log_valid == true
 }
 

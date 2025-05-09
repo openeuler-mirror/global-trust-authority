@@ -1,16 +1,14 @@
 use serde::{Deserialize, Serialize};
 use crate::challenge_error::ChallengeError;
-use std::sync::Mutex;
-use lazy_static::lazy_static;
+use crate::acquire_process_lock;
 use log;
 use config::{AGENT_CONFIG, PluginConfig};
 use plugin_manager::{PluginManagerInstance, AgentPlugin, AgentHostFunctions, PluginManager};
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
 use reqwest::Method;
 use agent_utils::Client;
-
 use serde_json::Value;
+use once_cell::sync::Lazy;
 
 #[derive(Debug, Clone)]
 pub struct NodeToken {
@@ -18,15 +16,8 @@ pub struct NodeToken {
     token: Value,
 }
 
-// Global cached tokens for reuse between requests
-lazy_static! {
-    static ref GLOBAL_TOKENS: Mutex<Vec<NodeToken>> = Mutex::new(Vec::new());
-}
-
-// Global mutex for synchronizing TPM access
-lazy_static! {
-    static ref TPM_LOCK: Mutex<()> = Mutex::new(());
-}
+// Global cached tokens for reuse between requests (sync Mutex)
+pub static GLOBAL_TOKENS: Lazy<Mutex<Vec<NodeToken>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 /// Information about an attester, including type and policy IDs
@@ -93,55 +84,33 @@ impl GetEvidenceResponse {
     }
 }
 
-/// Set the global cached tokens
-pub fn set_cached_tokens(tokens: Vec<NodeToken>) {
+/// Set the global cached tokens (async)
+pub fn set_cached_tokens(tokens: &[NodeToken]) {
     let mut global = GLOBAL_TOKENS.lock().unwrap();
-    *global = tokens;
+    *global = tokens.to_vec();
 }
 
-/// Get the cached token for current node_id as serde_json::Value
-pub fn get_cached_token() -> Option<serde_json::Value> {
-    let node_id = match get_node_id() {
-        Ok(id) => id,
-        Err(_) => return None,
-    };
+/// Get the cached token for current node_id as serde_json::Value (sync)
+pub fn get_cached_token_for_current_node() -> Option<Value> {
+    let node_id = get_node_id().ok()?;
     let global = GLOBAL_TOKENS.lock().unwrap();
-    for nt in global.iter() {
-        if nt.node_id == node_id {
-            return Some(nt.token.clone());
-        }
-    }
-    None
-}
-
-/// Try to acquire the TPM lock with timeout, to synchronize TPM access
-pub fn acquire_tpm_lock() -> Result<std::sync::MutexGuard<'static, ()>, ChallengeError> {
-    let start = Instant::now();
-    let timeout_duration = Duration::from_secs(120);
-
-    while start.elapsed() < timeout_duration {
-        // Try to acquire the lock
-        if let Ok(guard) = TPM_LOCK.try_lock() {
-            log::info!("Acquire tpm lock success.");
-            return Ok(guard);
-        }
-        // Sleep briefly to avoid busy waiting
-        std::thread::sleep(Duration::from_millis(10));
-    }
-    
-    Err(ChallengeError::InternalError(
-        "Timeout while waiting for TPM lock".to_string()
-    ))
+    global.iter().find(|nt| nt.node_id == node_id).map(|nt| nt.token.clone())
 }
 
 /// Get the node ID (UUID) from configuration
 pub fn get_node_id() -> Result<String, ChallengeError> {
     let config = AGENT_CONFIG.get_instance()
-        .map_err(|e| ChallengeError::ConfigError(e.to_string()))?;
+        .map_err(|e| {
+            log::error!("Failed to get AGENT_CONFIG instance: {}", e);
+            ChallengeError::ConfigError(e.to_string())
+        })?;
     
     config.agent.uuid
         .clone()
-        .ok_or_else(|| ChallengeError::ConfigError("Agent UUID not configured".to_string()))
+        .ok_or_else(|| {
+            log::error!("Agent UUID not configured");
+            ChallengeError::ConfigError("Agent UUID not configured".to_string())
+        })
 }
 
 /// Get all enabled attester types from the plugin manager and config
@@ -149,16 +118,21 @@ fn get_enabled_attester_types() -> Result<Vec<String>, ChallengeError> {
     let plugin_manager = PluginManager::<dyn AgentPlugin, AgentHostFunctions>::get_instance();
     
     if !plugin_manager.is_initialized() {
+        log::error!("Plugin manager not initialized");
         return Err(ChallengeError::InternalError("Plugin manager not initialized".to_string()));
     }
 
     let enabled_plugins = plugin_manager.get_plugin_types();
     if enabled_plugins.is_empty() {
+        log::error!("No enabled plugins found");
         return Err(ChallengeError::NoEnabledPlugins);
     }
 
     let config = AGENT_CONFIG.get_instance()
-        .map_err(|e| ChallengeError::ConfigError(e.to_string()))?;
+        .map_err(|e| {
+            log::error!("Failed to get AGENT_CONFIG instance: {}", e);
+            ChallengeError::ConfigError(e.to_string())
+        })?;
 
     let mut enabled_attester_types = Vec::new();
     
@@ -168,7 +142,6 @@ fn get_enabled_attester_types() -> Result<Vec<String>, ChallengeError> {
                 let attester_type = match params {
                     config::PluginParams::TpmBoot(_) => "tpm_boot",
                     config::PluginParams::TpmIma(_) => "tpm_ima",
-                    config::PluginParams::TpmDim(_) => "tpm_dim",
                 };
                 enabled_attester_types.push(attester_type.to_string());
             }
@@ -176,6 +149,7 @@ fn get_enabled_attester_types() -> Result<Vec<String>, ChallengeError> {
     }
 
     if enabled_attester_types.is_empty() {
+        log::error!("No enabled attester types found in config");
         return Err(ChallengeError::NoEnabledPlugins);
     }
 
@@ -187,25 +161,34 @@ fn find_plugin_for_attester_type(
     attester_type: &str
 ) -> Result<(Arc<dyn AgentPlugin>, PluginConfig), ChallengeError> {
     let config = AGENT_CONFIG.get_instance()
-        .map_err(|e| ChallengeError::ConfigError(e.to_string()))?;
+        .map_err(|e| {
+            log::error!("Failed to get AGENT_CONFIG instance: {}", e);
+            ChallengeError::ConfigError(e.to_string())
+        })?;
     let plugin_config = config.plugins.iter()
         .find(|p| p.enabled && p.params.as_ref().map_or(false, |params| {
             match (params, attester_type) {
                 (config::PluginParams::TpmBoot(_), "tpm_boot") => true,
                 (config::PluginParams::TpmIma(_), "tpm_ima") => true,
-                (config::PluginParams::TpmDim(_), "tpm_dim") => true,
                 _ => false
             }
         }))
-        .ok_or_else(|| ChallengeError::PluginNotFound(attester_type.to_string()))?
+        .ok_or_else(|| {
+            log::error!("Plugin not found for attester_type: {}", attester_type);
+            ChallengeError::PluginNotFound(attester_type.to_string())
+        })?
         .clone();
 
     let plugin_manager = PluginManager::<dyn AgentPlugin, AgentHostFunctions>::get_instance();
     if !plugin_manager.is_initialized() {
+        log::error!("Plugin manager not initialized");
         return Err(ChallengeError::InternalError("Plugin manager not initialized".to_string()));
     }
     let plugin = plugin_manager.get_plugin(&plugin_config.name)
-        .ok_or_else(|| ChallengeError::PluginNotFound(plugin_config.name.clone()))?;
+        .ok_or_else(|| {
+            log::error!("Plugin instance not found: {}", plugin_config.name);
+            ChallengeError::PluginNotFound(plugin_config.name.clone())
+        })?;
 
     Ok((plugin, plugin_config))
 }
@@ -223,42 +206,88 @@ fn collect_evidence(
     nonce_value: Option<String>,
 ) -> Result<serde_json::Value, ChallengeError> {
     let (plugin, _) = find_plugin_for_attester_type(attester_type)?;
-
     let node_id = get_node_id()?;
     let nonce_bytes = nonce_value.as_ref().map(|s| s.as_bytes());
 
+    let _tpm_lock = acquire_process_lock()?;
     match plugin.collect_evidence(Some(&node_id), nonce_bytes) {
-        Ok(evidence_value) => Ok(evidence_value),
-        Err(e) => Err(ChallengeError::EvidenceCollectionFailed(e.to_string()))
+        Ok(evidence_value) => {
+            log::info!("Evidence collected for attester_type: {}", attester_type);
+            Ok(evidence_value)
+        },
+        Err(e) => {
+            log::error!("Failed to collect evidence for '{}': {}", attester_type, e);
+            Err(ChallengeError::EvidenceCollectionFailed(e.to_string()))
+        }
     }
 }
 
+/// Get policy IDs based on the calling context
+///
+/// For collect_from_attester_info scenario:
+/// - If user-provided policy_ids count > 10: error
+/// - If user-provided policy_ids empty: return None
+/// - If user-provided policy_ids count 1-10: use them
+/// - If user didn't provide policy_ids (None): return None directly
+///
+/// For collect_from_enabled_plugins scenario:
+/// - Get policy_ids from config file
+/// - If config policy_ids count > 10: error
+/// - If config policy_ids empty: return None
+/// - If config policy_ids count 1-10: use them
 fn get_policy_ids(
     attester_type: &str,
-    input_policy_ids: &Option<Vec<String>>
+    input_policy_ids: &Option<Vec<String>>,
+    use_config: bool,
 ) -> Result<Option<Vec<String>>, ChallengeError> {
+    const MAX_POLICY_IDS: usize = 10;
+
+    // Case: User provided policy_ids
     if let Some(ids) = input_policy_ids {
-        if ids.len() > 10 {
+        if ids.len() > MAX_POLICY_IDS {
+            log::error!("Too many policy_ids for attester_type '{}', max allowed is {}", 
+                attester_type, MAX_POLICY_IDS);
             return Err(ChallengeError::InternalError(format!(
-                "Too many policy_ids for attester_type '{}', max allowed is 10", attester_type
+                "Too many policy_ids for attester_type '{}', max allowed is {}", 
+                attester_type, MAX_POLICY_IDS
             )));
         }
-        if !ids.is_empty() {
-            return Ok(Some(ids.clone()));
+        
+        // If user provided empty policy_ids, return None
+        if ids.is_empty() {
+            return Ok(None);
         }
+        
+        // User provided valid policy_ids (1-10), use them
+        return Ok(Some(ids.clone()));
     }
 
+    // Case: User didn't provide policy_ids (None)
+    // Only query config file if use_config is true (collect_from_enabled_plugins scenario)
+    if !use_config {
+        // For collect_from_attester_info scenario, return None when policy_ids is None
+        return Ok(None);
+    }
+
+    // Get policy_ids from config file (collect_from_enabled_plugins scenario)
     let (_, plugin_config) = find_plugin_for_attester_type(attester_type)?;
-    if plugin_config.policy_id.len() > 10 {
+
+    if plugin_config.policy_id.len() > MAX_POLICY_IDS {
+        log::error!("Too many policy_ids in config for attester_type '{}', max allowed is {}", 
+            attester_type, MAX_POLICY_IDS);
         return Err(ChallengeError::InternalError(format!(
-            "Too many policy_ids in config for attester_type '{}', max allowed is 10", attester_type
+            "Too many policy_ids in config for attester_type '{}', max allowed is {}", 
+            attester_type, MAX_POLICY_IDS
         )));
     }
-    Ok(if plugin_config.policy_id.is_empty() {
-        None
-    } else {
-        Some(plugin_config.policy_id)
-    })
+
+    // If config has empty policy_id, return None
+    if plugin_config.policy_id.is_empty() {
+        return Ok(None);
+    }
+
+    // Use policy_ids from config
+    Ok(Some(plugin_config.policy_id))
 }
 
 /// Generic evidence collection helper function
@@ -266,6 +295,7 @@ fn collect_evidences_for_types<I>(
     attester_iter: I,
     nonce_value: &Option<String>,
     need_validate: bool,
+    use_config: bool,
 ) -> Result<Vec<EvidenceWithPolicy>, ChallengeError>
 where
     I: IntoIterator<Item = (String, Option<Vec<String>>)> {
@@ -276,11 +306,14 @@ where
         }
 
         let evidence_value = collect_evidence(&attester_type, nonce_value.clone())
-            .map_err(|e| ChallengeError::EvidenceCollectionFailed(
-                format!("Failed to collect evidence for '{}': {}", attester_type, e)
-            ))?;
+            .map_err(|e| {
+                log::error!("Failed to collect evidence for '{}': {}", attester_type, e);
+                ChallengeError::EvidenceCollectionFailed(
+                    format!("Failed to collect evidence for '{}': {}", attester_type, e)
+                )
+            })?;
 
-        let policy_ids = get_policy_ids(&attester_type, &policy_ids_hint)?;
+        let policy_ids = get_policy_ids(&attester_type, &policy_ids_hint, use_config)?;
         all_evidences.push(EvidenceWithPolicy {
             attester_type,
             evidence: evidence_value,
@@ -288,6 +321,7 @@ where
         });
     }
     if all_evidences.is_empty() {
+        log::error!("No valid evidence collected for any attester_type");
         return Err(ChallengeError::NoValidEvidence("No evidence collected".to_string()));
     }
     Ok(all_evidences)
@@ -301,7 +335,8 @@ fn collect_from_attester_info(
     let attester_iter = info.iter().filter_map(|a| {
         a.attester_type.as_ref().map(|t| (t.clone(), a.policy_ids.clone()))
     });
-    collect_evidences_for_types(attester_iter, nonce_value, true)
+    // For collect_from_attester_info, use_config is false
+    collect_evidences_for_types(attester_iter, nonce_value, true, false)
 }
 
 /// Collect evidence from all enabled plugins
@@ -310,7 +345,8 @@ fn collect_from_enabled_plugins(
 ) -> Result<Vec<EvidenceWithPolicy>, ChallengeError> {
     let enabled_types = get_enabled_attester_types()?;
     let attester_iter = enabled_types.into_iter().map(|t| (t, None));
-    collect_evidences_for_types(attester_iter, nonce_value, false)
+    // For collect_from_enabled_plugins, use_config is true
+    collect_evidences_for_types(attester_iter, nonce_value, false, true)
 }
 
 /// Core function to collect evidences from attester info or enabled plugins
@@ -324,16 +360,21 @@ pub fn collect_evidences_core(
                 .all(|attester| attester.attester_type.is_none() || attester.attester_type.as_ref().unwrap().is_empty());
             
             if all_types_empty {
+                log::info!("All attester_types empty, collecting from enabled plugins");
                 // Case 1: All attester_types are empty
                 // Get all enabled plugin types using policy_ids from config
                 collect_from_enabled_plugins(nonce_value)
             } else {
+                log::info!("Collecting from provided attester_info");
                 // Case 2: Use information from attester_info
                 collect_from_attester_info(info, nonce_value)
             }
         },
         // Default case: Get all enabled plugin types
-        _ => collect_from_enabled_plugins(nonce_value)
+        _ => {
+            log::info!("No attester_info provided, collecting from enabled plugins");
+            collect_from_enabled_plugins(nonce_value)
+        }
     }
 }
 
@@ -368,9 +409,15 @@ async fn get_nonce_from_server(
 ) -> Result<Nonce, ChallengeError> {
     let attester_types = match attester_info {
         Some(info) if !info.is_empty() => {
-            info.iter()
+            let filtered: Vec<_> = info.iter()
                 .filter_map(|a| a.attester_type.clone())
-                .collect::<Vec<_>>()
+                .filter(|s| !s.trim().is_empty())
+                .collect();
+            if filtered.is_empty() {
+                get_enabled_attester_types()?
+            } else {
+                filtered
+            }
         },
         _ => get_enabled_attester_types()?,
     };
@@ -380,40 +427,38 @@ async fn get_nonce_from_server(
         "attester_type": attester_types
     });
 
-    // Mock response matching the required format
-    let json_value = serde_json::json!({
-        "service_version": "1.0.0",
-        "nonces": {
-            "iat": 1713412345,
-            "value": "5J7Q3sQbF6Yp6R6T1Qm8k1gX7j9YzvH4l6eQ2J1s8x0a9vT3h2K5z8W0u4x9V7n2b1c6e3w0p8m7u5q9t4r3y2z0v1s6d8a5g",
-            "signature": "Y0t2bGxwR1F6dGJmU1l4N3lBUXk2T2JZc3h5T0l6Z3Z4d2lQd2F6R0ZyZ3l6Z2V4V2V5d2F0Y3l6a2N6d2p6d2x5d2V6d2s="
-        }
-    });
-
-    // let client = Client::instance();
-    // let response = client
-    //     .request(Method::POST, "/challenge", Some(request))
-    //     .await
-    //     .map_err(|e| ChallengeError::NetworkError(format!("Failed to get nonce: {}", e)))?;
-
-    // let json_value = response
-    //     .json::<serde_json::Value>()
-    //     .await
-    //     .map_err(|e| ChallengeError::RequestParseError(format!("Failed to parse nonce response: {}", e)))?;
-
+    let client = Client::instance();
+    let response = client
+        .request(Method::POST, "/challenge", Some(request))
+        .await
+        .map_err(|e| {
+            log::error!("Failed to get nonce from server: {}", e);
+            ChallengeError::NetworkError(format!("Failed to get nonce: {}", e))
+        })?;
+    let json_value = response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| {
+            log::error!("Failed to parse nonce response: {}", e);
+            ChallengeError::RequestParseError(format!("Failed to parse nonce response: {}", e))
+        })?;
     if let Some(msg) = json_value.get("message").and_then(|v| v.as_str()) {
         if !msg.is_empty() {
+            log::error!("Server returned error message for nonce: {}", msg);
             return Err(ChallengeError::ServerError(msg.to_string()));
         }
     }
 
-    let nonce: Nonce = match json_value.get("nonces") {
+    let nonce: Nonce = match json_value.get("nonce") {
         Some(nonce_val) => serde_json::from_value(nonce_val.clone())
             .map_err(|e| ChallengeError::RequestParseError(format!("Failed to parse nonce: {}", e)))?,
-        None => return Err(ChallengeError::NonceNotProvided),
+        None => {
+            log::error!("Failed to get nonce from Server, nonce is null");
+            return Err(ChallengeError::ServerError("Failed to get nonce from Server, nonce is null".to_string()));
+        },
     };
     validate_nonce_fields(&nonce)?;
-
+    log::info!("Successfully obtained and validated nonce from server");
     Ok(nonce)
 }
 
@@ -421,88 +466,43 @@ async fn get_nonce_from_server(
 async fn get_tokens_from_server(
     evidence: &GetEvidenceResponse
 ) -> Result<Vec<NodeToken>, ChallengeError> {
-    // Mock response matching the required format
-    let long_token = concat!(
-    "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImprdSI6ImprdSIsImtpZCI6ImtpZCJ9.",
-    "eyJpbnR1c2UiOiJHZW5lcmljIiwic3RhdHVzIjoiZmFpbCIsInVlaWQiOiJUUE0gQUsiL",
-    "CJ0cG1fYm9vdCI6eyJhdHRlc3RhdGlvbl9zdGF0dXMiOiJmYWlsIiwicG9saWN5X2luZm",
-    "8iOlt7ImFwcHJhaXNhbF9wb2xpY3lfaWQiOiJmZWM3OTA5Zi0yOGY5LTRiMjktYmU2NS0",
-    "yOThlNGZjNDNmYjgiLCJwb2xpY3lfdmVyc2lvbiI6MSwiYXR0ZXN0YXRpb25fdmFsaWQi",
-    "OmZhbHNlLCJjdXN0b21fZGF0YSI6eyJoYXNoX2FsZyI6InNoYTI1NiJ9fV0sImlzX2xvZ",
-    "192YWxpZCI6dHJ1ZSwicGNycyI6eyJoYXNoX2FsZyI6InNoYTI1NiIsInBjcl92YWx1ZX",
-    "MiOlt7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6MCwicGNyX3ZhbHVlIjoiOWQ",
-    "3NTA0YmIwZDMyZjYyZDQzMzEwZjM4ZGYzN2NkZDVlNDJiZGI4M2RkMGMwNTkyZmQ5YjFj",
-    "M2IxNjc3MGMzNSIsInJlcGxheV92YWx1ZSI6IjlkNzUwNGJiMGQzMmY2MmQ0MzMxMGYzO",
-    "GRmMzdjZGQ1ZTQyYmRiODNkZDBjMDU5MmZkOWIxYzNiMTY3NzBjMzUifSx7ImlzX21hdG",
-    "NoZWQiOnRydWUsInBjcl9pbmRleCI6MSwicGNyX3ZhbHVlIjoiMzg4NDYyNzFlMmE4NmQ",
-    "2YmY0M2VmMzg4YmUyZDFjYjgzYTg5ZjFjMGJiMTU0ZmU0OTRhMWRkYTE5OGRhMjliZSIs",
-    "InJlcGxheV92YWx1ZSI6IjM4ODQ2MjcxZTJhODZkNmJmNDNlZjM4OGJlMmQxY2I4M2E4O",
-    "WYxYzBiYjE1NGZlNDk0YTFkZGExOThkYTI5YmUifSx7ImlzX21hdGNoZWQiOnRydWUsIn",
-    "Bjcl9pbmRleCI6MiwicGNyX3ZhbHVlIjoiM2Q0NThjZmU1NWNjMDNlYTFmNDQzZjE1NjJ",
-    "iZWVjOGRmNTFjNzVlMTRhOWZjZjlhNzIzNGExM2YxOThlNzk2OSIsInJlcGxheV92YWx1",
-    "ZSI6IjNkNDU4Y2ZlNTVjYzAzZWExZjQ0M2YxNTYyYmVlYzhkZjUxYzc1ZTE0YTlmY2Y5Y",
-    "TcyMzRhMTNmMTk4ZTc5NjkifSx7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6My",
-    "wicGNyX3ZhbHVlIjoiM2Q0NThjZmU1NWNjMDNlYTFmNDQzZjE1NjJiZWVjOGRmNTFjNzV",
-    "lMTRhOWZjZjlhNzIzNGExM2YxOThlNzk2OSIsInJlcGxheV92YWx1ZSI6IjNkNDU4Y2ZlN",
-    "TVjYzAzZWExZjQ0M2YxNTYyYmVlYzhkZjUxYzc1ZTE0YTlmY2Y5YTcyMzRhMTNmMTk4ZTc",
-    "5NjkifSx7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6NCwicGNyX3ZhbHVlIjoiO",
-    "GVkMTJjNDE1MDU2MzYyYzdhNGQ0MDNlNmUyYWNhZGYwOTBlNzhiZmI0Nzk4YTg3YjBhMzI",
-    "3YzgzODA2NDkzMSIsInJlcGxheV92YWx1ZSI6IjhlZDEyYzQxNTA1NjM2MmM3YTRkNDAzZ",
-    "TZlMmFjYWRmMDkwZTc4YmZiNDc5OGE4N2IwYTMyN2M4MzgwNjQ5MzEifSx7ImlzX21hdGN",
-    "oZWQiOnRydWUsInBjcl9pbmRleCI6NSwicGNyX3ZhbHVlIjoiNjYxMjFkNWJjZGI4YWI2Z",
-    "DYyOGI0OTgyNzU5MGFjOGUxZjJmMDllMjZhYTJkMWRkMWNmZWM1MzU4ODU0Y2QzYSIsInJ",
-    "lcGxheV92YWx1ZSI6IjY2MTIxZDViY2RiOGFiNmQ2MjhiNDk4Mjc1OTBhYzhlMWYyZjA5Z",
-    "TI2YWEyZDFkZDFjZmVjNTM1ODg1NGNkM2EifSx7ImlzX21hdGNoZWQiOnRydWUsInBjcl9",
-    "pbmRleCI6NiwicGNyX3ZhbHVlIjoiM2Q0NThjZmU1NWNjMDNlYTFmNDQzZjE1NjJiZWVjO",
-    "GRmNTFjNzVlMTRhOWZjZjlhNzIzNGExM2YxOThlNzk2OSIsInJlcGxheV92YWx1ZSI6IjN",
-    "kNDU4Y2ZlNTVjYzAzZWExZjQ0M2YxNTYyYmVlYzhkZjUxYzc1ZTE0YTlmY2Y5YTcyMzRhM",
-    "TNmMTk4ZTc5NjkifSx7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6NywicGNyX3Z",
-    "hbHVlIjoiNzRmYTJjMDY3ODkyZmFhNzRiZmIwY2FmYWNjNGM3MTAyZGQyYzljZjczZWZkZ",
-    "mE0MWYwN2ZkZmM3YzFlZWExYiIsInJlcGxheV92YWx1ZSI6Ijc0ZmEyYzA2Nzg5MmZhYTc",
-    "0YmZiMGNhZmFjYzRjNzEwMmRkMmM5Y2Y3M2VmZGZhNDFmMDdmZGZjN2MxZWVhMWIifV19L",
-    "CJzZWN1cmVfYm9vdCI6Ik5BIn0sImlhdCI6MTc0NDk1ODA3OTU3MiwiZXhwIjoxNzQ0OTU",
-    "4Njc5NTcyLCJpc3MiOiJpc3MiLCJqdGkiOiIwMGJhNjlkMy1kNGM2LTQ2ZjEtYmNmMS1lN",
-    "GZkMjNkODVlODQiLCJ2ZXIiOiIxLjAiLCJuYmYiOjE3NDQ5NTgwNzk1NzMsImVhdF9wcm9",
-    "maWxlIjoiZWF0X3Byb2ZpbGUifQ.q-CdDXeVoE4IMDqKae76P5wAnyrETAnkc394rQB63a",
-    "iGHJA8HuEWM5EQ6nuKhoB0BomQahi8NiFYFIn-ldK2wk_HyTDSWvNd4ZMpl4RrEE403S_T",
-    "Bmu_ZrY_aPhpTgUbH5Rdk-4tqXhDcJ171YxpPngbZ6hfeiPE9gHo4oAeZl7sULFsGcj64X",
-    "5aVPRAGw-rdaA_4gKXvICnlm6U3naRxNXOd4nZKUERXqlExM8uB-x1f87y0tyD5BOQQQqt",
-    "P7fIJuN8vubWbtj3ShQ7jIaFl2AdEMDcId8IapECNWP8VpTcu2rK-dHL8tGI0K8XfUFYtw",
-    "LZ02HYnz86IqCjbFYhpg");
-    let json_value = serde_json::json!({
-        "service_version": "1.0.0",
-        "tokens": [
-            {
-                "node_id": "TPM AK",
-                "token": long_token
-            }
-        ]
-    });
-
-    // let client = Client::instance();
-    // // Send the evidence to the attestation server
-    // let response = client
-    //     .request(Method::POST, "/attest", Some(serde_json::to_value(evidence)?))
-    //     .await
-    //     .map_err(|e| ChallengeError::NetworkError(format!("Failed to verify evidence: {}", e)))?;
-
-    // // Parse the server's JSON response
-    // let json_value = response
-    //     .json::<serde_json::Value>()
-    //     .await
-    //     .map_err(|e| ChallengeError::RequestParseError(format!("Failed to parse verify response: {}", e)))?;
+    let client = Client::instance();
+    // Send the evidence to the attestation server
+    let response = client
+        .request(Method::POST, "/attest", Some(serde_json::to_value(evidence)?))
+        .await
+        .map_err(|e| {
+            log::error!("Failed to send evidence to server: {}", e);
+            ChallengeError::NetworkError(format!("Failed to verify evidence: {}", e))
+        })?;
+    log::info!("Received token response from server");
+    // Parse the server's JSON response
+    let json_value = response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| {
+            log::error!("Failed to parse token response: {}", e);
+            ChallengeError::RequestParseError(format!("Failed to parse verify response: {}", e))
+        })?;
 
     // Check for error message in the response
     if let Some(msg) = json_value.get("message").and_then(|v| v.as_str()) {
         if !msg.is_empty() {
+            log::error!("Server returned error message for tokens: {}", msg);
             return Err(ChallengeError::ServerError(msg.to_string()));
         }
     }
 
     // Extract the tokens array from the response
     let tokens = match json_value.get("tokens") {
-        Some(val) => val.as_array().ok_or_else(|| ChallengeError::RequestParseError("tokens field is not array".to_string()))?,
-        None => return Err(ChallengeError::TokenNotReceived),
+        Some(val) => val.as_array().ok_or_else(|| {
+            log::error!("tokens field is not array in server response");
+            ChallengeError::RequestParseError("tokens field is not array".to_string())
+        })?,
+        None => {
+            log::error!("No tokens field in server response");
+            return Err(ChallengeError::TokenNotReceived);
+        },
     };
     let mut node_tokens = Vec::new();
     // For each token, extract node_id and token value
@@ -519,8 +519,7 @@ async fn get_tokens_from_server(
 pub async fn do_challenge(
     attester_info: &Option<Vec<AttesterInfo>>,
     attester_data: &Option<String>,
-) -> Result<bool, ChallengeError> {
-    let _tpm_lock = acquire_tpm_lock()?;
+) -> Result<serde_json::Value, ChallengeError> {
     log::info!("Starting challenge request.");
 
     let nonce = get_nonce_from_server(
@@ -528,10 +527,19 @@ pub async fn do_challenge(
         attester_info,
     ).await?;
 
-    let evidences = collect_evidences_core(
+    let evidences = match collect_evidences_core(
         attester_info,
         &Some(nonce.value.clone()),
-    )?;
+    ) {
+        Ok(evidences) => {
+            log::info!("Successfully collected evidences");
+            evidences
+        },
+        Err(e) => {
+            log::error!("Failed to collect evidences: {}", e);
+            return Err(e);
+        }
+    };
 
     let node_id = get_node_id()?;
 
@@ -546,7 +554,15 @@ pub async fn do_challenge(
     );
 
     let node_tokens = get_tokens_from_server(&evidence_response).await?;
-    set_cached_tokens(node_tokens);
-    log::info!("Successfully obtained and saved tokens from server");
-    Ok(true)
+    set_cached_tokens(&node_tokens);
+
+    for nt in node_tokens {
+        if nt.node_id == node_id {
+            log::info!("Successfully obtained token for node_id {}", node_id);
+            return Ok(nt.token);
+        }
+    }
+
+    log::error!("Token for node_id {} not found in server response", node_id);
+    Err(ChallengeError::TokenNotReceived)
 }

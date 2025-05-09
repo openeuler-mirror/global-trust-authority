@@ -14,7 +14,7 @@ use crate::key_manager::model::PrivateKey;
 // factory function
 pub fn create_algorithm(algorithm_str: &str) -> Result<Box<dyn KeyAlgorithm>, KeyManagerError> {
     info!("create_algorithm: {}", algorithm_str);
-    let parts: Vec<&str> = algorithm_str.split_whitespace().collect();
+    let parts: Vec<&str> = algorithm_str.split("_").collect();
     let (name, args) = parts
         .split_first()
         .ok_or_else(|| KeyManagerError::new("Empty algorithm string"))?;

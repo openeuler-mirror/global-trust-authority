@@ -83,13 +83,14 @@ COPY . .
 # Remove attestation_service unrelated directories
 RUN rm -rf attestation_agent
 RUN rm -rf attestation_cli
+RUN rm -rf .cargo
 
 # Exclude agent interference
 RUN sed -i '/members = \[/,/\]/ {/attestation_agent/d}' Cargo.toml
 RUN sed -i '/members = \[/,/\]/ {/attestation_cli/d}' Cargo.toml
 
 # Build specific packages
-RUN cargo build --release --package attestation_service
+RUN cargo build --release --package attestation_service --features docker_build
 RUN cargo build --release --package tpm_boot_verifier
 RUN cargo build --release --package tpm_ima_verifier
 
@@ -132,7 +133,7 @@ RUN mkdir -p /tmp/certs && \
         -out /tmp/certs/cert.pem \
         -days 365 \
         -subj "/CN=127.0.0.1"
-
+COPY certs/* /tmp/certs/
 # Copy dynamic libraries
 COPY --from=builder /var/test_docker/app/target/release/*.so /usr/local/lib/
 

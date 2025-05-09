@@ -9,8 +9,8 @@ fn mock_ima_configuration(_plugin_type: String) -> Option<String> {
         "tcti_config": "device:/dev/tpm0",
         "ak_handle": 0x81010020_i64,
         "ak_nv_index": 0x01800001_i64,
-        "pcr_selections": {"banks": [10], "hash_algo": "sha256"},
-        "quote_signature_scheme": {"hash_algo": "sha256", "signature_algo": "rsassa"},
+        "pcr_selections": {"banks": [10], "hash_alg": "sha256"},
+        "quote_signature_scheme": {"hash_alg": "sha256", "signature_algo": "rsassa"},
         "log_file_path": "/sys/kernel/security/ima/ascii_runtime_measurements",
         "template_name": "ima-ng",
         "ascii_runtime_measurements": true,
@@ -31,7 +31,7 @@ fn mock_missing_ak_handle_configuration(_plugin_type: String) -> Option<String> 
         "tcti_config": "device:/dev/tpm0",
         // ak_handle is missing
         "ak_nv_index": 0x01800001_i64,
-        "pcr_selections": {"banks": [10], "hash_algo": "sha256"},
+        "pcr_selections": {"banks": [10], "hash_alg": "sha256"},
         "log_file_path": "/sys/kernel/security/ima/ascii_runtime_measurements",
         "template_name": "ima-ng",
         "ascii_runtime_measurements": true,
@@ -47,7 +47,7 @@ fn mock_missing_ak_nv_index_configuration(_plugin_type: String) -> Option<String
         "tcti_config": "device:/dev/tpm0",
         "ak_handle": 0x81010020_i64,
         // ak_nv_index is missing
-        "pcr_selections": {"banks": [10], "hash_algo": "sha256"},
+        "pcr_selections": {"banks": [10], "hash_alg": "sha256"},
         "log_file_path": "/sys/kernel/security/ima/ascii_runtime_measurements",
         "template_name": "ima-ng",
         "ascii_runtime_measurements": true,
@@ -79,7 +79,7 @@ fn mock_missing_log_file_path_configuration(_plugin_type: String) -> Option<Stri
         "tcti_config": "device:/dev/tpm0",
         "ak_handle": 0x81010020_i64,
         "ak_nv_index": 0x01800001_i64,
-        "pcr_selections": {"banks": [10], "hash_algo": "sha256"},
+        "pcr_selections": {"banks": [10], "hash_alg": "sha256"},
         // log_file_path is missing
         "template_name": "ima-ng",
         "ascii_runtime_measurements": true,
@@ -101,12 +101,12 @@ fn mock_none_configuration(_plugin_type: String) -> Option<String> {
 //     // Create a new plugin with the mock configuration
 //     let plugin = TpmImaPlugin::new(String::from("tpm_ima"), mock_ima_configuration)
 //         .expect("Failed to create TpmImaPlugin");
-    
+
 //     let result = plugin.collect_evidence(Some("test-node-id"), Some("123456".as_bytes()));
-    
+
 //     // Check that the result is Ok
 //     assert!(result.is_ok(), "collect_evidence failed: {:?}", result.err());
-    
+
 //     // Print the result
 //     println!("Collect evidence result: {}", result.unwrap());
 // }
@@ -115,7 +115,7 @@ fn mock_none_configuration(_plugin_type: String) -> Option<String> {
 fn test_tpm_ima_plugin_with_valid_configuration() {
     // Create a new plugin with the mock configuration
     let plugin = TpmImaPlugin::new(String::from("tpm_ima"), mock_ima_configuration);
-    
+
     // Check that plugin creation is successful
     assert!(plugin.is_ok());
 }
@@ -124,7 +124,7 @@ fn test_tpm_ima_plugin_with_valid_configuration() {
 fn test_missing_plugin_configuration() {
     // Create a new plugin with a non-existent plugin type
     let plugin_result = TpmImaPlugin::new(String::from("tpm_ima"), mock_none_configuration);
-    
+
     // Check that plugin creation fails with the expected error
     assert!(plugin_result.is_err());
     if let Err(PluginError::InternalError(msg)) = plugin_result {
@@ -138,7 +138,7 @@ fn test_missing_plugin_configuration() {
 fn test_invalid_json_configuration() {
     // Create a new plugin with invalid JSON configuration
     let plugin_result = TpmImaPlugin::new(String::from("tpm_ima"), mock_invalid_json_configuration);
-    
+
     // Check that plugin creation fails with the expected error
     assert!(plugin_result.is_err());
     if let Err(PluginError::InternalError(msg)) = plugin_result {
@@ -153,13 +153,13 @@ fn test_missing_node_id() {
     // Create a new plugin with the mock configuration
     let plugin = TpmImaPlugin::new(String::from("tpm_ima"), mock_ima_configuration)
         .expect("Failed to create TpmImaPlugin");
-    
+
     // Test collect_evidence with missing node_id
     let node_id = None;
     let nonce = Some("123456".as_bytes());
-    
+
     let result = plugin.collect_evidence(node_id, nonce);
-    
+
     // Check that the result is an error
     assert!(result.is_err());
     if let Err(PluginError::InputError(msg)) = result {
@@ -173,7 +173,7 @@ fn test_missing_node_id() {
 fn test_missing_ak_handle() {
     // Create a new plugin with missing ak_handle configuration
     let plugin_result = TpmImaPlugin::new(String::from("tpm_ima"), mock_missing_ak_handle_configuration);
-    
+
     // Check that plugin creation fails with the expected error
     assert!(plugin_result.is_err());
     if let Err(PluginError::InternalError(msg)) = plugin_result {
@@ -187,7 +187,7 @@ fn test_missing_ak_handle() {
 fn test_missing_ak_nv_index() {
     // Create a new plugin with missing ak_nv_index configuration
     let plugin_result = TpmImaPlugin::new(String::from("tpm_ima"), mock_missing_ak_nv_index_configuration);
-    
+
     // Check that plugin creation fails with the expected error
     assert!(plugin_result.is_err());
     if let Err(PluginError::InternalError(msg)) = plugin_result {
@@ -201,7 +201,7 @@ fn test_missing_ak_nv_index() {
 fn test_missing_pcr_selections() {
     // Create a new plugin with missing pcr_selections configuration
     let plugin_result = TpmImaPlugin::new(String::from("tpm_ima"), mock_missing_pcr_selections_configuration);
-    
+
     // Check that plugin creation fails with the expected error
     assert!(plugin_result.is_err());
     if let Err(PluginError::InternalError(msg)) = plugin_result {
@@ -215,7 +215,7 @@ fn test_missing_pcr_selections() {
 fn test_missing_log_file_path() {
     // Create a new plugin with missing log_file_path configuration
     let plugin_result = TpmImaPlugin::new(String::from("tpm_ima"), mock_missing_log_file_path_configuration);
-    
+
     // Check that plugin creation fails with the expected error
     assert!(plugin_result.is_err());
     if let Err(PluginError::InternalError(msg)) = plugin_result {

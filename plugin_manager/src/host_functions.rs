@@ -13,8 +13,8 @@ pub type ValidateCertChainFn = dyn for<'a> Fn(&'a str, &'a str, &'a [u8]) -> std
 /// first parameter: measured values
 /// second parameter: attester_type
 /// third parameter: user_id
-/// return value: unmatched measurements
-pub type GetUnmatchedMeasurementsFn = dyn for<'a> Fn(&'a Vec<String>, &'a str, &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<String>> + Send + 'a>> + Send + Sync;
+/// return value: Result with unmatched measurements or error string
+pub type GetUnmatchedMeasurementsFn = dyn for<'a> Fn(&'a Vec<String>, &'a str, &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<String>, String>> + Send + 'a>> + Send + Sync;
 
 /// Function type for querying configuration, the parameter is configuration key, returns configuration value
 /// first parameter: configuration key

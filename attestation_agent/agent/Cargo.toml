@@ -1,5 +1,5 @@
 [package]
-name = "agent"
+name = "attestation_agent"
 version = "0.1.0"
 edition = "2021"
 
@@ -17,6 +17,6 @@ cron.workspace = true
 serde_json.workspace = true
 log4rs.workspace = true
 agent_restful = { path = "../agent_restful" }
-plugin_manager = { path = "../../plugin_manager" }
 agent_utils = { path = "../utils", features = ["client"] }
 config = { path = "../config" }
+challenge = { path = "../challenge" }

@@ -37,7 +37,7 @@ cargo clean
 
 export RUST_MIN_STACK=33554432
 
-CARGO_BUILD_JOBS=4 cargo build -p agent -p tpm_boot_attester -p tpm_ima_attester
+CARGO_BUILD_JOBS=4 cargo build -p attestation_agent -p tpm_boot_attester -p tpm_ima_attester
 
 %install
 rm -rf %{buildroot}
@@ -46,7 +46,7 @@ install -d %{buildroot}%{_libdir}
 install -d %{buildroot}%{agent_systemd_dir}
 install -d %{buildroot}%{_sysconfdir}/attestation_agent
 
-install -pm 751 %{agent_output_dir}/agent                     %{buildroot}%{_bindir}
+install -pm 751 %{agent_output_dir}/attestation_agent         %{buildroot}%{_bindir}
 install -pm 644 config/attestation_agent.service              %{buildroot}%{agent_systemd_dir}
 install -pm 644 config/agent_config.yaml                      %{buildroot}%{_sysconfdir}/attestation_agent/agent_config.yaml
 
@@ -54,7 +54,7 @@ install -pm 644 %{agent_output_dir}/libtpm_boot_attester.so   %{buildroot}%{_lib
 install -pm 644 %{agent_output_dir}/libtpm_ima_attester.so    %{buildroot}%{_libdir}
 
 %files
-%{_bindir}/agent
+%{_bindir}/attestation_agent
 %config %attr(0644, root, root) %{agent_systemd_dir}/attestation_agent.service
 %config %attr(0644, root, root) %{_sysconfdir}/attestation_agent/agent_config.yaml
 

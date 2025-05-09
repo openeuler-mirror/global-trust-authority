@@ -4,6 +4,8 @@ use serde_json::Value;
 use crate::response_error::create_error_response;
 use challenge::evidence::{EvidenceManager, GetEvidenceRequest};
 
+use std::thread;
+
 /// Main entry point for evidence collection requests
 /// Processes the request and returns collected evidence
 pub fn get_evidence(body: Option<Value>) -> HttpResponse {
@@ -20,9 +22,15 @@ pub fn get_evidence(body: Option<Value>) -> HttpResponse {
         None => GetEvidenceRequest::default(),
     };
 
-    // Collect evidence and handle the response
-    match EvidenceManager::get_evidence(&evidence_request) {
-        Ok(response) => HttpResponse::Ok().json(response),
-        Err(error) => create_error_response(error, StatusCode::SERVICE_UNAVAILABLE),
+    let handle = thread::spawn(move || {
+        EvidenceManager::get_evidence(&evidence_request)
+    });
+
+    match handle.join() {
+        Ok(result) => match result {
+            Ok(response) => HttpResponse::Ok().json(response),
+            Err(error) => create_error_response(error, StatusCode::SERVICE_UNAVAILABLE),
+        },
+        Err(_) => create_error_response("Thread execution failed", StatusCode::INTERNAL_SERVER_ERROR),
     }
 }

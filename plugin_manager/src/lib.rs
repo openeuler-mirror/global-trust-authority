@@ -3,7 +3,6 @@
 mod host_functions;
 mod traits;
 mod manager;
-pub mod init_plugin;
 
 // Re-export all public items explicitly
 // From interface

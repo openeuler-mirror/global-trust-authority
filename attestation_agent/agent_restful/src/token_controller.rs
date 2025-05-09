@@ -4,6 +4,8 @@ use serde_json::{json, Value};
 use crate::response_error::create_error_response;
 use challenge::token::{TokenManager, TokenRequest};
 use challenge::challenge_error::ChallengeError;
+use tokio::runtime::Runtime;
+use std::thread;
 
 // Asynchronous part of token processing
 async fn process_token_request(token_request: TokenRequest) -> Result<serde_json::Value, ChallengeError> {
@@ -32,9 +34,16 @@ pub fn get_token(body: Option<Value>) -> HttpResponse {
         None => TokenRequest::default(),
     };
 
-    // Process the token request and handle the response
-    match futures::executor::block_on(process_token_request(token_request)) {
-        Ok(token) => HttpResponse::Ok().json(json!({ "token": token })),
-        Err(error) => create_error_response(error, StatusCode::SERVICE_UNAVAILABLE),
+    let handle = thread::spawn(move || {
+        let rt = Runtime::new().unwrap();
+        rt.block_on(process_token_request(token_request))
+    });
+    
+    match handle.join() {
+        Ok(result) => match result {
+            Ok(token) => HttpResponse::Ok().json(json!({ "token": token })),
+            Err(error) => create_error_response(error, StatusCode::SERVICE_UNAVAILABLE),
+        },
+        Err(_) => create_error_response("Thread execution failed", StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
