@@ -72,7 +72,7 @@ pub enum CertificateCommands {
     Get {
         /// Certificate type
         #[clap(short, long, value_enum)]
-        cert_type: Option<CertType>,
+        cert_type: Option<DeleteCertType>,
 
         /// Certificate id list
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
