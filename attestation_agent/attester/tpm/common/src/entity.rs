@@ -7,7 +7,7 @@ pub struct Evidence {
     pub ak_cert: String,
     pub quote: Quote,
     pub pcrs: Pcrs,
-    pub log: Vec<Log>,
+    pub logs: Vec<Log>,
 }
 
 // quote structure
@@ -20,7 +20,7 @@ pub struct Quote {
 // pcrs structure
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Pcrs { 
-    pub hash_algo: String,      // default value is sha256
+    pub hash_alg: String,      // default value is sha256
     pub pcr_values: Vec<PcrValue>,
 }
 
@@ -37,3 +37,4 @@ pub struct Log {
     pub log_type: String,       // example value: TcgEventLog, ImaLog
     pub log_data: String,
 }
+
