@@ -33,6 +33,7 @@ members = [
     "attestation_common/jwt",
     "plugin_manager",
     "attestation_cli",
+    "key_manager",
 ]
 
 resolver = "2"

@@ -1,7 +1,7 @@
 use crate::config::config::TOKEN_ARRAY;
 use crate::constants::{
     ALGORITHM_EC, ALGORITHM_RSA_3072, ALGORITHM_RSA_4096, ALGORITHM_SM2, ENCODING_PEM,
-    RSA_3072_KEY_SIZE, RSA_4096_KEY_SIZE,
+    RSA_3072_KEY_SIZE, RSA_4096_KEY_SIZE, MAX_PRIVATE_KEY_SIZE,
 };
 use openssl::error::ErrorStack;
 use openssl::nid::Nid;
@@ -61,8 +61,22 @@ fn validate_private_key_format(req: &PutCipherReq) -> Result<(), ValidationError
         return Ok(());
     }
     let pem_data = if !req.private_key.is_empty() {
+        if req.key_file.len() > (MAX_PRIVATE_KEY_SIZE as usize) {
+            return Err(ValidationError::new("PrivateKeyTooLarge")
+                .with_message(format!("Private Key length exceeds {}MB limit",
+                                      MAX_PRIVATE_KEY_SIZE /1024/1024).into()));
+        }
         req.private_key.as_bytes()
     } else {
+        let file_meta = fs::metadata(&req.key_file)
+            .map_err(|e| ValidationError::new("FileReadError")
+                .with_message(format!("File metadata read failed: {}", e).into()))?;
+
+        if file_meta.len() > MAX_PRIVATE_KEY_SIZE {
+            return Err(ValidationError::new("FileTooLarge")
+                .with_message(format!("Key file: {} exceeds {}MB limit",
+                                      req.key_file, MAX_PRIVATE_KEY_SIZE /1024/1024).into()));
+        }
         &fs::read(&req.key_file).map_err(|e| {
             ValidationError::new("FileReadError")
                 .with_message(format!("Failed to read key file: {}", e).into())

@@ -11,16 +11,16 @@ use validator::Validate;
 )]
 pub struct PutArgs {
     /// Key name
-    #[arg(short = 'n', long = "key_name", required = true, value_parser = ["FSK", "NSK", "TSK"])]
+    #[arg(short = 'n', long = "key_name", required = true, value_parser = ["FSK", "NSK", "TSK"], ignore_case = true)]
     pub key_name: String,
 
     /// Encoding mode
-    #[arg(long, value_parser = ["pem"], default_value = "pem")]
+    #[arg(long, value_parser = ["pem"], ignore_case = true, default_value = "pem")]
     #[arg(verbatim_doc_comment)]
     pub encoding: String,
 
     /// Encryption algorithm
-    #[arg(long, required = true, value_parser = ["rsa_3072", "rsa_4096", "sm2", "ec"])]
+    #[arg(long, required = true, value_parser = ["rsa_3072", "rsa_4096", "sm2", "ec"], ignore_case = true)]
     pub algorithm: String,
 
     /// Private key content, cannot be used with '--key_file'
@@ -34,9 +34,9 @@ pub struct PutArgs {
 
 pub fn handle_put(args: PutArgs) -> Result<(), AppError> {
     let put_cipher = PutCipherReq {
-        key_name: args.key_name,
-        encoding: args.encoding,
-        algorithm: args.algorithm,
+        key_name: args.key_name.to_uppercase(),
+        encoding: args.encoding.to_lowercase(),
+        algorithm: args.algorithm.to_lowercase(),
         private_key: args.private_key.unwrap_or_default(),
         key_file: args.key_file.unwrap_or_default(),
     };

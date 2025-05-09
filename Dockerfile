@@ -73,6 +73,7 @@ RUN mkdir -p attestation_service/src && echo 'fn main() {}' > attestation_servic
 # Exclude agent and attestation_cli interference
 RUN sed -i '/members = \[/,/\]/ {/attestation_agent/d}' Cargo.toml
 RUN sed -i '/members = \[/,/\]/ {/attestation_cli/d}' Cargo.toml
+RUN sed -i '/members = \[/,/\]/ {/key_manager/d}' Cargo.toml
 
 # Download dependencies (keep in cache)
 RUN cargo fetch
@@ -88,6 +89,7 @@ RUN rm -rf .cargo
 # Exclude agent interference
 RUN sed -i '/members = \[/,/\]/ {/attestation_agent/d}' Cargo.toml
 RUN sed -i '/members = \[/,/\]/ {/attestation_cli/d}' Cargo.toml
+RUN sed -i '/members = \[/,/\]/ {/key_manager/d}' Cargo.toml
 
 # Build specific packages
 RUN cargo build --release --package attestation_service --features docker_build

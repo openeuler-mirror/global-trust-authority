@@ -115,6 +115,20 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     volumes:
       - kafka-data:/var/lib/kafka/data
+  key_manager:
+    image: key_manager
+    hostname: key_manager  # 显式设置主机名
+    build:
+      context: .
+      dockerfile: ./key_manager/Dockerfile
+    networks:
+      app-network:
+        aliases:
+          - key_manager    # 添加网络别名
+    volumes:
+      - .:/var/test_docker/app
+    ports:
+      - "8082:8082"
   attestation_mock:
     image: attestation_mock
     networks:
