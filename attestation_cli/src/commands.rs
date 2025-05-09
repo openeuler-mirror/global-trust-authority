@@ -264,7 +264,7 @@ pub enum EvidenceCommands {
 
         /// Nonce info, starting with @ indicates the file path
         #[clap(short, long)]
-        content: String,
+        content: Option<String>,
 
         /// Output file address
         #[clap(short, long, required = true)]

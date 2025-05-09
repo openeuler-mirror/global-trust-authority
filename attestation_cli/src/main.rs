@@ -104,10 +104,8 @@ static START_STR: &str = "@";
 static RPM_CONFIG_PATH: &str = "/etc/attestation_cli/agent_config.yaml";
 
 lazy_static! {
-    static ref CONFIG_PATH: PathBuf = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .join(Path::new("config/agent_config.yaml"));
+    static ref CONFIG_PATH: PathBuf =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join(Path::new("config/agent_config.yaml"));
 }
 
 async fn deal_certificate_commands(command: &CertificateCommands, server_url: String, client: Client, user: &String) {
@@ -501,17 +499,23 @@ async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
             println!("Plugins loaded successfully");
             let attester_type = get_attester_types(config);
 
-            let nonce = get_content(&Some(content.to_string()));
-            if nonce.is_none() {
-                eprintln!("Unable to obtain nonce");
-                return;
-            }
-            let nonce: Nonce = serde_json::from_str(&nonce.unwrap()).unwrap();
+            let nonce: Option<Nonce> = match content {
+                None => None,
+                Some(content) => {
+                    let nonce = get_content(&Some(content.to_string()));
+                    if nonce.is_none() {
+                        eprintln!("Unable to obtain nonce");
+                        return;
+                    }
+                    let nonce: Nonce = serde_json::from_str(&nonce.unwrap()).unwrap();
+                    Some(nonce)
+                },
+            };
             let evidence_request = GetEvidenceRequest {
                 attester_types: Option::from(attester_type),
                 nonce_type: Option::from(nonce_type.to_string()),
                 user_nonce: user_nonce.clone(),
-                nonce: Option::from(nonce),
+                nonce,
                 attester_data: attester_data.clone(),
             };
             match EvidenceManager::get_evidence(&evidence_request) {
