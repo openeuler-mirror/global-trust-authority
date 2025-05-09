@@ -83,6 +83,7 @@ COPY . .
 # Remove attestation_service unrelated directories
 RUN rm -rf attestation_agent
 RUN rm -rf attestation_cli
+RUN rm -rf .cargo
 
 # Exclude agent interference
 RUN sed -i '/members = \[/,/\]/ {/attestation_agent/d}' Cargo.toml
