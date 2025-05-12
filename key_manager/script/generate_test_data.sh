@@ -42,7 +42,7 @@ generate_key() {
                 -pkeyopt rsa_keygen_bits:3072 \
                 -pkeyopt rsa_pss_keygen_md:sha256 \
                 -pkeyopt rsa_pss_keygen_mgf1_md:sha256 \
-                -pkeyopt rsa_pss_keygen_saltlen:32 \
+                -pkeyopt rsa_pss_keygen_saltlen:-1 \
                 2>/dev/null
             ;;
         sm2)

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use serde_json::{from_str, from_value, Value};
 use crate::config::config;
 use crate::config::config::TOKEN_ARRAY;
-use crate::key_manager::base_key_manager::{CommandExecutor, PrivateKey};
+use crate::key_manager::base_key_manager::PrivateKey;
 use crate::key_manager::openbao::openbao_command::{OpenBaoManager, Version};
 use crate::key_manager::secret_manager_factory::SecretManager;
 use crate::models::cipher_models::PutCipherReq;
@@ -94,7 +94,7 @@ impl OpenBaoManager {
         Ok(())
     }
 
-    fn check_secrets(bao: &mut OpenBaoManager) -> Result<bool, AppError> {
+    pub fn check_secrets(bao: &mut OpenBaoManager) -> Result<bool, AppError> {
         bao.clean();
         // 创建密钥路径
         let result = bao.secrets().list().detailed().format_json().run();
@@ -132,7 +132,7 @@ impl OpenBaoManager {
         }
     }
 
-    fn create_metadata(bao: &mut OpenBaoManager, item: &str) -> Result<(), AppError> {
+    pub fn create_metadata(bao: &mut OpenBaoManager, item: &str) -> Result<(), AppError> {
         bao.clean();
         let result = bao.kv().metadata().put().mount(config::SECRET_PATH).max_versions(&u32::MAX).map_name(item).run();
         match result {
