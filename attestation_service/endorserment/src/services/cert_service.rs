@@ -605,7 +605,8 @@ impl CertService {
                 // Insert certificate revocation information
                 match CertRepository::get_user_revoke_cert_num(&db, &user_id).await {
                     Ok(count) => {
-                        if count >= CONFIG.get_instance().unwrap().attestation_service.cert.single_user_cert_limit {
+                        if count + cert_revoked_list.len() as u64
+                            > CONFIG.get_instance().unwrap().attestation_service.cert.single_user_cert_limit {
                             error!("this user's revoke certs has exceeded the online limit");
                             return Ok(HttpResponse::BadRequest()
                                 .body("this user's revoke certs has exceeded the online limit".to_string()));
@@ -967,7 +968,7 @@ impl CertService {
             error!("The cert_type or user_id is empty");
             return Ok(false);
         }
-        info!("Begin verifying certificate signature");
+        info!("Begin verifying certificate signature, user_id: {}, cert_type: {}", user_id, cert_type);
         let db = get_connection().await.map_err(|e| {
             error!("Failed to get database connection: {}", e);
             CertVerifyError::DbError(e.to_string())
@@ -977,6 +978,10 @@ impl CertService {
             error!("Failed to query certificate by type and user: {:?}", e);
             CertVerifyError::DbError(e.to_string())
         })?;
+        if cert_data.is_empty() {
+            error!("The certificate queried is empty");
+            return Ok(false);
+        }
         let tx = db.begin().await.map_err(|e| {
             error!("Failed to get database transaction: {}", e);
             CertVerifyError::DbError(e.to_string())
@@ -986,16 +991,21 @@ impl CertService {
             error!("Failed to commit database transaction: {}", e);
             CertVerifyError::DbError(e.to_string())
         })?;
+        if certs.is_empty() {
+            error!("All certificates queried have been revoked or tampered with");
+            return Ok(false);
+        }
         for model in certs.into_iter() {
             let cert_info = model.cert_info.unwrap();
             match parse_cert_content(&cert_info) {
                 Ok(cert) => {
+                    info!("Begin verify signature {}", get_cert_serial_number(&cert),);
                     if !CertService::verify_cert_time(&cert) {
+                        error!("The parent certificate is expired");
                         continue;
                     }
                     // Obtain certificate public key
                     let pub_key = cert.public_key().unwrap();
-                    // let digest = Self::get_cert_digest(&cert).unwrap();
                     // Create verifier
                     let mut verifier = match Verifier::new(alg, &pub_key) {
                         Ok(verifier) => verifier,
@@ -1014,12 +1024,18 @@ impl CertService {
                             if is_valid {
                                 info!("Successfully verified certificate signature");
                                 return Ok(true);
+                            } else {
+                                error!("Failed verified certificate signature");
                             }
                         },
-                        Err(_) => continue,
+                        Err(e) => {
+                            error!("Verified certificate signature error: {}", e);
+                            continue;
+                        },
                     }
                 },
-                Err(_) => {
+                Err(e) => {
+                    error!("Parse cert content error: {}", e);
                     continue;
                 },
             }
@@ -1073,7 +1089,10 @@ impl CertService {
                 },
             };
             if certs.is_empty() {
-                error!("The certificate {:?} parent certificates is all revoked", service_cert.subject_name(),);
+                error!(
+                    "All parent certificates of this certificate {:?} have been revoked or tampered with",
+                    service_cert.subject_name(),
+                );
                 return Ok(false);
             }
             let mut is_success = false;

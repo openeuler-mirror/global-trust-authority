@@ -24,18 +24,22 @@ use std::path::{Path, PathBuf};
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {
+    /// Service Url
     #[clap(short, long, default_value = "")]
     server_url: String,
 
+    /// Client CA Cert
     #[clap(long, default_value = "")]
     cert_path: String,
 
+    /// Service CA Cert
     #[clap(long, default_value = "")]
     ca_path: String,
 
     #[clap(subcommand)]
     group: CommandGroup,
 
+    /// User Id
     #[clap(short, long, default_value = "")]
     user: String,
 }
@@ -97,14 +101,11 @@ enum CommandGroup {
 static USER_ID: &str = "User-Id";
 static AGENT_VERSION: &str = "1.0.0";
 static START_STR: &str = "@";
+static RPM_CONFIG_PATH: &str = "/etc/attestation_cli/agent_config.yaml";
 
 lazy_static! {
-    static ref CONFIG_PATH: String = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .join(Path::new("config/agent_config.yaml"))
-        .display()
-        .to_string();
+    static ref CONFIG_PATH: PathBuf =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join(Path::new("config/agent_config.yaml"));
 }
 
 async fn deal_certificate_commands(command: &CertificateCommands, server_url: String, client: Client, user: &String) {
@@ -222,9 +223,7 @@ fn get_policy_content(content: &Option<String>, content_type: &Option<ContentTyp
             } else {
                 Some(match content_type {
                     ContentType::Jwt => content.clone(),
-                    ContentType::Text => {
-                        general_purpose::STANDARD.encode(content)
-                    },
+                    ContentType::Text => general_purpose::STANDARD.encode(content),
                 })
             }
         },
@@ -500,17 +499,23 @@ async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
             println!("Plugins loaded successfully");
             let attester_type = get_attester_types(config);
 
-            let nonce = get_content(&Some(content.to_string()));
-            if nonce.is_none() {
-                eprintln!("Unable to obtain nonce");
-                return;
-            }
-            let nonce: Nonce = serde_json::from_str(&nonce.unwrap()).unwrap();
+            let nonce: Option<Nonce> = match content {
+                None => None,
+                Some(content) => {
+                    let nonce = get_content(&Some(content.to_string()));
+                    if nonce.is_none() {
+                        eprintln!("Unable to obtain nonce");
+                        return;
+                    }
+                    let nonce: Nonce = serde_json::from_str(&nonce.unwrap()).unwrap();
+                    Some(nonce)
+                },
+            };
             let evidence_request = GetEvidenceRequest {
                 attester_types: Option::from(attester_type),
                 nonce_type: Option::from(nonce_type.to_string()),
                 user_nonce: user_nonce.clone(),
-                nonce: Option::from(nonce),
+                nonce,
                 attester_data: attester_data.clone(),
             };
             match EvidenceManager::get_evidence(&evidence_request) {
@@ -569,10 +574,18 @@ async fn deal_token_commands(command: &TokenCommands, server_url: String, client
     }
 }
 
+fn get_config_path() -> String {
+    if CONFIG_PATH.exists() {
+        CONFIG_PATH.to_string_lossy().into_owned()
+    } else {
+        RPM_CONFIG_PATH.to_string()
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
-    ConfigManager::new(&CONFIG_PATH).unwrap();
+    ConfigManager::new(&get_config_path()).unwrap();
     let config: Config = AGENT_CONFIG.get_instance().unwrap().clone();
     let server_url = if cli.server_url.is_empty() { config.clone().server.server_url } else { cli.server_url };
     let tls = config.clone().server.tls.unwrap();
@@ -621,7 +634,6 @@ async fn main() {
             if let Value::Object(ref mut map) = request_body {
                 map.insert("message".to_string(), json!(message));
             }
-            println!("request_body {}", &request_body);
             // Send POST request
             let response = client
                 .post(url)

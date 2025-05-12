@@ -72,7 +72,7 @@ pub enum CertificateCommands {
     Get {
         /// Certificate type
         #[clap(short, long, value_enum)]
-        cert_type: Option<CertType>,
+        cert_type: Option<DeleteCertType>,
 
         /// Certificate id list
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
@@ -264,7 +264,7 @@ pub enum EvidenceCommands {
 
         /// Nonce info, starting with @ indicates the file path
         #[clap(short, long)]
-        content: String,
+        content: Option<String>,
 
         /// Output file address
         #[clap(short, long, required = true)]
