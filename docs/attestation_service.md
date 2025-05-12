@@ -1,0 +1,138 @@
+# Attestation Service Development Process and Feature Usage Guide
+
+## 1. Feature Introduction
+Attestation Service is the server-side component of the remote attestation system, providing the following main functions:
+- Remote attestation challenge generation and verification
+- Policy management and verification
+- Certificate management
+- Key management
+
+## 2. Development Environment Configuration
+
+### 2.1 Required Components
+- Rust 1.70.0 or higher
+- PostgreSQL 14.0 or higher
+- OpenSSL development library
+- libssl-dev (for OpenSSL)
+- pkg-config
+
+### 2.2 Environment Setup
+1. Install PostgreSQL
+```bash
+winget install PostgreSQL.PostgreSQL
+```
+
+## 3. Directory Structure
+```plaintext
+attestation_service/
+├── attestation/        # Core attestation functionality
+├── attestation_service/# Main attestation service implementation
+├── config/            # Configuration management
+├── endorserment/      # Certificate management
+├── key_management/    # Key management
+├── nonce/            # Random number generation and management
+├── policy/           # Policy definition and management
+├── policy_engine/    # Policy engine implementation
+├── resource_provider/ # Resource provider
+├── rv/               # Remote verification related
+├── server_config/    # Server configuration
+├── service_restful/  # RESTful API implementation
+├── token_management/ # Token management
+├── verifier/         # Verifier implementation
+```
+
+## 4. Development Process Guide
+
+### 4.1 Add New Feature Flow
+- 1 Define Entity（entities/）
+  #[derive(Debug, Serialize, Deserialize)]
+  pub struct Entity  {
+  pub name: String,
+  }
+
+- 2 Implement Data Access Layer（repositories/）
+  pub async fn save_entity(pool: &PgPool, entity: &Entity) -> Result<(), Error> {
+  sqlx::query!(
+  "INSERT INTO entity (name) VALUES ($1)",
+  entity.name
+  )
+  .execute(pool)
+  .await?;
+  Ok(())
+  }
+
+- 3 Implement Business Logic（services/）
+  pub async fn process_entity(request: EntityRequest) -> Result<EntityResponse, ServiceError> {
+  // Business logic implementation
+  }
+
+- 4 Add Controller（controllers/）
+  pub async fn create_entity(
+  State(pool): State<PgPool>,
+  Json(request): Json<EntityRequest>,
+  ) -> Result<Json<EntityResponse>, ServiceError> {
+  let entity = process_entity(request).await?;
+  Ok(Json(entity))
+  }
+- 5 Configure Routes（routes/）
+  pub fn configure_routes(cfg: &mut web::ServiceConfig) {
+  cfg.service(
+  web::scope("/api")
+  .route("/entity", web::post().to(create_entity))
+  );
+  }
+
+## 5. Feature Usage Guide
+
+### 5.1 Database Operation
+// Create connection pool
+let pool = PgPoolOptions::new()
+.max_connections(5)
+.connect(&database_url)
+.await?;
+
+// Execute query
+let result = sqlx::query!("SELECT * FROM entity ")
+.fetch_all(&pool)
+.await?;
+
+### 5.2 Rate Limiting
+// Execute query
+let governor = Arc::new(Governor::new(&GovernorConfigBuilder::default()
+.requests_per_second(10)
+.burst_size(5)
+.finish()
+.unwrap()));
+
+### 5.3 Logging
+// Configure logging
+log::info!("Processing request: {:?}", request);
+log::error!("Error occurred: {:?}", error);
+
+## 6. Testing Guide
+
+### 6.1 Unit Testing（tests/）
+#[cfg(test)]
+mod tests {
+use super::*;
+
+    #[test]
+    fn test_entity_validation() {
+        // Test implementation
+    }
+}
+
+## 7. Deployment Guide
+
+### 7.1 Build and Run
+- Build：cargo build
+- Run：cargo run --bin attestation_service
+
+### 7.2 Configuration Description
+- DATABASE_URL: Database connection string
+- SERVER_ADDR: Service listening address
+- RUST_LOG: Log level
+- MAX_JSON_SIZE: JSON request size limit
+- REQUESTS_PER_SECOND: Request rate limit
+- BURST_SIZE: Burst request limit
+- HTTPS_SWITCH: HTTPS switch
