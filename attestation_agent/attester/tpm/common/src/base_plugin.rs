@@ -31,7 +31,9 @@ use tss_esapi::{
     constants::CapabilityType,
     constants::SessionType,
     attributes::SessionAttributesBuilder,
+    constants::response_code::{FormatZeroResponseCode, Tss2ResponseCode},
 };
+use std::io::Error as IoError;
 
 pub trait TpmPluginBase: PluginBase + AgentPlugin {
     fn config(&self) -> &TpmPluginConfig;
@@ -80,9 +82,25 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         }).collect()
     }
 
+    fn context_new(&self) -> Result<Context, PluginError> {
+        let ctx = Context::new(self.config().tcti_config.clone());
+        match ctx {
+            Ok(context) => Ok(context),
+            Err(e) => {
+                match e {
+                    tss_esapi::Error::Tss2Error(Tss2ResponseCode::FormatZero(response_code)) => {
+                        let err = IoError::last_os_error();
+                        Err(PluginError::InternalError(
+                            format!("TPM error details: response code {:x}, system error: {}", response_code.0, err)
+                        ))
+                    },
+                    _ => Err(PluginError::InternalError(format!("Failed to create TPM context: {}", e)))
+                }
+            }
+        }
+    }
     fn create_ctx_with_session(&self) -> Result<Context, PluginError> {
-        let mut ctx = Context::new(self.config().tcti_config.clone())
-            .map_err(|e| PluginError::InternalError(format!("Failed to create TPM context: {}", e)))?;
+        let mut ctx = self.context_new()?;
         let session = ctx
             .start_auth_session(
                 None,
@@ -309,9 +327,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
     fn collect_pcrs(&self) -> Result<Pcrs, PluginError> {
         // Implementation of collect_pcrs (same for all plugins)
         // Create a new TPM context
-        let mut context = Context::new(self.config().tcti_config.clone())
-            .map_err(|e| PluginError::InternalError(format!("Failed to create TPM context: {}", e)))?;
-
+        let mut context = self.context_new()?;
         let pcr_hash_alg = Self::hash_alg_from_str(self.config().pcr_selection.hash_alg.as_str())?;
 
         // Check if PCRs exist for the specified hash algorithm
@@ -371,9 +387,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         let nonce = &nonce[..std::cmp::min(nonce.len(), 32)];
 
         // Create a new TPM context
-        let mut context = Context::new(self.config().tcti_config.clone())
-            .map_err(|e| PluginError::InternalError(format!("Failed to create TPM context: {}", e)))?;
-
+        let mut context = self.context_new()?;
         // Get the persistent AK handle and convert it to KeyHandle
         let persistent_handle = PersistentTpmHandle::new(self.config().ak_handle as u32)
             .map_err(|e| PluginError::InternalError(format!("Invalid AK handle value: {}", e)))?;

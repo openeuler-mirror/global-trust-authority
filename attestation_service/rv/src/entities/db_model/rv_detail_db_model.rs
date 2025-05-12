@@ -11,7 +11,7 @@ pub struct Model {
     pub attester_type: String,
     #[sea_orm(column_type = String(255))]
     pub file_name: String,
-    #[sea_orm(column_type = String(40))]
+    #[sea_orm(column_type = String(64))]
     pub sha256: String,
     #[sea_orm(column_type = String(32))]
     pub ref_value_id: String,

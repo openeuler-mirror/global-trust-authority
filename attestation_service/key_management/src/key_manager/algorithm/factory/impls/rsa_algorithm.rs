@@ -40,7 +40,7 @@ impl KeyAlgorithm for RsaAlgorithm {
 
         signer.set_rsa_padding(openssl::rsa::Padding::PKCS1_PSS)?;
         signer.set_rsa_mgf1_md(openssl::hash::MessageDigest::sha256())?;
-        signer.set_rsa_pss_saltlen(RsaPssSaltlen::MAXIMUM_LENGTH)?;
+        signer.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)?;
 
         let pub_key = private_pkey.public_key_to_pem().map_err(|e| {
             println!("RsaAlgorithm: public_key_to_pem failed: {}", e);
@@ -62,7 +62,7 @@ impl KeyAlgorithm for RsaAlgorithm {
         // creating a signer
         let mut signer = Signer::new_without_digest(private_key)?;
         signer.set_rsa_padding(Padding::PKCS1_PSS)?;
-
+        signer.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)?;
         // signature data
         Ok(signer.sign_oneshot_to_vec(data.clone().as_slice())?)
     }
@@ -78,7 +78,7 @@ impl KeyAlgorithm for RsaAlgorithm {
         info!("get public key to verify");
         verifier.set_rsa_padding(Padding::PKCS1_PSS)?;
         verifier.set_rsa_mgf1_md(openssl::hash::MessageDigest::sha256())?;
-        verifier.set_rsa_pss_saltlen(RsaPssSaltlen::MAXIMUM_LENGTH)?;
+        verifier.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)?;
 
         Ok(verifier.verify_oneshot(&signature, &data)?)
     }
