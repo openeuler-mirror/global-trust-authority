@@ -1,29 +1,41 @@
-use std::{io};
+use crate::config::config::{OPENBAO_ADDR_ENV_KEY, OPENBAO_TOKEN_ENV_KEY};
+use crate::key_manager::base_key_manager::CommandExecutor;
+use crate::utils::env_setting_center::Environment;
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, from_str};
 use std::collections::HashMap;
 use std::ffi::OsString;
-use std::process::{Output};
-use serde::{Deserialize, Serialize};
-use serde_json::{from_str, Value};
-use crate::config::config::{OPENBAO_ADDR_ENV_KEY, OPENBAO_TOKEN_ENV_KEY};
-use crate::key_manager::base_key_manager::{CommandExecutor};
-use crate::utils::env_setting_center::Environment;
+use std::io;
+use std::process::Output;
 
 pub struct OpenBaoManager {
     command: String,
     args: Vec<String>,
-    envs: HashMap<OsString, OsString>
+    envs: HashMap<OsString, OsString>,
+    runner: Box<dyn CommandExecutor>,
 }
 
 impl OpenBaoManager {
-    pub fn default () -> OpenBaoManager {
+    pub fn default() -> OpenBaoManager {
+        struct DefaultExecutor;
+        impl CommandExecutor for DefaultExecutor {
+            fn run(&self, command: &str, args: &Vec<String>, envs: &HashMap<OsString, OsString>) -> io::Result<Output> {
+                self.execute(command, args, envs)
+            }
+        }
         Self {
             command: String::from("bao"),
             args: Vec::<String>::new(),
             envs: HashMap::from([
                 (OsString::from(OPENBAO_TOKEN_ENV_KEY), OsString::from(&Environment::global().root_token)),
                 (OsString::from(OPENBAO_ADDR_ENV_KEY), OsString::from(&Environment::global().addr)),
-            ])
+            ]),
+            runner: Box::new(DefaultExecutor),
         }
+    }
+
+    pub fn new(runner: Box<dyn CommandExecutor>) -> OpenBaoManager {
+        Self { command: String::new(), args: Vec::<String>::new(), envs: HashMap::from([]), runner }
     }
 
     pub fn status(&mut self) -> &mut Self {
@@ -115,7 +127,7 @@ impl OpenBaoManager {
         self.args.push(format!("--max-versions={}", max_versions));
         self
     }
-    
+
     pub fn clean(&mut self) -> &mut Self {
         self.args.clear();
         self
@@ -133,11 +145,11 @@ impl OpenBaoManager {
                     return false;
                 }
                 let data: Value = from_str(&String::from_utf8(out.stdout).unwrap()).unwrap();
-                if data["Initialized"] == "false" {
+                if data["Initialized"] == false {
                     log::error!("openbao not initialized, please check");
                     return false;
                 }
-                if data["Sealed"] == "false" {
+                if data["Sealed"] == true {
                     log::error!("openbao is seal, please unseal openbao");
                     return false;
                 }
@@ -151,18 +163,38 @@ impl OpenBaoManager {
         }
     }
 
-}
+    pub fn command(&self) -> &str {
+        &self.command
+    }
 
-impl CommandExecutor for OpenBaoManager {
-    fn run(&self) -> io::Result<Output> {
-        self.execute(&self.command, &self.args, &self.envs)
+    pub fn args(&self) -> &Vec<String> {
+        &self.args
+    }
+
+    pub fn envs(&self) -> &HashMap<OsString, OsString> {
+        &self.envs
+    }
+
+    pub fn set_command(&mut self, command: String) {
+        self.command = command;
+    }
+
+    pub fn set_args(&mut self, args: Vec<String>) {
+        self.args = args;
+    }
+
+    pub fn set_envs(&mut self, envs: HashMap<OsString, OsString>) {
+        self.envs = envs;
+    }
+
+    pub fn run(&self) -> io::Result<Output> {
+        self.runner.execute(&self.command, &self.args, &self.envs)
     }
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Version {
-    pub created_time : String,
-    pub deletion_time : String,
-    pub destroyed : bool
+    pub created_time: String,
+    pub deletion_time: String,
+    pub destroyed: bool,
 }
-
