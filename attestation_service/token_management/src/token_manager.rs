@@ -9,6 +9,7 @@ use log::{debug, error, info};
 use mq::send_message;
 use serde_json::{json, Value};
 use std::time::{SystemTime, UNIX_EPOCH};
+use openssl::pkey::PKey;
 use uuid::Uuid;
 
 /// token manager
@@ -27,10 +28,10 @@ impl TokenManager {
             error!("get_private_key error: {}", e.to_string());
             GenerateTokenError::GenerateTokenError(e.to_string())
         })?;
-        let private_key = EncodingKey::from_rsa_pem(&key_info_resp.key).map_err(|e| {
-            error!("from_rsa_pem error: {}", e.to_string());
-            GenerateTokenError::GenerateTokenError(e.to_string())
-        })?;
+        let pkey = PKey::private_key_from_pem(&key_info_resp.key).map_err(|e| GenerateTokenError::GenerateTokenError(e.to_string()))?;
+        let rsa = pkey.rsa().map_err(|e| GenerateTokenError::GenerateTokenError(e.to_string()))?;
+        let der = rsa.private_key_to_der().unwrap();
+        let private_key = EncodingKey::from_rsa_der(&der);
 
         // get algorithm
         let algorithm = key_info_resp.algorithm;
@@ -94,10 +95,10 @@ impl TokenManager {
             error!("get_public_key error: {}", e.to_string());
             VerifyTokenError::VerifyTokenError(e.to_string())
         })?;
-        let public_key = DecodingKey::from_rsa_pem(&key_info_resp.key).map_err(|e| {
-            error!("from_rsa_pem error: {}", e.to_string());
-            VerifyTokenError::VerifyTokenError(e.to_string())
-        })?;
+        let pkey = PKey::public_key_from_pem(&key_info_resp.key).map_err(|e| VerifyTokenError::VerifyTokenError(e.to_string()))?;
+        let rsa = pkey.rsa().map_err(|e| VerifyTokenError::VerifyTokenError(e.to_string()))?;
+        let der = rsa.public_key_to_der_pkcs1().unwrap();
+        let public_key = DecodingKey::from_rsa_der(&der);
 
         // get algorithm
         let algorithm = key_info_resp.algorithm;

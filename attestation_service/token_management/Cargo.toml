@@ -19,3 +19,4 @@ mockall.workspace = true
 env_config_parse.workspace = true
 mq.workspace = true
 config_manager.workspace = true
+openssl.workspace = true
