@@ -52,7 +52,7 @@ impl GenerateEvidence for TpmImaPlugin {
         }
         let mut ima_log = ImaLog::new(&log_data.log_data)?;
         let is_log_valid: bool = match ima_log.verify(pcr_values, &self.service_host_functions, user_id).await {
-            Ok(_) => true,
+            Ok(res) => res,
             Err(_) => false
         };
         let ima_log_json = ima_log.to_json_value()?;
