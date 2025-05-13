@@ -1,0 +1,16 @@
+[package]
+name = "common_log"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+log.workspace = true
+serde.workspace = true
+dotenv.workspace = true
+serde_yaml.workspace = true
+log4rs.workspace = true
+chrono.workspace = true
+env_config_parse.workspace = true

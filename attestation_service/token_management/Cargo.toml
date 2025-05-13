@@ -1,0 +1,22 @@
+[package]
+name = "token_management"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+key_management.workspace = true
+jsonwebtoken.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+mockall.workspace = true
+env_config_parse.workspace = true
+mq.workspace = true
+config_manager.workspace = true
+openssl.workspace = true

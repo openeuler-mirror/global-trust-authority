@@ -1,0 +1,42 @@
+loggers:
+  - path_prefix: root
+    log_directory: logs
+    log_file_name: root.log
+    max_file_size: 10485760  # 10MB
+    max_zip_count: 5
+    level: info
+
+#  - path_prefix: scheduled_task
+#    log_directory: logs/scheduled
+#    log_file_name: scheduled.log
+#    max_file_size: 10485760
+#    max_zip_count: 5
+#    level: info
+#
+#  - path_prefix: attestation_service
+#    log_directory: logs/service
+#    log_file_name: service.log
+#    max_file_size: 10485760
+#    max_zip_count: 5
+#    level: info
+#
+#  - path_prefix: attestation_common
+#    log_directory: logs/common
+#    log_file_name: common.log
+#    max_file_size: 10485760
+#    max_zip_count: 5
+#    level: info
+#
+#  - path_prefix: attester
+#    log_directory: logs/attester
+#    log_file_name: attester.log
+#    max_file_size: 10485760
+#    max_zip_count: 5
+#    level: info
+#
+#  - path_prefix: challenge
+#    log_directory: logs/challenge
+#    log_file_name: challenge.log
+#    max_file_size: 10485760
+#    max_zip_count: 5
+#    level: info

@@ -1,0 +1,36 @@
+[package]
+name = "policy"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["rlib","dylib"]
+path = "src/lib.rs"
+
+[dependencies]
+uuid.workspace = true
+chrono.workspace = true
+serde.workspace = true
+actix-web.workspace = true
+sea-orm.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+base64.workspace = true
+thiserror.workspace = true
+lazy_static.workspace = true
+key_management.workspace = true
+jsonwebtoken.workspace = true
+ctor.workspace = true
+tempfile.workspace = true
+mockall.workspace = true
+endorserment.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+validator.workspace = true
+plugin_manager.workspace = true
+policy_engine.workspace = true
+env_config_parse.workspace = true
+rdb.workspace = true
+common_log.workspace = true
+jwt.workspace = true
+config_manager.workspace = true

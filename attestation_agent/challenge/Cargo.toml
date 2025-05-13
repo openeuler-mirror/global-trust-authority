@@ -1,0 +1,22 @@
+[package]
+name = "challenge"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libc = "0.2"
+tokio.workspace = true
+once_cell.workspace = true
+futures.workspace = true
+log.workspace = true
+env_logger.workspace = true
+serde_json.workspace = true
+lazy_static.workspace = true
+serde = { workspace = true, features = ["derive"] }
+reqwest = { workspace = true, features = ["json"] }
+config = { path = "../config" }
+plugin_manager = { path = "../../plugin_manager" }
+tpm_common_attester = { path = "../attester/tpm/common" }
+tpm_boot_attester = { path = "../attester/tpm/boot" }
+tpm_ima_attester = { path = "../attester/tpm/ima" }
+agent_utils = { path = "../utils" }

@@ -1,0 +1,14 @@
+[Unit]
+Description=Remote attestation agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/attestation_agent
+ExecReload=/usr/bin/attestation_agent
+Restart=always
+RestartSec=10s
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target

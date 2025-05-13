@@ -1,0 +1,47 @@
+{
+    "version": 2,
+    "Events": [
+      {
+        "EventNum": 10,
+        "PCRIndex": 1,
+        "EventType": "EV_EFI_VARIABLE_BOOT",
+        "DigestCount": 3,
+        "Digests": [
+          {
+            "AlgorithmId": "sha256",
+            "Digest": "75a377ae87f3f07ad9fd4b108a1cbb15e3dd58a6817e1e3f1f3cb8e0b3ee0ed3"
+          },
+          {
+            "AlgorithmId": "sha384",
+            "Digest": "ab4685ecbb2f6e90e2dd22cf1ed2bf28dc583ac8a62948f34b566f8c5297108843e2d855469fb14c1462c64e69d8ecb4"
+          },
+          {
+            "AlgorithmId": "sha512",
+            "Digest": "74712c8940e0578c7ac6daae6c9e79930edafb3e0ea64df5d383cc27c9672300091bdd0c6938340eea08d9a98b2d11ea1c46a81d8e91f79f7866f26539633c9d"
+          }
+        ],
+        "EventSize": 166,
+        "Event": {
+          "VariableName": "8be4df61-93ca-11d2-aa0d-00e098032b8c",
+          "UnicodeNameLength": 8,
+          "VariableDataLength": 118,
+          "UnicodeName": "Boot0002",
+          "VariableData": {
+            "Enabled": "Yes",
+            "FilePathListLength": 98,
+            "Description": "Ubuntu",
+            "DevicePath": "04012a000f00000000280000000000000050030000000000d7cd62a445c6884b8a42f58eefe93eba0202040434005c004500460049005c007500620075006e00740075005c007300680069006d007800360034002e0065006600690000007fff0400"
+          }
+        }
+      }
+    ],
+    "pcrs": {
+      "sha256": {
+        "0": "0x737f767a12f54e70eecbc8684011323ae2fe2dd9f90785577969d7a2013e8c12",
+        "1": "0x6b0bbcc0d97a82a589af03335e6ed7bd00e07129e884c56bb7dca49a4282814a",
+        "2": "0x3d458cfe55cc03ea1f443f1562beec8df51c75e14a9fcf9a7234a13f198e7969",
+        "3": "0x3d458cfe55cc03ea1f443f1562beec8df51c75e14a9fcf9a7234a13f198e7969",
+        "4": "0xabe8b3fa6aecb36c2fd93c6f6edde661c21b353d007410a2739d69bfa7e1b9be"
+      }
+    }
+}

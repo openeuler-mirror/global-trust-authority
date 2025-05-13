@@ -1,0 +1,22 @@
+[package]
+name = "agent_utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+validator = { workspace = true, optional = true }
+log = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+reqwest = { workspace = true, features = ["json", "native-tls"], optional = true }
+once_cell = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+openssl = { workspace = true, optional = true }
+regex = { workspace = true, optional = true }
+config = { path = "../config" }
+plugin_manager = { path = "../../plugin_manager" }
+
+[features]
+default = ["errors"]
+errors = []
+validate = ["errors", "validator", "regex"]
+client = ["log", "reqwest", "errors", "validate", "once_cell", "serde_json", "openssl"]

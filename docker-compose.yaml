@@ -1,0 +1,153 @@
+services:
+  attestation_service:
+    image: ra-attestation_service:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '2'    # Limit CPU usage to 200% (equivalent to 100% utilization of dual cores)
+          memory: 200M   # Hard memory limit of 200MB
+    env_file: .env
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+    build: .
+    environment:
+      - REDIS_URL=redis://default:${REDIS_PASSWORD}@redis:6379/0
+      - MYSQL_DATABASE_URL=mysql://${DB_USER}:${DB_PASSWORD}@mysql:3306/${DB_NAME}?ssl-mode=disabled&charset=utf8mb4&auth-plugin=mysql_native_password
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      zookeeper:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      attestation_mock:
+        condition: service_started
+    networks:
+      - app-network  # Unified network name
+#    restart: always
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - .:/var/test_docker/app
+      - app-logs:/var/test_docker/app/ra-log/logs/  # Use named volume
+      - ./config:/app/config:ro  # Read-only mount for config directory (add as needed)
+  mysql:
+    image: mysql:8.0.41
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: mysql_native_password  # Force use of old authentication method, ensure use of more compatible mysql_native_password plugin
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init.sql:/docker-entrypoint-initdb.d:ro
+    networks:
+      - app-network
+    command:
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}", "-h", "localhost" ]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+    ports:
+      - "3306:3306"
+  redis:
+    image: redis:6.2.17
+    command: redis-server --appendonly yes  # redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+  # Zookeeper (Kafka dependency)
+  zookeeper:
+    image: zookeeper:3.8  # Official Apache image (can be pulled domestically)
+    networks:
+      - app-network
+    ports:
+      - "2181:2181"
+    environment:
+      ZOO_4LW_COMMANDS_WHITELIST: "*"  # Allow all four-letter commands (including stat, ruok, etc.)
+      ZOOKEEPER_CLIENT_PORT: 2181
+    healthcheck:
+      test: ["CMD-SHELL", "echo srvr | nc 127.0.0.1 2181 | grep -E 'Zookeeper version|Mode'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  # Kafka service
+  kafka:
+    image: wurstmeister/kafka:latest  # Community maintained Kafka image
+    networks:
+      - app-network
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+#      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]  # Check if port 9092 is accessible
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    ports:
+      - "9092:9092"          # Internal container access
+      - "29092:29092"        # Host machine access (optional)
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENERS: "INTERNAL://:9092,EXTERNAL://:29092"
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka:9092,EXTERNAL://localhost:29092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+  key_manager:
+    image: key_manager
+    hostname: key_manager  # 显式设置主机名
+    build:
+      context: .
+      dockerfile: ./key_manager/Dockerfile
+    networks:
+      app-network:
+        aliases:
+          - key_manager    # 添加网络别名
+    volumes:
+      - .:/var/test_docker/app
+    ports:
+      - "8082:8082"
+  attestation_mock:
+    image: attestation_mock
+    networks:
+      - app-network
+    volumes:
+      - /var/test_docker/attestation_mock:/var/test_docker/app
+    ports:
+      - "8082:8082"
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  app-logs:
+    driver: local
+  kafka-data:  # Kafka data persistence
+    driver: local
+  cargo-registry:
+
+networks:
+  app-network:
+    driver: bridge

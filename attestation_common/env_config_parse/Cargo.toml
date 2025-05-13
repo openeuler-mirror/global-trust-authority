@@ -1,0 +1,13 @@
+[package]
+name = "env_config_parse"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+log.workspace = true
+tokio.workspace = true
+serde_yaml.workspace = true
+walkdir.workspace = true

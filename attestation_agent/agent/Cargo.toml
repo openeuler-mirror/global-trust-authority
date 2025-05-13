@@ -1,0 +1,22 @@
+[package]
+name = "attestation_agent"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web.workspace = true
+sea-orm.workspace = true
+log.workspace = true
+serde.workspace = true
+dotenv.workspace = true
+tokio.workspace = true
+tokio.features = ["full", "macros", "rt-multi-thread"]
+chrono.workspace = true
+rand.workspace = true
+cron.workspace = true
+serde_json.workspace = true
+log4rs.workspace = true
+agent_restful = { path = "../agent_restful" }
+agent_utils = { path = "../utils", features = ["client"] }
+config = { path = "../config" }
+challenge = { path = "../challenge" }
