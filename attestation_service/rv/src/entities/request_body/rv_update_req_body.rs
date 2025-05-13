@@ -9,7 +9,7 @@ pub struct RvUpdateReqBody {
     pub id: String,
     
     /// Reference value name
-    #[validate(length(max = 255))]
+    #[validate(length(min = 1, max = 255))]
     pub name: Option<String>,
 
     /// Reference value description
