@@ -28,8 +28,6 @@ pub async fn get_nonce() -> HttpResponse {
         valid_period: iat1,
         nonce: nonce,
     };
-    error!("input is {:?}", input);
     let res = nonce::validate_nonce(input).await;
-    error!("res is  {},---{}", res.is_valid, res.message);
     HttpResponse::Ok().body("get_nonce ok".to_string())
 }
