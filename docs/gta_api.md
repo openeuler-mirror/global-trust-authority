@@ -84,7 +84,7 @@
 #### 3.1.1 Add Baseline
 **Description**: Add baseline
 
-**Request Method**: `POST /set_refvalue`
+**Request Method**: `POST /refvalue`
 
 ##### Request Parameters
 | Field | Sub-field | Type | Required | Description |
