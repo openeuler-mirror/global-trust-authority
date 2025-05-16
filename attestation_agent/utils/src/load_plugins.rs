@@ -1,17 +1,8 @@
-use std::collections::HashMap;
-use log::{error, info};
-use plugin_manager::{
-    PluginManager,
-    AgentPlugin,
-    PluginManagerInstance,
-    AgentHostFunctions
-};
-use config::{
-    Config,
-    ConfigManager,
-    AGENT_CONFIG
-};
 use crate::AgentError;
+use config::{Config, ConfigManager, AGENT_CONFIG};
+use log::{error, info};
+use plugin_manager::{AgentHostFunctions, AgentPlugin, PluginManager, PluginManagerInstance};
+use std::collections::HashMap;
 
 /// Configuration query function for plugin manager
 /// This function will be dynamically called by the plugin manager
@@ -23,7 +14,7 @@ pub fn query_configuration(plugin_name: String) -> Option<String> {
         Err(e) => {
             error!("Failed to get config: {}", e);
             return None;
-        }
+        },
     };
 
     // Find the plugin config matching the given plugin name
@@ -36,9 +27,9 @@ pub fn query_configuration(plugin_name: String) -> Option<String> {
             Err(e) => {
                 error!("Failed to serialize plugin params: {}", e);
                 None
-            }
+            },
         },
-        None => Some("null".to_string()) // If no params, return JSON null
+        None => Some("null".to_string()), // If no params, return JSON null
     };
 
     params

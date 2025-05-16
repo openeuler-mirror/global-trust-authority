@@ -20,7 +20,6 @@ futures.workspace = true
 chrono.workspace = true
 log.workspace = true
 openssl.workspace = true
-env_logger.workspace = true
 validator.workspace = true
 governor.workspace = true
 ratelimit.workspace = true
