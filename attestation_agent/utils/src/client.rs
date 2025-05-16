@@ -1,18 +1,17 @@
 use crate::agent_error::AgentError;
 use crate::validate::validate_utils::validate_file;
-use log::{error, info, debug};
 use config::AGENT_CONFIG;
+use log::{debug, error, info};
 use once_cell::sync::OnceCell;
 use reqwest::{Client as ReqwestClient, Method, Proxy, Response};
 use serde_json::Value;
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use validator::Validate;
 
 const CLIENT_CONNECTION_TIMEOUT: u64 = 60; // Client connection timeout in seconds
 
-// Certificate configuration structure
+// 证书配置结构体
 #[derive(Validate)]
 #[derive(Clone, Debug)]
 pub struct CertConfig {
@@ -24,7 +23,7 @@ pub struct CertConfig {
     ca_path: String,
 }
 
-// Client configuration structure, containing base configuration and optional certificate configuration
+// 客户端配置结构体，包含基础配置和可选的证书配置
 #[derive(Validate)]
 #[derive(Clone, Debug)]
 pub struct ClientConfig {
@@ -37,11 +36,7 @@ pub struct ClientConfig {
 
 impl Default for ClientConfig {
     fn default() -> Self {
-        Self {
-            base_url: String::new(),
-            proxy: None,
-            cert_config: None,
-        }
+        Self { base_url: String::new(), proxy: None, cert_config: None }
     }
 }
 
@@ -74,7 +69,7 @@ impl ClientConfig {
             return Err(AgentError::ConfigError(format!("Validation failed: {:?}", err)));
         }
 
-        // If base_url starts with https, certificate configuration needs to be verified
+        // 如果 base_url 以 https 开头，则需要校验证书配置
         if self.base_url.starts_with("https://") {
             if let Some(cert_config) = &self.cert_config {
                 if let Err(err) = cert_config.validate() {
@@ -112,30 +107,24 @@ impl Client {
             return Err(AgentError::ConfigError(format!("Invalid configuration: {:?}", err)));
         }
 
-        // Update configuration
+        // 更新配置
         {
-            let mut config_guard = instance
-                .config
-                .write()
-                .map_err(|e| {
-                    error!("Failed to acquire config lock: {}", e);
-                    AgentError::LockError(format!("Cannot acquire config lock: {}", e))
-                })?;
+            let mut config_guard = instance.config.write().map_err(|e| {
+                error!("Failed to acquire config lock: {}", e);
+                AgentError::LockError(format!("Cannot acquire config lock: {}", e))
+            })?;
             *config_guard = config;
         }
 
-        // Initialize HTTP client
+        // 初始化 HTTP 客户端
         {
             let config = instance.get_config()?;
             debug!("Initializing HTTP client with base_url: {}", config.base_url);
             let client = Self::create_client(&config)?;
-            let mut client_guard = instance
-                .client
-                .write()
-                .map_err(|e| {
-                    error!("Failed to acquire client lock: {}", e);
-                    AgentError::LockError(format!("Cannot acquire client lock: {}", e))
-                })?;
+            let mut client_guard = instance.client.write().map_err(|e| {
+                error!("Failed to acquire client lock: {}", e);
+                AgentError::LockError(format!("Cannot acquire client lock: {}", e))
+            })?;
             *client_guard = Some(client);
         }
 
@@ -143,91 +132,66 @@ impl Client {
     }
 
     fn create_client(config: &ClientConfig) -> Result<ReqwestClient, AgentError> {
-        // Initialize client builder
         let mut builder = ReqwestClient::builder().timeout(Duration::from_secs(CLIENT_CONNECTION_TIMEOUT));
 
         if config.base_url.starts_with("https://") {
             if let Some(cert_config) = &config.cert_config {
-                // Create SSL builder
-                let mut ssl_builder = match SslAcceptor::mozilla_modern(SslMethod::tls()) {
-                    Ok(builder) => builder,
-                    Err(e) => {
-                        error!("Failed to create SSL acceptor: {}", e);
-                        return Err(AgentError::SslError(format!("Failed to create SSL acceptor: {}", e)));
-                    }
-                };
+                // 读取文件
+                let cert_data = std::fs::read(&cert_config.cert_path)
+                    .map_err(|e| AgentError::SslError(format!("Failed to read certificate: {}", e)))?;
+                let key_data = std::fs::read(&cert_config.key_path)
+                    .map_err(|e| AgentError::SslError(format!("Failed to read private key: {}", e)))?;
+                let ca_data = std::fs::read(&cert_config.ca_path)
+                    .map_err(|e| AgentError::SslError(format!("Failed to read CA certificate: {}", e)))?;
 
-                // Set certificate and private key
-                if let Err(e) = ssl_builder.set_certificate_file(&cert_config.cert_path, SslFiletype::PEM) {
-                    error!("Failed to set certificate file: {}", e);
-                    return Err(AgentError::SslError(format!("Failed to set certificate file: {}", e)));
-                }
-                if let Err(e) = ssl_builder.set_private_key_file(&cert_config.key_path, SslFiletype::PEM) {
-                    error!("Failed to set private key file: {}", e);
-                    return Err(AgentError::SslError(format!("Failed to set private key file: {}", e)));
-                }
-                if let Err(e) = ssl_builder.check_private_key() {
-                    error!("Failed to check private key: {}", e);
-                    return Err(AgentError::SslError(format!("Failed to check private key: {}", e)));
-                }
+                // 创建 Identity 和 Certificate
+                let identity = reqwest::Identity::from_pkcs8_pem(&cert_data, &key_data)
+                    .map_err(|e| AgentError::SslError(format!("Failed to create identity: {}", e)))?;
+                let ca_cert = reqwest::Certificate::from_pem(&ca_data)
+                    .map_err(|e| AgentError::SslError(format!("Failed to create CA certificate: {}", e)))?;
 
-                // Set CA certificate
-                if let Err(e) = ssl_builder.set_ca_file(&cert_config.ca_path) {
-                    error!("Failed to set CA file: {}", e);
-                    return Err(AgentError::SslError(format!("Failed to set CA file: {}", e)));
-                }
-
-                // Create reqwest client
-                let _ssl_context = ssl_builder.build();
-                builder = match builder.use_native_tls() {
-                    builder => builder,
-                };
+                // 构建客户端配置
+                builder = builder
+                    .identity(identity)
+                    .add_root_certificate(ca_cert)
+                    .danger_accept_invalid_certs(true)
+                    .danger_accept_invalid_hostnames(true);
             }
         }
 
-        // Configure proxy
+        // 处理代理等其他配置...
         if let Some(proxy_url) = config.proxy.as_deref() {
-            info!("Configuring HTTP client with proxy: {}", Self::mask_sensitive_info(proxy_url));
-
-            let proxy = match Proxy::all(proxy_url) {
-                Ok(proxy) => proxy,
-                Err(e) => {
-                    error!("Invalid proxy URL: {}", e);
-                    return Err(AgentError::ConfigError(format!("Invalid proxy URL: {}", e)));
-                }
-            };
-
+            let proxy = Proxy::all(proxy_url).map_err(|e| {
+                error!("Invalid proxy URL: {}", e);
+                AgentError::ConfigError(e.to_string())
+            })?;
             builder = builder.proxy(proxy);
         }
 
-        // Build client
         match builder.build() {
             Ok(client) => Ok(client),
             Err(e) => {
-                let error_msg = format!("Failed to build HTTP client: {}", e);
-                error!("{}", error_msg);
-                Err(AgentError::ConfigError(error_msg))
-            }
+                error!("Failed to build HTTP client: {}", e);
+                Err(AgentError::ConfigError(e.to_string()))
+            },
         }
     }
 
-    /// Helper function: Mask sensitive information in proxy URL
+    /// 辅助函数：屏蔽代理 URL 中的敏感信息
     fn mask_sensitive_info(url: &str) -> String {
         url.split('@').last().map_or_else(|| url.to_string(), |masked| format!("***@{}", masked))
     }
 
     pub async fn request(&self, method: Method, path: &str, json: Option<Value>) -> Result<Response, AgentError> {
-        let client_guard = self.client.read()
-            .map_err(|e| {
-                error!("Failed to acquire client read lock: {}", e);
-                AgentError::LockError(format!("Cannot acquire client lock: {}", e))
-            })?;
+        let client_guard = self.client.read().map_err(|e| {
+            error!("Failed to acquire client read lock: {}", e);
+            AgentError::LockError(format!("Cannot acquire client lock: {}", e))
+        })?;
 
-        let client = client_guard.as_ref()
-            .ok_or_else(|| {
-                error!("HTTP client not initialized");
-                AgentError::ConfigError("HTTP client not initialized".to_string())
-            })?;
+        let client = client_guard.as_ref().ok_or_else(|| {
+            error!("HTTP client not initialized");
+            AgentError::ConfigError("HTTP client not initialized".to_string())
+        })?;
 
         let config = self.get_config()?;
 
@@ -242,12 +206,15 @@ impl Client {
             })?;
 
             // Dynamically get user_id from config
-            let user_id = AGENT_CONFIG.get_instance()
+            let user_id = AGENT_CONFIG
+                .get_instance()
                 .map_err(|e| {
                     error!("Failed to get global config: {}", e);
                     AgentError::ConfigError(format!("Failed to get global config: {}", e))
                 })?
-                .agent.user_id.clone()
+                .agent
+                .user_id
+                .clone()
                 .ok_or_else(|| {
                     error!("agent.user_id field not found in config");
                     AgentError::ConfigError("agent.user_id field not found in config".to_string())
@@ -265,7 +232,7 @@ impl Client {
             Err(e) => {
                 error!("Request to {} failed: {}", request_url, e);
                 Err(AgentError::NetworkError(format!("Request failed: {}", e)))
-            }
+            },
         }
     }
 

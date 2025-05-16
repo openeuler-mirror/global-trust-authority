@@ -1,10 +1,10 @@
 pub mod validate_utils {
+    use crate::agent_error::AgentError;
+    use regex::Regex;
     use std::fs;
+    use std::net::{Ipv4Addr, Ipv6Addr};
     use std::path::Path;
     use validator::ValidationError;
-    use std::net::{Ipv4Addr, Ipv6Addr};
-    use regex::Regex;
-    use crate::agent_error::AgentError;
 
     pub fn validate_file(path: &str) -> Result<(), ValidationError> {
         // Check if path is empty
@@ -50,7 +50,10 @@ pub mod validate_utils {
         }
 
         // Check if it's a valid hostname
-        let hostname_regex = Regex::new(r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$").unwrap();
+        let hostname_regex = Regex::new(
+            r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$",
+        )
+        .unwrap();
         if hostname_regex.is_match(address) {
             return Ok(());
         }
@@ -68,7 +71,10 @@ pub mod validate_utils {
         }
 
         if rest_path.contains('\0') || rest_path.contains('\n') || rest_path.contains('\r') {
-            return Err(AgentError::ConfigError(format!("Route path contains invalid control characters: {}", rest_path)));
+            return Err(AgentError::ConfigError(format!(
+                "Route path contains invalid control characters: {}",
+                rest_path
+            )));
         }
 
         if rest_path.contains('?') || rest_path.contains('#') {
@@ -135,6 +141,4 @@ pub mod validate_utils {
 
         Ok(())
     }
-
 }
-
