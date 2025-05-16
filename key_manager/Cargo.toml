@@ -33,3 +33,5 @@ async-trait.workspace = true
 # 命令行参数处理
 clap.workspace = true
 mockall.workspace = true
+lazy_static.workspace = true
+serial_test.workspace = true
