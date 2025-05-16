@@ -11,7 +11,7 @@ use validator::Validate;
 
 const CLIENT_CONNECTION_TIMEOUT: u64 = 60; // Client connection timeout in seconds
 
-// 证书配置结构体
+// Certificate configuration struct
 #[derive(Validate)]
 #[derive(Clone, Debug)]
 pub struct CertConfig {
@@ -23,7 +23,7 @@ pub struct CertConfig {
     ca_path: String,
 }
 
-// 客户端配置结构体，包含基础配置和可选的证书配置
+// Client configuration struct, containing base configuration and optional certificate configuration
 #[derive(Validate)]
 #[derive(Clone, Debug)]
 pub struct ClientConfig {
@@ -69,7 +69,7 @@ impl ClientConfig {
             return Err(AgentError::ConfigError(format!("Validation failed: {:?}", err)));
         }
 
-        // 如果 base_url 以 https 开头，则需要校验证书配置
+        // If base_url starts with https, certificate configuration is required
         if self.base_url.starts_with("https://") {
             if let Some(cert_config) = &self.cert_config {
                 if let Err(err) = cert_config.validate() {
@@ -107,7 +107,7 @@ impl Client {
             return Err(AgentError::ConfigError(format!("Invalid configuration: {:?}", err)));
         }
 
-        // 更新配置
+        // Update the configuration
         {
             let mut config_guard = instance.config.write().map_err(|e| {
                 error!("Failed to acquire config lock: {}", e);
@@ -116,7 +116,7 @@ impl Client {
             *config_guard = config;
         }
 
-        // 初始化 HTTP 客户端
+        // Initialize HTTP client
         {
             let config = instance.get_config()?;
             debug!("Initializing HTTP client with base_url: {}", config.base_url);
@@ -136,7 +136,7 @@ impl Client {
 
         if config.base_url.starts_with("https://") {
             if let Some(cert_config) = &config.cert_config {
-                // 读取文件
+                // Read files
                 let cert_data = std::fs::read(&cert_config.cert_path)
                     .map_err(|e| AgentError::SslError(format!("Failed to read certificate: {}", e)))?;
                 let key_data = std::fs::read(&cert_config.key_path)
@@ -144,13 +144,13 @@ impl Client {
                 let ca_data = std::fs::read(&cert_config.ca_path)
                     .map_err(|e| AgentError::SslError(format!("Failed to read CA certificate: {}", e)))?;
 
-                // 创建 Identity 和 Certificate
+                // Create Identity and Certificate
                 let identity = reqwest::Identity::from_pkcs8_pem(&cert_data, &key_data)
                     .map_err(|e| AgentError::SslError(format!("Failed to create identity: {}", e)))?;
                 let ca_cert = reqwest::Certificate::from_pem(&ca_data)
                     .map_err(|e| AgentError::SslError(format!("Failed to create CA certificate: {}", e)))?;
 
-                // 构建客户端配置
+                // Build client configuration
                 builder = builder
                     .identity(identity)
                     .add_root_certificate(ca_cert)
@@ -159,7 +159,7 @@ impl Client {
             }
         }
 
-        // 处理代理等其他配置...
+        // Handle other configurations such as proxy...
         if let Some(proxy_url) = config.proxy.as_deref() {
             let proxy = Proxy::all(proxy_url).map_err(|e| {
                 error!("Invalid proxy URL: {}", e);
@@ -177,7 +177,7 @@ impl Client {
         }
     }
 
-    /// 辅助函数：屏蔽代理 URL 中的敏感信息
+    /// Helper function: masks sensitive information in proxy URLs
     fn mask_sensitive_info(url: &str) -> String {
         url.split('@').last().map_or_else(|| url.to_string(), |masked| format!("***@{}", masked))
     }
