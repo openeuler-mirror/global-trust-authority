@@ -1,11 +1,20 @@
 [source.crates-io]
-replace-with = 'tuna'
-
-[source.mirror]
-registry = "https://mirrors.tools.huawei.com/rust/crates.io-index/"
-
+replace-with = 'aliyun' # 指定使用下面哪个源，修改为source.后面的内容即可
+#阿里云
+[source.aliyun]
+registry = "sparse+https://mirrors.aliyun.com/crates.io-index/"
+# 中国科学技术大学
+[source.ustc]
+registry = "https://mirrors.ustc.edu.cn/crates.io-index"
+# 上海交通大学
+[source.sjtu]
+registry = "https://mirrors.sjtug.sjtu.edu.cn/git/crates.io-index/"
+# 清华大学
 [source.tuna]
-registry = "sparse+https://mirrors.tuna.tsinghua.edu.cn/crates.io-index/"
+registry = "https://mirrors.tuna.tsinghua.edu.cn/git/crates.io-index.git"
+# rustcc社区
+[source.rustcc]
+registry = "https://code.aliyun.com/rustcc/crates.io-index.git"
 
 [net]
 git-fetch-with-cli = true
