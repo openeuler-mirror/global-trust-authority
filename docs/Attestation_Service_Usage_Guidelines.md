@@ -65,6 +65,7 @@ One thing to note here is that the service service relies on the key_manager key
 
 First run a cargo check to inspect the project and generate the necessary files for building the docker image
 
+The current version of docker builds only supports Debian, and subsequent versions will support other mirrors.
 ```
 cargo check
 ```
