@@ -1,98 +1,50 @@
-# HRA (Huawei Remote Attestation)
+# GTA (global-trust-authority)
 
-## Introduction
-Unified Remote Attestation is an open-source confidential computing project dedicated to providing a unified architecture for confidential computing and trusted computing remote attestation, promoting the development of confidential computing ecosystem. This project provides a complete remote attestation solution, including client agent and server-side service components.
+## 介绍
+统一远程认证是一个开源保密计算项目，致力于为保密计算和可信计算远程认证提供统一的架构，促进保密计算生态系统的发展。该项目提供完整的远程认证解决方案，包括客户端代理和服务器端服务组件。
+## 特点
 
-## Features
+### 1. 远程认证挑战生成与验证
 
-### 1. Remote Attestation Challenge Generation and Verification
+远程认证挑战生成和验证是统一远程认证的核心功能。它包括以下步骤：
+1. 客户端代理生成远程验证挑战。
+2. 服务器验证远程验证挑战。
 
-Remote attestation challenge generation and verification is the core functionality of Unified Remote Attestation. It includes the following steps:
-1. Client agent generates remote attestation challenge.
-2. Server verifies remote attestation challenge.
+## 外部接口
 
-## External Interfaces
+有关外部接口，请参阅 [API 文档](./docs/api_documentation.md)
 
-Please refer to the [API documentation](./docs/hra_api.md) for external interfaces.
+## 组件
 
-## Components
+| 目录                   | 描述            | 详细文档                                             |
+|---------------------|---------------|--------------------------------------------------|
+| attestation_agent   | 远程证明agent模块   | [开发指南](docs/attestation_agent.md)                 |
+| attestation_service | 远程证明service模块 | [开发指南](docs/attestation_service.md) |
+| attestation_common  | 远程证明common模块  | [开发指南](docs/attestation_common.md)  |
 
-| Directory           | Description          | Detailed Documentation |
-| ------------------- | -------------------- | --------------------- |
-| attestation_agent   | Remote attestation agent module | [Development Guide](docs/attestation_agent.md) |
-| attestation_service | Remote attestation service module | [Development Guide](docs/attestation_service.md) |
-| attestation_common  | Common code          | [Development Guide](docs/attestation_common.md) |
+## 开发
 
-## Development
+### 环境准备
+openEuler 21.03 或更高（生产环境）
 
-### Environment Requirements
+### 依赖
 
-* Processor: Must support Intel SGX (Intel Software Guard Extensions)
-* Operating System:
-  - Windows 10/11 (Development Environment)
-  - openEuler 21.03 or higher (Production Environment)
-  - openEuler 20.03 LTS SP2 or higher (Production Environment)
-
-### Dependencies
-
-* Rust 1.70.0 or higher
-* PostgreSQL 14.0 or higher
+* Rust 1.70.0 或更高
+* PostgreSQL 14.0 或更高
 * OpenSSL development library
 * libssl-dev (for OpenSSL)
 * pkg-config
 
-Windows environment dependency installation:
-```bash
-winget install Rust.Rust
-winget install PostgreSQL.PostgreSQL
-winget install OpenSSL
-```
+## 贡献指导
+- fork该仓库
+- 创建一个特性分支（ git checkout -b feature/AmazingFeature）
+- 提交您的更改（ git commit -m 'Add some AmazingFeature' )
+- 推送到分支（ git push origin feature/AmazingFeature）
+- 创建拉取请求
 
-### Build
+## 许可证
+本项目采用木兰 PSL v2 许可协议进行许可。
 
-```
-# Full build
-cargo clean
-cargo build
-# Build specific package
-cargo build -p *
-# Run specific package
-cargo run -p *
-# Build and run tests
-cargo test
-# Build and run specific package tests
-cargo test -p *
-# Build and run specific test case
-cargo test * -p *
-# Build release version
-cargo build --release
-```
-
-## Usage Guide
-
-### Clone Code
-git clone https://gitee.com/openeuler/global-trust-authority.git
-cd global-trust-authority
-
-### Build Project
-cargo build --release
-
-### Run Project
-- Run server
-  cargo run -p attestation_service
-- Run client
-  cargo run -p attestation_agent
-
-## Contribution Guide
-- Fork this repository
-- Create a feature branch ( git checkout -b feature/AmazingFeature )
-- Commit your changes ( git commit -m 'Add some AmazingFeature' )
-- Push to the branch ( git push origin feature/AmazingFeature )
-- Create Pull Reques
-
-## License
-This project is licensed under Mulan PSL v2
-
-## Contact
-- Project URL: https://gitee.com/openeuler/global-trust-authority
-- Issue Tracker: https://gitee.com/openeuler/global-trust-authority/issues
+## 联系方式
+- 项目 URL: https://gitee.com/openeuler/global-trust-authority
+- Issue: https://gitee.com/openeuler/global-trust-authority/issues

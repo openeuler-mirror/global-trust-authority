@@ -1,36 +1,52 @@
-# global-trust-authority
+# GTA (global-trust-authority)
 
-#### Description
-A framework to support remote attestation of trusted computing and confidential computing,making remote attestation flow unified and simpler
+## Introduction
+Unified Remote Attestation is an open-source confidential computing project dedicated to providing a unified architecture for confidential computing and trusted computing remote attestation, promoting the development of confidential computing ecosystem. This project provides a complete remote attestation solution, including client agent and server-side service components.
 
-#### Software Architecture
-Software architecture description
+## Features
 
-#### Installation
+### 1. Remote Attestation Challenge Generation and Verification
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+Remote attestation challenge generation and verification is the core functionality of Unified Remote Attestation. It includes the following steps:
+1. Client agent generates remote attestation challenge.
+2. Server verifies remote attestation challenge.
 
-#### Instructions
+## External Interfaces
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+Please refer to the [api_documentation.md](docs/api_documentation.md) for external interfaces.
 
-#### Contribution
+## Components
 
-1.  Fork the repository
-2.  Create Feat_xxx branch
-3.  Commit your code
-4.  Create Pull Request
+| Directory           | Description          | Detailed Documentation |
+| ------------------- | -------------------- | --------------------- |
+| attestation_agent   | Remote attestation agent module | [Development Guide](docs/attestation_agent.md) |
+| attestation_service | Remote attestation service module | [Development Guide](docs/attestation_service.md) |
+| attestation_common  | Common code          | [Development Guide](docs/attestation_common.md) |
+
+## Development
+
+### Environment Requirements
+openEuler 21.03 or higher (Production Environment)
+
+### Dependencies
+
+* Rust 1.70.0 or higher
+* PostgreSQL 14.0 or higher
+* OpenSSL development library
+* libssl-dev (for OpenSSL)
+* pkg-config
 
 
-#### Gitee Feature
+## Contribution Guide
+- Fork this repository
+- Create a feature branch ( git checkout -b feature/AmazingFeature )
+- Commit your changes ( git commit -m 'Add some AmazingFeature' )
+- Push to the branch ( git push origin feature/AmazingFeature )
+- Create Pull Reques
 
-1.  You can use Readme\_XXX.md to support different languages, such as Readme\_en.md, Readme\_zh.md
-2.  Gitee blog [blog.gitee.com](https://blog.gitee.com)
-3.  Explore open source project [https://gitee.com/explore](https://gitee.com/explore)
-4.  The most valuable open source project [GVP](https://gitee.com/gvp)
-5.  The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
-6.  The most popular members  [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+## License
+This project is licensed under Mulan PSL v2
+
+## Contact
+- Project URL: https://gitee.com/openeuler/global-trust-authority
+- Issue: https://gitee.com/openeuler/global-trust-authority/issues

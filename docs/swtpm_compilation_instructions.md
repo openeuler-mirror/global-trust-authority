@@ -1,4 +1,4 @@
-# 1、安装libtpms
+# 1、Install libtpms
 
 ```
 # https://github.com/stefanberger/libtpms/tags
@@ -12,7 +12,6 @@ make install
 # yum install -y lcov
 sh autogen.sh --with-openssl=yes --with-tpm1=no --with-tpm2=yes --enable-test-coverage
 make check -j$(nproc)
-# 生成覆盖率
 lcov -d ./src -c -o result.info -rc lcov_branch_coverage=1
 lcov -r result.info "/usr/*" "*/src/tpm12/*" -o result.info -rc branch_coverage=1
 genhtml -o result result.info
@@ -20,7 +19,7 @@ genhtml -o result result.info
 
 
 
-# 2、安装swtpm
+# 2、Install swtpm
 
 ```
 # https://github.com/stefanberger/swtpm/tags
@@ -36,28 +35,24 @@ yum install -y libcmocka-devel socat expect
 pip3 install pyyaml
 sh autogen.sh --with-openssl=yes --with-cuse=yes --with-gnutls=yes --with-selinux=no --enable-test-coverage
 make check -j$(nproc)
-# 生成覆盖率
 lcov -d ./src -c -o result.info -rc lcov_branch_coverage=1
 lcov -r result.info "/usr/*" -o result.info -rc branch_coverage=1
 genhtml -o result result.info
 ```
 
 
-## 2.1、安装失败：
-### 1. 报错no libtpms.pc found
-查找libtpms.pc路径：find /usr -name libtpms.pc，根据查找结果设置，在变量PKG_CONFIG_P
-ATH添加对应路径，然后重新执行autogen.sh
+## 2.1、installation failure：
+### 1. no libtpms.pc found
+Find the path of libtpms.pc: find /usr -name libtpms.pc, add the corresponding path to the variable PKG_CONFIG_PATH according to the settings of the search result, and then re-execute autogen.sh.
 
 ```
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 ```
 
-### 2. 报错checking for TPMLIB_ChooseTPMVersion in -ltpms... no和configure: error: "libtpms 0.6 or later is required"
-通过nm -D /usr/local/lib/libtpms.so | grep "TPMLIB_ChooseTPMVersion"查看是否存在该
-符号，同时可以查看config.log查看详细报错
-### 3. 报错configure: error: "Is libjson-glib-dev/json-glib-devel installed? -- could not get cflags"
-安装json-glib：yum install -y json-glib json-glib-devel
-或源码安装json-glib：https://download.gnome.org/sources/json-glib/
+### 2. checking for TPMLIB_ChooseTPMVersion in -ltpms... no和configure: error: "libtpms 0.6 or later is required"
+Check if the symbol exists by nm -D /usr/local/lib/libtpms.so | grep “TPMLIB_ChooseTPMVersion”, and also check the config.log to see the details of the error.### 3. 报错configure: error: "Is libjson-glib-dev/json-glib-devel installed? -- could not get cflags"
+install json-glib：yum install -y json-glib json-glib-devel
+or source code installation json-glib：https://download.gnome.org/sources/json-glib/
 
 ```
 wget https://download.gnome.org/sources/json-glib/1.0/json-glib-1.0.0.tar.xz
@@ -68,8 +63,8 @@ make -j$(nproc)
 make install
 ```
 
-# 3、swtpm模拟TPM基本功能
-## 设置TPM_PATH环境变量可以替代命令行参数--tpmstate dir=<dir>
+# 3. swtpm emulates the basic TPM functions
+## Setting the TPM_PATH environment variable can be an alternative to the command line parameter -- tpmstate dir=<dir>
 
 ```
 export TPM_PATH=/tmp/swtpm
@@ -77,7 +72,7 @@ mkdir -p $TPM_PATH
 
 ```
 
-## 1. 通过swtpm cuse启动进程，模拟tpm设备，编译swtpm时需要增加编译参数--with-cuse=yes
+## 1. Start the process via swtpm cuse to emulate a tpm device, compiling swtpm requires the addition of the compilation parameter --with-cuse=yes
 
 ```
 mkdir -p /tmp/swtpm
@@ -89,7 +84,7 @@ export TPM2TOOLS_TCTI=device:/dev/tpm0
 tpm2_startup -c
 tpm2_startup
 ```
-## 2. 通过swtpm chardev启动进程，模拟tpm设备，这种方式模拟的设备会带有tpmrm0
+## 2. Emulate a tpm device by starting the process with swtpm chardev, this way the emulated device will come with tpmrm0
 
 ```
 mkdir -p /tmp/swtpm
@@ -99,7 +94,7 @@ export TPM2TOOLS_TCTI=device:/dev/tpm0
 tpm2_startup -c
 tpm2_startup
 ```
-## 3. 通过swtpm socket启动进程
+## 3. Start the process via the swtpm socket
 
 ```
 mkdir -p /tmp/swtpm

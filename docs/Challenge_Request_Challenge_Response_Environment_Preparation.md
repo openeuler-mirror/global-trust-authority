@@ -1,7 +1,7 @@
-# Server准备
-## 策略相关数据准备
+# Server Preparation
+## Strategy-related data preparation
 
-新增tpm_boot策略和tpm_ima策略
+Added tpm_boot policy and tpm_ima policy
 
 ### tpm_boot
 
@@ -91,18 +91,18 @@ result = {
 }
 ```
 
-## 证书相关的准备
+## Certificate-related preparations
 
-### 导入插件的ak证书
+### Importing the plugin's ak certificate
 
-查看agent侧生成ak根证书的方法，然后调用新增证书接口进行证书新增
+Check out the method for generating ak root certificates on the agent side, and then call the add certificate interface to add the certificate
 
-### 导入基线和策略的证书
+### Importing certificates for baselines and strategies
 
-此处自己生成证书即可
+Just generate your own certificate here
 
 ```
-1、生成私钥
+1. Generate private key
 sha256WithRSAEncryption:
 openssl genpkey -algorithm RSA -out rsa_2048_private_key.pem -pkeyopt rsa_keygen_bits:2048
 openssl genpkey -algorithm RSA -out rsa_4096_private_key.pem -pkeyopt rsa_keygen_bits:4096
@@ -121,7 +121,7 @@ SM2-with-SM3:
 openssl ecparam -genkey -name SM2 -out sm2_private_key.pem
 
 
-2、从私钥提取公钥
+2. Extract public key from private key
 sha256WithRSAEncryption:
 openssl pkey -in rsa_2048_private_key.pem -pubout -out rsa_2048_public_key.pem
 openssl pkey -in rsa_4096_private_key.pem -pubout -out rsa_4096_public_key.pem
@@ -140,7 +140,7 @@ SM2-with-SM3:
 openssl ec -in sm2_private_key.pem -pubout -out sm2_public_key.pem
 
 
-3. 生成证书签名请求 (CSR)
+3. Generating a Certificate Signing Request (CSR)
 sha256WithRSAEncryption:
 openssl req -new -key rsa_2048_private_key.pem -out rsa_2048_csr.pem -subj "/C=CN/ST=Beijing/L=Chaoyang/O=MyCompany/CN=www.example.com"
 openssl req -new -key rsa_4096_private_key.pem -out rsa_4096_csr.pem -subj "/C=CN/ST=Beijing/L=Chaoyang/O=MyCompany/CN=www.example.com"
@@ -158,7 +158,7 @@ openssl req -new -key ecc_private_key.pem -sha256 -out ecc_csr.pem -subj "/C=CN/
 SM2-with-SM3:
 openssl req -new -key sm2_private_key.pem -out sm2_csr.pem -sm3 -sigopt "distid:1234567812345678"
 
-4、生成自签名证书 (有效期365天)
+4. Generate self-signed certificates (valid for 365 days)
 sha256WithRSAEncryption:
 openssl x509 -req -days 365 -in rsa_2048_csr.pem -signkey rsa_2048_private_key.pem -out rsa_2048_certificate.pem
 openssl x509 -req -days 365 -in rsa_4096_csr.pem -signkey rsa_4096_private_key.pem -out rsa_4096_certificate.pem
@@ -200,13 +200,13 @@ SM2-with-SM3:
 openssl x509 -req -days 365 -in ecc_csr.pem -signkey sm2_private_key.pem -sm3 -out sm2_certificate.pem
 ```
 
-## 基线相关的准备
+## Baseline-related preparations
 
-/sys/kernel/security/ima/ascii_runtime_measurements 读取此份文件中的内容
+/sys/kernel/security/ima/ascii_runtime_measurements Read the contents of this file
 
 ![输入图片说明](https://foruda.gitee.com/images/1745830028187538391/bd7d9fc9_15438102.png "屏幕截图")
 
-转换成json格式
+Convert to json format
 
 ```
 {
@@ -270,32 +270,26 @@ openssl x509 -req -days 365 -in ecc_csr.pem -signkey sm2_private_key.pem -sm3 -o
 ```
 #!/bin/bash
 
-# 输出文件名
 OUTPUT_FILE="ima_measurements.json"
 
-# 检查文件是否存在
 if [ ! -f "/sys/kernel/security/ima/ascii_runtime_measurements" ]; then
     echo "Error: /sys/kernel/security/ima/ascii_runtime_measurements not found." >&2
     exit 1
 fi
 
-# 检查是否有读取权限
 if [ ! -r "/sys/kernel/security/ima/ascii_runtime_measurements" ]; then
     echo "Error: No permission to read /sys/kernel/security/ima/ascii_runtime_measurements." >&2
     exit 1
 fi
 
-# 处理文件并输出到JSON
 {
 awk 'BEGIN {
     print "{"
     print "  \"referenceValues\": ["
     first=1
 }
-/ima-ng sha256:/ {  # 只处理包含"ima-ng sha256:"的行
-    # 提取sha256（第4个字段，去掉"sha256:"前缀）
+/ima-ng sha256:/ {  
     sha256 = substr($4, 8)
-    # 文件名是第5个字段及之后（处理可能包含空格的文件名）
     filename = $5
     for (i=6; i<=NF; i++) {
         filename = filename " " $i
@@ -312,7 +306,7 @@ awk 'BEGIN {
     printf "      \"sha256\": \"%s\"\n", sha256
 }
 END {
-    if (!first) {  # 只有当有数据时才输出闭合部分
+    if (!first) { 
         print "    }"
     }
     print "  ]"
@@ -320,7 +314,6 @@ END {
 }' /sys/kernel/security/ima/ascii_runtime_measurements
 } > "$OUTPUT_FILE"
 
-# 检查输出是否成功
 if [ $? -eq 0 ]; then
     echo "Successfully saved IMA measurements to $OUTPUT_FILE"
 else
@@ -328,66 +321,65 @@ else
     exit 1
 fi
 
-# 设置适当的文件权限
 chmod 644 "$OUTPUT_FILE"
 
 ```
 
-再提供导入的基线证书生成jwt
+Then provide the imported baseline certificate to generate jwt
 
-最后导入基线
-
-
+Finally, import the baseline
 
 
-# Agent准备
-# 一、环境
 
-1、Agent需要部署在有TPM芯片（或者swtpm，需要有/dev/tpm0设备节点、tpm_boot的日志路径/sys/kernel/security/tpm0/binary_bios_measurements和tpm_ima的日志路径/sys/kernel/security/ima/ascii_runtime_measurements）的openEuler环境；
 
-2、Agent和Server需要部署在同个网段，能互相ping通。
+# Agent preparation
+## environmental preparation
 
-# 二、使用自签名CA签发AK证书：
+1. Agent needs to be deployed in an openEuler environment with a TPM chip (or swtpm, which requires a /dev/tpm0 device node, a tpm_boot log path /sys/kernel/security/tpm0/binary_bios_measurements and a tpm_ima log path /sys/ kernel/security/ima/ascii_runtime_measurements) of the openEuler environment;
 
-1、执行以下命令创建ak之前请使用tpm2-tools工具验证要使用的nv index和ak密钥是否存在，如果存在请删除：
+2. Agent and Server need to be deployed in the same network segment, can ping through each other.
 
-tpm_tools相关命令
+## Issuing AK certificates using a self-signed CA：
+
+1. Before executing the following commands to create ak, please use the tpm2-tools tool to verify whether the nv index and ak key you want to use exists or not, and if it exists, please delete it:
+
+tpm_tools related commands
 
 ```sh
-# 1.删除nv 
+# 1.delete nv 
 sudo tpm2_nvundefine 0x150001b
 
-# 2.删除ak密钥
+# 2.Delete ak key
 sudo tpm2_evictcontrol -C o -c 0x81010020
 
-# 3.查看证书nv_index是否存在
+# 3.Check if the certificate nv_index exists
 sudo tpm2_getcap handles-nv-index
 
-# 4.查看ak密钥是否存在
+# 4.Check if the ak key exists
 sudo tpm2_getcap handles-persistent
 
-# 5.查看ak public
+# 5.View ak public
 sudo tpm2_readpublic -c 0x81010020
 
 ```
 
-2、确保使用的nv index和ak密钥不存在后，执行以下命令使用自签名CA签发AK证书
+2.to ensure that the use of the nv index and ak key does not exist, execute the following command to use the self-signed CA to issue AK certificates
 
 ```sh
-# 1.创建ak及持久化
+# 1. Create ak and persistence
 sudo tpm2_createek -c ek.handle -G rsa -u ek.pub
 sudo tpm2_createak -C ek.handle -c ak.ctx -u ak.pub -n ak.name
 sudo tpm2_evictcontrol -C o -c ak.ctx 0x81010020
 
-# 2.读取pem格式ak公钥
+# 2. Read pem format ak public key
 sudo tpm2_readpublic -c 0x81010020 -o ak.pem -f pem -Q
 
-# 3.创建根CA密钥及根CA证书
+# 3. Create root CA key and root CA certificate
 openssl genrsa -out rootCA.key 2048
 openssl req -x509 -new -nodes -key rootCA.key -sha256 -days 10950 -out rootCA.crt -subj "/C=CN/O=test CA/OU=test/CN=TPM Root CA v2"
 
-# 4.生成CSR
-# 1) 创建正确格式的配置文件
+# 4. Generate CSR
+# 1) Create correctly formatted configuration file
 cat > cert.conf << EOF
 [ req ]
 distinguished_name = req_distinguished_name
@@ -405,58 +397,58 @@ keyUsage = critical, digitalSignature
 extendedKeyUsage = clientAuth, serverAuth
 EOF
 
-# 2) 创建CSR
+# 2) Creating CSRs
 openssl req -new -key rootCA.key -out temp.csr -config cert.conf
 
-# 3) 签发证书 使用CA签署，强制使用TPM公钥
+# 3) Issuance of certificate Signing with CA, mandatory use of TPM public key
 sudo openssl x509 -req -in temp.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial -days 3650 -out ak.crt -force_pubkey ak.pem
 
-# 5. 查看证书
+# 5. Viewing Certificates
 openssl x509 -in ak.crt -noout -text
 
-# 6. 转der证书
+# 6. Transder certificates
 openssl x509 -in ak.crt -inform PEM -out ak.der -outform DER
 
-# 7. 证书写tpm nv index
-# 1) 查看证书大小
+# 7. certificate write tpm nv index
+# 1) Check the certificate size
 ll ak.der
 
-# 2) 创建NVRAM空间： -s 传入ak.cer的大小， 0x150001b是即将写入证书的nv_index
+# 2) Create NVRAM space: -s pass in the size of ak.cer, 0x150001b is the nv_index where the certificate is going to be written to
 sudo tpm2_nvdefine -C o -s 778 0x150001b -a "ppread|ppwrite|authread|ownerread|ownerwrite"
 
-# 3) 写入证书数据
+# 3) Write certificate data
 sudo tpm2_nvwrite -C o 0x150001b -i ak.der
 
-# 4). 验证写入是否成功
+# 4) Verify that the write was successful
 sudo tpm2_nvread 0x150001b > ak_read.der
 ```
 
-执行完毕后，将生成的rootCA.crt发给Serevr测试人员，导入Server侧。
+After execution, send the generated rootCA.crt to Serevr testers to import into Server side.
 
-备注：Server侧导入的rootCA.crt的CN名字（上面步骤3中的CN字段内容）需要唯一，即Server侧不能有两本CN名字一样的rootCA.crt，不然Server侧证据校验时证书链会校验失败。
+Note: The CN name of the rootCA.crt imported from the Server side (the content of the CN field in step 3 above) needs to be unique, i.e., there can't be two rootCA.crts with the same CN name on the Server side, or the certificate chain will fail when the evidence is verified on the Server side.
 
-# 三、agent_config.yaml文件配置：
+# 3、agent_config.yaml file configuration:
 
-Agent和Server的ip和端口可在agent_config.yaml文件中配置，各自端口不能被其他进程占用。
+The ip and port of Agent and Server can be configured in the agent_config.yaml file, and the respective ports cannot be occupied by other processes.
 
-例如 如下的agent_config.yaml，8088端口只被Agent占用监听，8080端口被Server占用监听：
+For example, in the following agent_config.yaml file, port 8088 is only occupied by the Agent and port 8080 is occupied by the Server:
 
 ```sh
 agent:
  listen_address: "0.0.0.0"
  listen_port: 8088
- uuid: "TPM AK"  # 唯一的 agent 标识符
- user_id: "test_lyz" # Unique user identifier
+ uuid: "TPM AK" 
+ user_id: "test_lyz" 
 
 server:
- server_url: "http://10.10.0.102:8080"  # 基础URL，API路径将自动添加
+ server_url: "http://10.10.0.102:8080" 
  tls:
   cert_path: "/path/to/cert.pem"
   key_path: "/path/to/key.pem"
   ca_path: "/path/to/key.pem"
 ```
 
-# 四、测试方法示例：
+# 4、Test Method Example：
 
 get_token：
 
