@@ -102,6 +102,7 @@ static USER_ID: &str = "User-Id";
 static AGENT_VERSION: &str = "1.0.0";
 static START_STR: &str = "@";
 static RPM_CONFIG_PATH: &str = "/etc/attestation_cli/agent_config.yaml";
+static SERVICE_URL_PREFIX: &str = "/global-trust-authority/v1/service";
 
 lazy_static! {
     static ref CONFIG_PATH: PathBuf =
@@ -587,7 +588,11 @@ async fn main() {
     let cli = Cli::parse();
     ConfigManager::new(&get_config_path()).unwrap();
     let config: Config = AGENT_CONFIG.get_instance().unwrap().clone();
-    let server_url = if cli.server_url.is_empty() { config.clone().server.server_url } else { cli.server_url };
+    let server_url = if cli.server_url.is_empty() {
+        config.clone().server.server_url + SERVICE_URL_PREFIX
+    } else {
+        cli.server_url + SERVICE_URL_PREFIX
+    };
     let tls = config.clone().server.tls.unwrap();
     let cert_path = if cli.cert_path.is_empty() { tls.cert_path } else { cli.cert_path };
     let ca_path = if cli.ca_path.is_empty() { tls.ca_path } else { cli.ca_path };
