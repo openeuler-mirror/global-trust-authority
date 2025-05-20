@@ -6,7 +6,7 @@ mod utils;
 use crate::middlewares::filter::default_filter::DefaultFilter;
 use crate::middlewares::mq::create_mq_topics;
 use crate::routes::routes::configure_user_routes;
-use crate::utils::env_setting_center::{get_cert_path, get_env_value_or_default, get_key_path, load_env};
+use crate::utils::env_setting_center::{get_cert_path, get_env_by_key, get_env_value_or_default, get_key_path, load_env};
 use actix_web::{middleware, web, App, HttpServer};
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use ratelimit::{create_challenge_governor, create_management_governor};
@@ -82,6 +82,9 @@ async fn main() -> std::io::Result<()> {
         let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
         builder.set_private_key_file(get_key_path(), SslFiletype::PEM).unwrap();
         builder.set_certificate_chain_file(get_cert_path()).unwrap();
+        // Set the certificate verification mode to require client certificate verification
+        builder.set_verify(openssl::ssl::SslVerifyMode::PEER | openssl::ssl::SslVerifyMode::FAIL_IF_NO_PEER_CERT);
+        builder.set_ca_file(get_env_by_key("CA_CERT_PATH".to_string())).unwrap();
         server.bind_openssl(get_https_address(), builder)?
     } else {
         server.bind(get_address())?
