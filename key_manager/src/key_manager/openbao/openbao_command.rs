@@ -1,28 +1,19 @@
 use crate::config::config::{OPENBAO_ADDR_ENV_KEY, OPENBAO_TOKEN_ENV_KEY};
-use crate::key_manager::base_key_manager::CommandExecutor;
+use crate::key_manager::base_key_manager::get_command_service;
 use crate::utils::env_setting_center::Environment;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, from_str};
 use std::collections::HashMap;
 use std::ffi::OsString;
-use std::io;
-use std::process::Output;
 
 pub struct OpenBaoManager {
     command: String,
     args: Vec<String>,
     envs: HashMap<OsString, OsString>,
-    runner: Box<dyn CommandExecutor>,
 }
 
 impl OpenBaoManager {
     pub fn default() -> OpenBaoManager {
-        struct DefaultExecutor;
-        impl CommandExecutor for DefaultExecutor {
-            fn run(&self, command: &str, args: &Vec<String>, envs: &HashMap<OsString, OsString>) -> io::Result<Output> {
-                self.execute(command, args, envs)
-            }
-        }
         Self {
             command: String::from("bao"),
             args: Vec::<String>::new(),
@@ -30,12 +21,11 @@ impl OpenBaoManager {
                 (OsString::from(OPENBAO_TOKEN_ENV_KEY), OsString::from(&Environment::global().root_token)),
                 (OsString::from(OPENBAO_ADDR_ENV_KEY), OsString::from(&Environment::global().addr)),
             ]),
-            runner: Box::new(DefaultExecutor),
         }
     }
 
-    pub fn new(runner: Box<dyn CommandExecutor>) -> OpenBaoManager {
-        Self { command: String::new(), args: Vec::<String>::new(), envs: HashMap::from([]), runner }
+    pub fn new() -> OpenBaoManager {
+        Self { command: String::new(), args: Vec::<String>::new(), envs: HashMap::from([])}
     }
 
     pub fn status(&mut self) -> &mut Self {
@@ -135,9 +125,8 @@ impl OpenBaoManager {
 
     pub fn check_status(&mut self) -> bool {
         log::info!("start check openbao status");
-        self.clean();
-        self.status().format_json();
-        let result = self.run();
+        self.clean().status().format_json();
+        let result = get_command_service().execute(self.get_command(), self.get_args(), self.get_envs());
         match result {
             Ok(out) => {
                 if !out.status.success() {
@@ -163,18 +152,6 @@ impl OpenBaoManager {
         }
     }
 
-    pub fn command(&self) -> &str {
-        &self.command
-    }
-
-    pub fn args(&self) -> &Vec<String> {
-        &self.args
-    }
-
-    pub fn envs(&self) -> &HashMap<OsString, OsString> {
-        &self.envs
-    }
-
     pub fn set_command(&mut self, command: String) {
         self.command = command;
     }
@@ -187,8 +164,16 @@ impl OpenBaoManager {
         self.envs = envs;
     }
 
-    pub fn run(&self) -> io::Result<Output> {
-        self.runner.execute(&self.command, &self.args, &self.envs)
+    pub fn get_command(&self) -> &str {
+        &self.command
+    }
+
+    pub fn get_args(&self) -> &Vec<String> {
+        &self.args
+    }
+
+    pub fn get_envs(&self) -> &HashMap<OsString, OsString> {
+        &self.envs
     }
 }
 

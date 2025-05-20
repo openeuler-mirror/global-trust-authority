@@ -94,3 +94,26 @@ impl From<ValidationErrors> for AppError {
         AppError::ParamInvalid(error_msg)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::errors::error_codes;
+    use super::AppError;
+
+    #[test]
+    fn test_app_error() {
+        let str = String::from("hello world");
+        assert_eq!(AppError::ParamInvalid(str.clone()).error_code(), error_codes::PARAM_INVALID);
+        assert_eq!(AppError::NotSupported(str.clone()).error_code(), error_codes::NOT_SUPPORTED);
+        assert_eq!(AppError::IoFailed(std::io::Error::new(std::io::ErrorKind::Other, str.clone())).error_code(), error_codes::IO_FAILED);
+        assert_eq!(AppError::OpenbaoNotAvailable(str.clone()).error_code(), error_codes::OPENBAO_NOT_AVAILABLE);
+        assert_eq!(AppError::OpenbaoCommandExecuteError(str.clone()).error_code(), error_codes::OPENBAO_COMMAND_EXECUTE_ERROR);
+        assert_eq!(AppError::CommandException(str.clone()).error_code(), error_codes::OPENBAO_COMMAND_EXCEPTION);
+        assert_eq!(AppError::OpenbaoJsonError(str.clone()).error_code(), error_codes::OPENBAO_JSON_ERROR);
+        assert_eq!(AppError::EnvConfigError(str.clone()).error_code(), error_codes::ENV_CONFIG_ERROR);
+        assert_eq!(AppError::AsyncExecuteError(str.clone()).error_code(), error_codes::ASYNC_EXECUTE_ERROR);
+        assert_eq!(AppError::EnvLoadError(str.clone()).error_code(), error_codes::ENV_LOAD_ERROR);
+        assert_eq!(AppError::CertLoadError(str.clone()).error_code(), error_codes::CERT_LOAD_ERROR);
+        assert_eq!(AppError::FileLoadError(str.clone()).error_code(), error_codes::FILE_LOAD_ERROR);
+    }
+}

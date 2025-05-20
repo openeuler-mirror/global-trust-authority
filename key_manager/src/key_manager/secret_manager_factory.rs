@@ -10,9 +10,9 @@ pub struct SecretManagerFactory;
 
 #[async_trait]
 pub trait SecretManager : Send + Sync{
-    async fn get_all_secret(&self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError>;
-    fn import_secret(&self, cipher: &PutCipherReq) -> Result<String, AppError>;
-    fn init_system(&self) -> Result<(), AppError>;
+    async fn get_all_secret(&mut self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError>;
+    fn import_secret(&mut self, cipher: &PutCipherReq) -> Result<String, AppError>;
+    fn init_system(&mut self) -> Result<(), AppError>;
 }
 
 #[derive(Debug)]
