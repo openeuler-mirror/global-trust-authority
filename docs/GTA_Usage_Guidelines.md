@@ -106,7 +106,7 @@ docker stop CONTAINER ID
 
 ## rpm deployment
 
-### Uploading certificates that interact with key_manager and librdkafka
+### Uploading TLS certificates with key_manager and install librdkafka
 
 Create the certs folder in the /tmp directory and place the a_client_key.pem, ra_client_cert.pem and km_cert.pem certificates into the specified directory.
 
@@ -166,7 +166,7 @@ Updating / installing...
 
 ### Run the rpm package
 
-Execute the command directly in the window to start
+Execute the command to start the service
 
 ```
 attestation_service
@@ -185,19 +185,19 @@ rpm -qa | grep ra-server
 
 After executing the command, there is no output, proving that the service was uninstalled successfully
 
-## Call interface && environment preset data
+## Interact with Rest API && environment preset data
 
 ### Environmental data preset contents
 
 Data that needs to be preset on the server side:
 
 1. tpm_boot policy, tpm_ima policy
-2. agent plugin AK root certificate
-3. baseline, policy jwt format import used certificate
+2. Certificate chain for AIK validation
+3. Public key certificate for validation signature of baseline/policy
 4. ima metrics baseline
 
 All of the above data is in the Challenge_Request_Challenge_Response_Environment_Preparation.md document.
 
-### Call interface
+### Interact with Rest API
 
-Refer to the Complete_List_of_Management_Tool_Commands.md documentation to call the interface using the cli_tool.
+Refer to the Complete_List_of_Management_Tool_Commands.md documentation to Interact with the Rest API using the cli_tool.
