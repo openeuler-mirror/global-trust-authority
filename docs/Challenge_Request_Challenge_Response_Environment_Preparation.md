@@ -335,7 +335,7 @@ Finally, import the baseline
 # Agent preparation
 ## environmental preparation
 
-1. Agent needs to be deployed in an openEuler environment with a TPM chip (or swtpm, which requires a /dev/tpm0 device node, a tpm_boot log path /sys/kernel/security/tpm0/binary_bios_measurements and a tpm_ima log path /sys/ kernel/security/ima/ascii_runtime_measurements) of the openEuler environment;
+1. Agent needs to be deployed in an openEuler environment with a TPM chip (or swtpm, which requires a /dev/tpm0 device node, a tpm_boot log path /sys/kernel/security/tpm0/binary_bios_measurements and a tpm_ima log path /sys/kernel/security/ima/ascii_runtime_measurements) of the openEuler environment;
 
 2. Agent and Server need to be deployed in the same network segment, can ping through each other.
 
@@ -437,11 +437,11 @@ For example, in the following agent_config.yaml file, port 8088 is only occupied
 agent:
  listen_address: "0.0.0.0"
  listen_port: 8088
- uuid: "TPM AK" 
- user_id: "test_lyz" 
+ uuid: "a4e7c719-6b05-4ac6-b95a-7e71a9d6f9d5" 
+ user_id: "test_01" 
 
 server:
- server_url: "http://10.10.0.102:8080" 
+ server_url: "http://127.0.0.1:8080" 
  tls:
   cert_path: "/path/to/cert.pem"
   key_path: "/path/to/key.pem"

@@ -12,11 +12,11 @@
 sudo attestation_cli certificate set -h
 
 #Insert Certificate
-sudo attestation_cli -u "test_lyt" certificate set \
+sudo attestation_cli -u "test_01" certificate set \
 	--cert-type "policy" "refvalue" \
 	--content @/home/test/rsa_2048_certificate.pem
 
-sudo attestation_cli -u "test_lyt" certificate set \
+sudo attestation_cli -u "test_01" certificate set \
 	--name "new.pem" \
     --cert-type "policy" "refvalue" \
 	--content "-----BEGIN CERTIFICATE-----
@@ -55,15 +55,15 @@ laZa46J98tGIK7o=
 	
 	
 #Insert certificate (full version)
-sudo attestation_cli -u "test_lyt" certificate set \
+sudo attestation_cli -u "test_01" certificate set \
 	--name "certificate.pem" \
 	--description "This is certificate" \
 	--cert-type "policy" "refvalue" \
 	--content @/home/test/rsa_2048_certificate.pem \
 	--is-default
 
-#Insert revocation of certificate
-sudo attestation_cli -u "test_lyt" certificate set \
+#Insert the list of revocations
+sudo attestation_cli -u "test_01" certificate set \
 	--cert-type "crl" \
 	--revoke-certificate-file "/home/openssl/certificate.pem" "/home/openssl/certificate.pem"
 ```
@@ -75,16 +75,16 @@ sudo attestation_cli -u "test_lyt" certificate set \
  attestation_cli certificate delete -h
 
 #Delete all
-sudo attestation_cli -u "test_lyt" certificate delete \
+sudo attestation_cli -u "test_01" certificate delete \
 	--delete-type "all"
 
 #Delete by id
-sudo attestation_cli -u "test_lyt" certificate delete \
+sudo attestation_cli -u "test_01" certificate delete \
 	--delete-type "id" \
 	--ids "id1" "id2"
 
 #Delete by certificate type
-sudo attestation_cli -u "test_lyt" certificate delete \
+sudo attestation_cli -u "test_01" certificate delete \
 	--delete-type "type" \
 	--cert-type "policy" 
 ```
@@ -96,7 +96,7 @@ sudo attestation_cli -u "test_lyt" certificate delete \
  attestation_cli certificate update -h
 
 #Modification of certificates
-sudo attestation_cli -u "test_lyt" certificate update \
+sudo attestation_cli -u "test_01" certificate update \
 	--id "b8481f3e58525f359e12bda53a5779a9" \
 	--name "new_name" \
 	--description "new_description" \
@@ -104,7 +104,7 @@ sudo attestation_cli -u "test_lyt" certificate update \
 	--cert-type "policy" "refvalue" \
 	--is-default true
 	
-sudo attestation_cli -u "test_lyt" certificate update \
+sudo attestation_cli -u "test_01" certificate update \
 	--id "cada113be95d5689a38a465f211bd9bd" \
 	--name "new_name.pem" \
 	--description "new_description" \
@@ -152,14 +152,14 @@ laZa46J98tGIK7o=
  attestation_cli certificate get -h
 
 #Check all certificates
-sudo attestation_cli -u "test_lyt" certificate get
+sudo attestation_cli -u "test_01" certificate get
 
 #Search by certificate type
-sudo attestation_cli -u "test_lyt" certificate get \
+sudo attestation_cli -u "test_01" certificate get \
 	--cert-type "refvalue" 
 
 #Search by certificate id
-sudo attestation_cli -u "test_lyt" certificate get \
+sudo attestation_cli -u "test_01" certificate get \
 	--ids "id1" "id2"
 ```
 
@@ -179,7 +179,7 @@ sudo attestation_cli -u "test_lyt" certificate get \
  attestation_cli policy set -h
 
 #Added text type strategy (abbreviated version)
-sudo attestation_cli -u "test_lyt" policy set \
+sudo attestation_cli -u "test_01" policy set \
 	--name "test_policy{{$number.int}}" \
 	--content "package verification
 
@@ -218,25 +218,25 @@ result = {
 	--attester-type "tpm_ima" "tpm_boot" \
 	--content-type "text" 
 
-sudo attestation_cli -u "test_lyt" policy set \
+sudo attestation_cli -u "test_01" policy set \
 	--content @/tmp/text_policy.txt \
 	--attester-type "tpm_ima" "tpm_boot" \
 	--content-type "text" 
 		
 #add jwt-type strategies (abbreviated version)
-sudo attestation_cli -u "test_lyt" policy set \
+sudo attestation_cli -u "test_01" policy set \
 	--name "asd{{$number.int}}" \
     --content "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyMyJ9.eyJ1c2VybmFtZSI6Ind3dy5qc29uLmNuIiwicG9saWN5IjoiY0dGamEyRm5aU0IyWlhKcFptbGpZWFJwYjI0S0NpTWdSWGgwY21GamRDQnBjMTlzYjJkZmRtRnNhV1FnWm5KdmJTQm1hWEp6ZENCMGNHMWZhVzFoSUd4dlp3cHBjMTlzYjJkZmRtRnNhV1FnUFNCMllXeHBaQ0I3Q2lBZ0lDQnpiMjFsSUdrS0lDQWdJR3h2WjNNZ09qMGdhVzV3ZFhRdVpYWnBaR1Z1WTJVdWJHOW5jd29nSUNBZ2JHOW5jMXRwWFM1c2IyZGZkSGx3WlNBOVBTQWlkSEJ0WDJsdFlTSUtJQ0FnSUhaaGJHbGtJRG85SUd4dlozTmJhVjB1YVhOZmJHOW5YM1poYkdsa0NuMEtDaU1nUTJobFkyc2dhV1lnY0dOeWN5QXhNQ0JwY3lCd2NtVnpaVzUwSUdsdUlHRnVlU0JvWVhOb0lHRnNaMjl5YVhSb2JTQW9jMmhoTVN3Z2MyaGhNalUyTENCemFHRXpPRFFzSUhOb1lUVXhNaWtLY0dOeVgzQnlaWE5sYm5RZ2V3b2dJQ0FnWVd4c0lEbzlJSHQ0SUh3Z2VDQTZQU0JiTVRCZFcxOWRJSDBLSUNBZ0lHMWxZWE4xY21Wa0lEbzlJSHR3WTNJdWNHTnlYMmx1WkdWNElId2djR055SURvOUlHbHVjSFYwTG1WMmFXUmxibU5sTG5CamNuTXVjR055WDNaaGJIVmxjMXRmWFgwS0lDQWdJR0ZzYkY5d1kzSnpYM04xWW5ObGRDQTZQU0JoYkd3Z0xTQnRaV0Z6ZFhKbFpBb2dJQ0FnWTI5MWJuUW9ZV3hzWDNCamNuTmZjM1ZpYzJWMEtTQTlQU0F3Q24wS0NpTWdRWFIwWlhOMFlYUnBiMjRnZG1Gc2FXUWdhV1lnWVd4c0lHTnZibVJwZEdsdmJuTWdiV1YwQ21SbFptRjFiSFFnWVhSMFpYTjBZWFJwYjI1ZmRtRnNhV1FnUFNCbVlXeHpaUXBoZEhSbGMzUmhkR2x2Ymw5MllXeHBaQ0I3Q2lBZ0lDQnBjMTlzYjJkZmRtRnNhV1FnUFQwZ2RISjFaUW9nSUNBZ2NHTnlYM0J5WlhObGJuUUtmUW9LSXlCUGRYUndkWFFnY21WemRXeDBDbkpsYzNWc2RDQTlJSHNLSUNBZ0lDSmhkSFJsYzNSaGRHbHZibDkyWVd4cFpDSTZJR0YwZEdWemRHRjBhVzl1WDNaaGJHbGtMQW9nSUNBZ0ltTjFjM1J2YlY5a1lYUmhJam9nZXdvZ0lDQWdJQ0FnSUNKb1lYTm9YMkZzWnlJNklHbHVjSFYwTG1WMmFXUmxibU5sTG5CamNuTXVhR0Z6YUY5aGJHY0tJQ0FnSUgwS2ZRbz0ifQ.e68L3J2OE2yylJmwYIw3kpId7rQZ2XoGiY6ZCxg4VJ2cEPEDZtj0me_3Hcp87im0mpZxj9d3O3yVgLNvAfHNBw0MJYd85aoPTUxP2i_8i8Huhgw1mORK4s_hupNS-ryjKHf6uTgJQeKiuWjDM4VJguJCj64YZDH8sB-JLLrYI-Fn9XkQK0aiOrAtL2cOh9btWNKUw5Wpi9s2Be2qGiIArcn2hcmoDdkxcTo4FAbDSw8Hu0HbjVkpli4ionNkBYOnz_IgLD1Mi3SSF1PlY0hJQygpCiA8j4Hb6nY19eSkjqfdZ7C2lTqFlBnj2D89QWupwMufYX7csvJ0h5x5l581KQ" \
 	--attester-type "tpm_ima" "tpm_boot" \
 	--content-type "jwt" 
 	
-sudo attestation_cli -u "test_lyt" policy set \
+sudo attestation_cli -u "test_01" policy set \
 	--content @/home/test/policy_jwt.txt \
 	--attester-type "tpm_ima" "tpm_boot" \
 	--content-type "jwt" 
 
 #add strategy (full version)
-sudo attestation_cli -u "test_lyt" policy set \
+sudo attestation_cli -u "test_01" policy set \
 	--name "digest_verification.rego" \
 	--description "This is policy" \
 	--attester-type "tpm_ima" "tpm_boot" \
@@ -252,16 +252,16 @@ sudo attestation_cli -u "test_lyt" policy set \
  attestation_cli policy delete -h
 
 #Delete all
-sudo attestation_cli -u "test_lyt" policy delete \
+sudo attestation_cli -u "test_01" policy delete \
 	--delete-type "all"
 
 #Delete by id
-sudo attestation_cli -u "test_lyt" policy delete \
+sudo attestation_cli -u "test_01" policy delete \
 	--delete-type "id" \
 	--ids "id1" "id2"
 
 #Delete by plugin type
-sudo attestation_cli -u "test_lyt" policy delete \
+sudo attestation_cli -u "test_01" policy delete \
 	--delete-type "attester_type" \
 	--attester-type "tpm_ima" 
 
@@ -274,7 +274,7 @@ sudo attestation_cli -u "test_lyt" policy delete \
  attestation_cli policy update -h
 
 #Modification of certificates
-sudo attestation_cli -u "test_lyt" policy update \
+sudo attestation_cli -u "test_01" policy update \
 	--id "be8c820d-55d3-4645-b54b-fe2cb5f84f81" \
 	--name "new_name" \
 	--description "new_description" \
@@ -292,14 +292,14 @@ sudo attestation_cli -u "test_lyt" policy update \
  attestation_cli policy get -h
 
 # Query all policies
-sudo attestation_cli -u "test_lyt" policy get
+sudo attestation_cli -u "test_01" policy get
 
 # Query by policy type
-sudo attestation_cli -u "test_lyt" policy get \
+sudo attestation_cli -u "test_01" policy get \
 	--attester-type "tpm_ima" 
 
 #Query based on policy type
-sudo attestation_cli -u "test_lyt" policy get \
+sudo attestation_cli -u "test_01" policy get \
 	--ids "id1" "be8c820d-55d3-4645-b54b-fe2cb5f84f81"
 
 ```
@@ -320,15 +320,15 @@ sudo attestation_cli -u "test_lyt" policy get \
  attestation_cli baseline set -h
 
 #Additional baselines (abridged version)
-sudo attestation_cli -u "test_lyt" baseline set \
+sudo attestation_cli -u "test_01" baseline set \
 	--content @/home/test/baseline.txt
 
-sudo attestation_cli -u "test_lyt" baseline set \
+sudo attestation_cli -u "test_01" baseline set \
 	--name "baseline.txt" \
 	--content "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJyZWZlcmVuY2VWYWx1ZXMiOlt7ImZpbGVOYW1lIjoic3l5eC0xLlBBVCIsInNoYTI1NiI6IjEyMzQ1NiJ9XX0.GXywOcuhqz05b-9TVx5cHCkcV8Rxy0v3XY3Aex5H9z5jXdmvl3kfV-wkZXgZJWf2LoOqD8YE3dXG-MhxzLqGAu2GeRoVhg-bXsd1Gzn1QM5_Who3quYXu4jKLbGR4EwVlEoK9M8Oa0eUVeA14R1kKyZ4cdDEir2u_Z_mXa_0RapVUoePAipNsVocs3xXSsppxTE1xOHe6VmV71GbCU-UE9O5GvGu_SeTljvuLV4uFCi4UXmy3VIzULAybPbS_n4vSvOazNeHTTq787ifn6c6n5-kZu0KP7AR96tOnLLG_f1giSu9XbFsntCPu9FNNzx6cO6BHHlDAOQhiJcSK2rzSQ"
 
 #Add strategy (full version)
-sudo attestation_cli -u "test_lyt" baseline set \
+sudo attestation_cli -u "test_01" baseline set \
 	--name "baseline" \
 	--description "This is baseline" \
 	--attester-type "tpm_ima" \
@@ -342,16 +342,16 @@ sudo attestation_cli -u "test_lyt" baseline set \
  attestation_cli baseline delete -h
 
 #Delete all
-sudo attestation_cli -u "test_lyt" baseline delete \
+sudo attestation_cli -u "test_01" baseline delete \
 	--delete-type "all"
 
 #Delete by id
-sudo attestation_cli -u "test_lyt" baseline delete \
+sudo attestation_cli -u "test_01" baseline delete \
 	--delete-type "id" \
 	--ids "id1" "id2"
 
 #Delete by plugin type
-sudo attestation_cli -u "test_lyt" baseline delete \
+sudo attestation_cli -u "test_01" baseline delete \
 	--delete-type "type" \
 	--attester-type "tpm_ima" 
 ```
@@ -362,7 +362,7 @@ sudo attestation_cli -u "test_lyt" baseline delete \
  attestation_cli baseline update -h
 
 #Modifying the baseline
-sudo attestation_cli -u "test_lyt" baseline update \
+sudo attestation_cli -u "test_01" baseline update \
 	--id "757737811267856835" \
 	--name "new_name" \
 	--description "new_description" \
@@ -370,7 +370,7 @@ sudo attestation_cli -u "test_lyt" baseline update \
 	--attester-type "tpm_ima" \
 	--is-default false
 	
-sudo attestation_cli -u "test_lyt" baseline update \
+sudo attestation_cli -u "test_01" baseline update \
 	--id "757737811267856835" \
 	--name "new_name" \
 	--description "new_description" \
@@ -385,14 +385,14 @@ sudo attestation_cli -u "test_lyt" baseline update \
  attestation_cli baseline get -h
 
 #Query all baselines
-sudo attestation_cli -u "test_lyt" baseline get
+sudo attestation_cli -u "test_01" baseline get
 
 #Query by baseline type
-sudo attestation_cli -u "test_lyt" baseline get \
+sudo attestation_cli -u "test_01" baseline get \
 	--attester-type "tpm_ima" 
 
 #Query based on baseline id
-sudo attestation_cli -u "test_lyt" baseline get \
+sudo attestation_cli -u "test_01" baseline get \
 	--ids "id1" "id2"
 ```
 
@@ -412,7 +412,7 @@ sudo attestation_cli -u "test_lyt" baseline get \
  attestation_cli nonce get -h
 	
 #Get Nonce
-sudo attestation_cli -u "test_lyt" nonce get --out "/tmp/nonce.txt"
+sudo attestation_cli -u "test_01" nonce get --out "/tmp/nonce.txt"
 ```
 
 
