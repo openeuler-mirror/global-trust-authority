@@ -28,9 +28,11 @@
 openEuler 21.03 或更高（生产环境）
 
 ### 依赖
-
 * Rust 1.70.0 或更高
 * PostgreSQL 14.0 或更高
+* Mysql 8.0.4 或更高
+* Redis 6.2或更高
+* Kafka 3.8或更高
 * OpenSSL development library
 * libssl-dev (for OpenSSL)
 * pkg-config

@@ -32,6 +32,9 @@ openEuler 21.03 or higher (Production Environment)
 
 * Rust 1.70.0 or higher
 * PostgreSQL 14.0 or higher
+* Mysql 8.0.4 or higher
+* Redis 6.2 or higher
+* Kafka 3.8 or higher
 * OpenSSL development library
 * libssl-dev (for OpenSSL)
 * pkg-config
