@@ -82,6 +82,9 @@ pub struct KeyManagement {
     /// URL for retrieving signing keys from vault
     pub vault_get_key_url: String,
     pub is_require_sign: bool,
+    pub key_ca_cert_path: String,
+    pub key_cli_key_path: String,
+    pub key_cli_cert_path: String,
 }
 
 /// Token management configuration

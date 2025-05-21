@@ -24,7 +24,10 @@ impl ConfigLoader for YamlConfigLoader {
             Mutex::new(
                 YamlConfig {
                     vault_get_key_url: yml_config.attestation_service.key_management.vault_get_key_url,
-                    is_require_sign: yml_config.attestation_service.key_management.is_require_sign
+                    is_require_sign: yml_config.attestation_service.key_management.is_require_sign,
+                    key_ca_cert_path: yml_config.attestation_service.key_management.key_ca_cert_path,
+                    key_cli_key_path: yml_config.attestation_service.key_management.key_cli_key_path,
+                    key_cli_cert_path: yml_config.attestation_service.key_management.key_cli_cert_path
                 }
             )
         });
@@ -36,10 +39,16 @@ impl ConfigLoader for YamlConfigLoader {
             let vault_get_key_url = env::var("VAULT_GET_KEY_URL").expect("DB_TYPE must be set");
             let yml_config = CONFIG.get_instance().expect("Failed to obtain the YAML configuration").clone();
             let is_require_sign = yml_config.attestation_service.key_management.is_require_sign;
+            let key_ca_cert_path = yml_config.attestation_service.key_management.key_ca_cert_path;
+            let key_cli_key_path = yml_config.attestation_service.key_management.key_cli_key_path;
+            let key_cli_cert_path = yml_config.attestation_service.key_management.key_cli_cert_path;
             Mutex::new(
                 YamlConfig {
                     vault_get_key_url,
-                    is_require_sign
+                    is_require_sign,
+                    key_ca_cert_path,
+                    key_cli_key_path,
+                    key_cli_cert_path
                 }
             )
         });
@@ -50,12 +59,18 @@ impl ConfigLoader for YamlConfigLoader {
 pub trait Config: Debug {
     fn vault_get_key_url(&self) -> String;
     fn is_require_sign(&self) -> bool;
+    fn key_ca_cert_path(&self) -> String;
+    fn key_cli_key_path(&self) -> String;
+    fn key_cli_cert_path(&self) -> String;
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct YamlConfig {
     pub vault_get_key_url: String,
     pub is_require_sign: bool,
+    pub key_ca_cert_path: String,
+    pub key_cli_key_path: String,
+    pub key_cli_cert_path: String,
 }
 
 impl Config for YamlConfig {
@@ -65,6 +80,18 @@ impl Config for YamlConfig {
 
     fn is_require_sign(&self) -> bool {
         self.is_require_sign.clone()
+    }
+
+    fn key_ca_cert_path(&self) -> String {
+        self.key_ca_cert_path.clone()
+    }
+
+    fn key_cli_key_path(&self) -> String {
+        self.key_cli_key_path.clone()
+    }
+
+    fn key_cli_cert_path(&self) -> String {
+        self.key_cli_cert_path.clone()
     }
 }
 
@@ -106,6 +133,9 @@ mod tests {
         let yaml_config = YamlConfig {
             vault_get_key_url: "https://test.url".to_string(),
             is_require_sign: true,
+            key_ca_cert_path: "String".to_string(),
+            key_cli_key_path: "String".to_string(),
+            key_cli_cert_path: "String".to_string(),
         };
         let config: &dyn Config = &yaml_config;
         assert_eq!(config.vault_get_key_url(), "https://test.url");
@@ -121,6 +151,9 @@ mod tests {
             .returning(|| Some(Box::new(YamlConfig {
                 vault_get_key_url: "mock://test.url".to_string(),
                 is_require_sign: false,
+                key_ca_cert_path: "String".to_string(),
+                key_cli_key_path: "String".to_string(),
+                key_cli_cert_path: "String".to_string(),
             })));
 
         // Verify mock behavior

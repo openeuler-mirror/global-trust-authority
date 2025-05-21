@@ -4,6 +4,9 @@ attestation_service:
   key_management:
     vault_get_key_url: "http://attestation_mock:8081/v1/vault/get_signing_keys"
     is_require_sign: true
+    key_ca_cert_path: "/tmp/certs/km_cert.pem"
+    key_cli_key_path: "/tmp/certs/ra_client_key.pem"
+    key_cli_cert_path: "/tmp/certs/ra_client_cert.pem"
   token_management:
     jku: "jku"
     kid: "kid"

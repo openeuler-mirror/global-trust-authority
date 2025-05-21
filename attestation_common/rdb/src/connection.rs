@@ -1,6 +1,7 @@
 //! Database Connection Management Module
 //! Provides unified database connection pool management functionality
 
+use std::env;
 use std::error::Error;
 use std::path::PathBuf;
 use sea_orm::{ConnectionTrait, DatabaseBackend, DatabaseConnection, Statement, TransactionTrait};
@@ -34,6 +35,7 @@ pub async fn get_connection() -> Result<Arc<DatabaseConnection>, DbError> {
     let conn = DB_CONN
     .get_or_init(|| async {
         info!("Initializing database connection...");
+        println!("{:?}", env::var("MYSQL_DATABASE_URL"));
         dotenv().ok();
         match DbConfig::from_env() {
             Ok(config) => {

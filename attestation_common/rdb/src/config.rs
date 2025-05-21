@@ -34,6 +34,7 @@ impl DbConfig {
         let url = match db_type.as_str() {
             "mysql" => {
                 info!("db type is mysql");
+                dbg!(env::var("MYSQL_DATABASE_URL"));
                 env::var("MYSQL_DATABASE_URL").expect("MYSQL_DATABASE_URL must be set")}
             "postgres" => {
                 info!("db type is postgresql");
