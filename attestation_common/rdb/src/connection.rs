@@ -35,7 +35,6 @@ pub async fn get_connection() -> Result<Arc<DatabaseConnection>, DbError> {
     let conn = DB_CONN
     .get_or_init(|| async {
         info!("Initializing database connection...");
-        println!("{:?}", env::var("MYSQL_DATABASE_URL"));
         dotenv().ok();
         match DbConfig::from_env() {
             Ok(config) => {
