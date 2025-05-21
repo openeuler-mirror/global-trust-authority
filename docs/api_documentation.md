@@ -11,6 +11,8 @@
   - [3.3 Challenge Related](#33-challenge-related)
   - [3.4 Policy Management](#34-policy-management)
   - [3.5 Token Validation](#35-token-validation)
+- [4. Key Manager API](#4-Key-Manager-API)
+  - [4.1 Query Key](#41-Query-key)
 
 ## 1. General Information
 
@@ -784,3 +786,31 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/policy?ids=2b0ead4b-6a
 }
  ```
 
+## 4. Key Manager API
+
+### 4.1 Query key
+**Description**: Query all the keys of the current key management component
+
+**Request Method**: `GET /v1/vault/get_signing_keys`
+
+#### Request Parameters
+None
+
+#### Response Parameters
+| Field | Sub-field | Type | Required | Description |
+|-------|-----------|------|----------|-------------|
+| NSK | | string | YES | key NSK |
+| | private_key | string | Yes | key info |
+| | algorithm | string | Yes | Private key algorithm |
+| | encoding | string | Yes | Private key format |
+| | version | string | Yes | Private key version |
+| PSK | | string | YES | key PSK |
+| | private_key | string | Yes | key info |
+| | algorithm | string | Yes | Private key algorithm |
+| | encoding | string | Yes | Private key format |
+| | version | string | Yes | Private key version |
+| TSK | | string | YES | key TSK |
+| | private_key | string | Yes | key info |
+| | algorithm | string | Yes | Private key algorithm |
+| | encoding | string | Yes | Private key format |
+| | version | string | Yes | Private key version |
