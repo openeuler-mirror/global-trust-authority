@@ -120,4 +120,4 @@ use super::*;
 
 ## 7. Deployment Guide
 
-See GTA_Usage_Guidelines.md for more details
+Refer to GTA_Usage_Guidelines.md for more details
