@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Intel Corporation
+
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::error::ErrorTooManyRequests;
 use actix_web::Error;
@@ -7,7 +9,6 @@ use governor::state::NotKeyed;
 use governor::{Quota, RateLimiter};
 use std::env;
 use std::sync::Arc;
-// Add this import
 
 const REQUESTS_PER_SECOND_DEFAULT: u32 = 10;
 const BURST_SIZE_DEFAULT: u32 = 5;
