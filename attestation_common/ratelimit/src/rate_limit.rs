@@ -1,37 +1,57 @@
-use std::env;
-use governor::{Quota, RateLimiter};
-use std::sync::Arc;
-use std::net::IpAddr;
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::error::ErrorTooManyRequests;
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use governor::clock::DefaultClock;
-use governor::state::keyed::DefaultKeyedStateStore;
 use actix_web::Error;
+use governor::clock::DefaultClock;
+use governor::state::InMemoryState;
+use governor::state::NotKeyed;
+use governor::{Quota, RateLimiter};
+use std::env;
+use std::sync::Arc;
+// Add this import
 
 const REQUESTS_PER_SECOND_DEFAULT: u32 = 10;
 const BURST_SIZE_DEFAULT: u32 = 5;
 
 #[derive(Clone)]
 pub struct Governor {
-    limiter: Arc<RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>>,
+    limiter: Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>,
 }
 
-// ... rest of the code ...
+// Update GovernorMiddleware to match
+pub struct GovernorMiddleware<S> {
+    service: S,
+    limiter: Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>,
+}
 
-impl Governor {
-    pub fn new(quota: Quota) -> Self {
-        Self {
-            limiter: Arc::new(RateLimiter::keyed(quota)),
-        }
+impl<S, B> Service<ServiceRequest> for GovernorMiddleware<S>
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S::Future: 'static,
+{
+    type Response = ServiceResponse<B>;
+    type Error = actix_web::Error;
+    type Future = std::pin::Pin<Box<dyn std::future::Future<Output = Result<Self::Response, Self::Error>> + 'static>>;
+
+    fn poll_ready(&self, context: &mut std::task::Context<'_>) -> std::task::Poll<Result<(), Self::Error>> {
+        self.service.poll_ready(context)
+    }
+
+    fn call(&self, request: ServiceRequest) -> Self::Future {
+        let fut = self.service.call(request);
+        let limiter = self.limiter.clone();
+
+        Box::pin(async move {
+            match limiter.check() {
+                Ok(_) => fut.await,
+                Err(_) => Err(ErrorTooManyRequests("Too many requests")),
+            }
+        })
     }
 }
 
 impl<S, B> Transform<S, ServiceRequest> for Governor
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
     B: 'static,
 {
@@ -49,38 +69,11 @@ where
     }
 }
 
-pub struct GovernorMiddleware<S> {
-    service: S,
-    limiter: Arc<RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>>,
-}
-
-impl<S, B> Service<ServiceRequest> for GovernorMiddleware<S>
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
-    S::Future: 'static,
-{
-    type Response = ServiceResponse<B>;
-    type Error = Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
-
-    fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.service.poll_ready(cx)
-    }
-
-    fn call(&self, req: ServiceRequest) -> Self::Future {
-        let ip = req.peer_addr()
-            .map(|addr| addr.ip())
-            .unwrap_or_else(|| "0.0.0.0".parse().unwrap());
-
-        let fut = self.service.call(req);
-        let limiter = self.limiter.clone();
-
-        Box::pin(async move {
-            match limiter.check_key(&ip) {
-                Ok(_) => fut.await,
-                Err(_) => Err(ErrorTooManyRequests("Too many requests")),
-            }
-        })
+impl Governor {
+    pub fn new(quota: Quota) -> Self {
+        Self {
+            limiter: Arc::new(RateLimiter::direct(quota)),
+        }
     }
 }
 
