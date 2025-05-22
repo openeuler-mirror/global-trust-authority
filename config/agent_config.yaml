@@ -1,8 +1,8 @@
 agent:
   listen_address: "0.0.0.0"
   listen_port: 8088
-  uuid: "TPM AK"  # Unique agent identifier
-  user_id: "test_lyz" # Unique user identifier
+  uuid: "a4e7c719-6b05-4ac6-b95a-7e71a9d6f9d5"  # Unique agent identifier, same as common name field in IAK certificate
+  user_id: "test_01" # Unique user identifier
 
 server:
   server_url: "http://127.0.0.1:8080"  # Base URL, API paths will be automatically appended
