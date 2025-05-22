@@ -93,7 +93,7 @@ Configuration of agent ip, server url, log file and plugins information on agent
 #### attestation_agent.service
 The agent supports auto-start at startup, and this file cannot be customized and modified
 
-## Building a docker image
+## Deployment by docker
 
 ### Uploading certificates that interact with key_manager
 
@@ -144,7 +144,7 @@ Stop the docker container
 docker stop CONTAINER ID
 ```
 
-## rpm deployment
+## Deployment by rpm
 
 ### Uploading TLS certificates with key_manager and install librdkafka
 
