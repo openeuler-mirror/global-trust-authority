@@ -460,7 +460,7 @@ sudo attestation_cli evidence get \
  attestation_cli attest -h
 
 #challenge
-sudo attestation_cli -u "test_lyz" attest \
+sudo attestation_cli -u "test_01" attest \
 	--file "/tmp/evidence.txt" \
 	--out "/tmp/token.txt"
 ```

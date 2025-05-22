@@ -93,7 +93,7 @@
 |-------|-----------|------|----------|-------------|-------------|
 | name | | string | Yes | Length 1-255 characters | Baseline name |
 | description | | string | No | Length 0-512 characters | Baseline description |
-| attester_type | | string | Yes | tpm_ima character | Applicable challenge plugin type |
+| attester_type | | string | Yes | only support tpm_ima | Applicable challenge plugin type |
 | content | | string | Yes | Maximum length 10M | Baseline content |
 | is_default | | boolean | No | true or false | Whether it's default baseline, defaults to false |
 
