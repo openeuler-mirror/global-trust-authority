@@ -53,7 +53,7 @@ rpm_build for rpm builds
 ![输入图片说明](https://foruda.gitee.com/images/1747300931159837528/617c4777_15438102.png "屏幕截图")
 
 
-## Building a docker image
+## Deployment by docker
 
 ### Uploading certificates that interact with key_manager
 
@@ -104,7 +104,7 @@ Stop the docker container
 docker stop CONTAINER ID
 ```
 
-## rpm deployment
+## Deployment by rpm
 
 ### Uploading TLS certificates with key_manager and install librdkafka
 

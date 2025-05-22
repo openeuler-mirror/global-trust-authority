@@ -10,17 +10,13 @@ Attestation Service is the server-side component of the remote attestation syste
 ## 2. Development Environment Configuration
 
 ### 2.1 Required Components
-- Rust 1.70.0 or higher
-- PostgreSQL 14.0 or higher
+- Rust 1.82 or higher
+- Mysql 8.0.4/PostgreSQL 14.0 or higher
+- Redis 6.2 or higher
+- Kafka 3.8 or higher
 - OpenSSL development library
 - libssl-dev (for OpenSSL)
 - pkg-config
-
-### 2.2 Environment Setup
-1. Install PostgreSQL
-```bash
-winget install PostgreSQL.PostgreSQL
-```
 
 ## 3. Directory Structure
 ```plaintext
@@ -124,15 +120,4 @@ use super::*;
 
 ## 7. Deployment Guide
 
-### 7.1 Build and Run
-- Build：cargo build
-- Run：cargo run --bin attestation_service
-
-### 7.2 Configuration Description
-- DATABASE_URL: Database connection string
-- SERVER_ADDR: Service listening address
-- RUST_LOG: Log level
-- MAX_JSON_SIZE: JSON request size limit
-- REQUESTS_PER_SECOND: Request rate limit
-- BURST_SIZE: Burst request limit
-- HTTPS_SWITCH: HTTPS switch
+See GTA_Usage_Guidelines.md for more details

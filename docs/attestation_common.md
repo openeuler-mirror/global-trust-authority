@@ -11,7 +11,7 @@ Attestation Common is a shared code library for the remote attestation system, p
 ## 2. Development Environment Configuration
 
 ### 2.1 Required Components
-- Rust 1.70.0 or higher
+- Rust 1.82 or higher
 
 ## 3. Project Structure Description
 
@@ -20,7 +20,7 @@ Attestation Common is a shared code library for the remote attestation system, p
 attestation_common/
 ├── cache/           # Cache management
 ├── distributed_lock/# Distributed lock
-├── hisec_log/      # Security logging
+├── common_log/      # Security logging
 ├── mq/             # Message queue
 ├── rdb/            # Relational database
 ├── config_manager/ # Configuration management
@@ -106,7 +106,7 @@ use super::*;
 
     #[test]
     fn test_hash_generation() {
-        // 测试实现
+        // code implementation
     }
 }
 

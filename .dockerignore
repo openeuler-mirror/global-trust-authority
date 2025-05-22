@@ -1,5 +1,5 @@
 target/
-huawei-ra-log/
+ra-log/
 .gitee/
 .gitignore
 .vscode/

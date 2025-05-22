@@ -57,7 +57,7 @@ schedulers:
     cron_expression: "0 */5 * * * *"
 logging:
   level: "info"
-  file: "/home/hisec/log/hra-agent.log"
+  file: "/home/log/hra-agent.log"
 "#
     .to_string()
 }
