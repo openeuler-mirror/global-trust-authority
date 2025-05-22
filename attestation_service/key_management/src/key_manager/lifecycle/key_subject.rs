@@ -127,7 +127,7 @@ impl KeyLifecycle for KeySubject {
 
             let max_version = vault_response.find_max_version().unwrap();
             info!("Max version: {}", max_version);
-            if db_version >= max_version {
+            if db_version > max_version {
                 info!(
                     "db_version is large than max_version, db_version: {}, max_version: {}",
                     db_version, max_version
