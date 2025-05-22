@@ -335,15 +335,15 @@ Finally, import the baseline
 # Agent preparation
 ## environmental preparation
 
-1. Agent needs to be deployed in an openEuler environment when deploying RPM, and users can use the source code in other environments.
+1. The agent needs to be deployed in an openEuler environment when deploying RPM, and users can use the source code in other environments.
 
-2. Agent and Server need to be deployed in the same network segment, can ping through each other.
+2. The agent can communicate with the server over the network..
 
 ## agent_config.yaml file configuration
 
-The ip and port of Agent and Server can be configured in the agent_config.yaml file, and the respective ports cannot be occupied by other processes.
+The agent can configure its own IP address and port in the agent_config.yaml, and the port cannot be occupied by other processes.
 
-For example, in the following agent_config.yaml file, port 8088 is only occupied by the Agent and port 8080 is occupied by the Server:
+For example, in the following agent_config.yaml file, port 8088 is configured by the agent, because the 8088 port is already occupied by the server.
 
 ```sh
 agent:

@@ -236,9 +236,10 @@ Data that needs to be preset on the server side:
 3. Public key certificate for validation signature of baseline/policy
 4. ima metrics baseline
 
+
 Data that needs to be preset on the agent side:
 
-1. The device needs to have a TPM chip
+1. The device needs to have the TPM, which includes the hardware TPM, vTPM, or fTPM.
 2. The device must be preset with the IAK certificate in the TPM chip
 
 All of the above data is in the Challenge_Request_Challenge_Response_Environment_Preparation.md document.
