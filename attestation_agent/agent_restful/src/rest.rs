@@ -1,3 +1,4 @@
+use crate::middlewares::rate_limit::{RateLimit, GLOBAL_LIMITER};
 use crate::middlewares::request_logger::RequestLogger;
 use crate::middlewares::security_headers::SecurityHeaders;
 use crate::middlewares::trusted_proxies::TrustedProxies;
@@ -15,14 +16,10 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use validator::Validate;
-use governor::Quota;
-use ratelimit::Governor;
 
 /// Constants used for rate limiting and connection control
 const DEFAULT_PAYLOAD_SIZE: usize = 1024 * 1024 * 10; // 10MB
 const MAX_CONNECTIONS: usize = 3; // Maximum concurrent connections
-const MILLISECONDS_PER_REQUEST: u32 = 500; // Rate limit: 500ms between requests (2 requests/second)
-const MAX_REQUESTS_LIMIT: u32 = 5; // Maximum burst size for rate limiting
 
 #[derive(Validate)]
 #[derive(Clone, Debug)]
@@ -48,7 +45,7 @@ pub struct ServiceConfig {
     /// List of trusted proxy addresses for handling forwarded headers.
     pub trusted_proxies: Vec<String>,
 
-    pub cert_config: Option<CertConfig>
+    pub cert_config: Option<CertConfig>,
 }
 
 impl Default for ServiceConfig {
@@ -127,10 +124,8 @@ impl ServiceConfig {
     ///
     /// * `path` - Path to the SSL certificate file in PEM format
     pub fn with_certificates(mut self, cert_path: &str, key_path: &str) -> Self {
-        self.cert_config = Some(CertConfig {
-            cert_path: Some(cert_path.to_string()),
-            key_path: Some(key_path.to_string()),
-        });
+        self.cert_config =
+            Some(CertConfig { cert_path: Some(cert_path.to_string()), key_path: Some(key_path.to_string()) });
         self
     }
 
@@ -143,7 +138,9 @@ impl ServiceConfig {
         // Then validate certificate configuration if HTTPS is enabled
         if self.enable_https {
             if self.cert_config.is_none() {
-                return Err(AgentError::ConfigError("Certificate configuration must be specified for HTTPS".to_string()));
+                return Err(AgentError::ConfigError(
+                    "Certificate configuration must be specified for HTTPS".to_string(),
+                ));
             }
             if let Some(cert_config) = &self.cert_config {
                 if let Err(e) = cert_config.validate() {
@@ -776,15 +773,12 @@ fn create_app(
 > {
     let json_config = web::JsonConfig::default().limit(DEFAULT_PAYLOAD_SIZE).content_type(|_| true);
 
-    let governor_config = Quota::per_second(std::num::NonZeroU32::new(MILLISECONDS_PER_REQUEST).unwrap())
-        .allow_burst(std::num::NonZeroU32::new(MAX_REQUESTS_LIMIT).unwrap());
-    let governor = Governor::new(governor_config);
-
     let app = App::new()
         .app_data(json_config)
+        .app_data(GLOBAL_LIMITER.clone())
+        .wrap(RateLimit)
         .wrap(Logger::default())
         .wrap(RequestLogger::new())
-        .wrap(governor.clone())
         .wrap(SecurityHeaders::new())
         .wrap(TrustedProxies::new(config))
         .wrap(Condition::new(true, NormalizePath::new(TrailingSlash::Trim)))
@@ -825,8 +819,8 @@ mod tests {
     use std::path::PathBuf;
     use std::process::Command;
     use std::sync::Arc;
-    use tempfile::TempDir;
     use std::time::Duration;
+    use tempfile::TempDir;
 
     fn create_test_instance() -> Arc<RestService> {
         Arc::new(RestService::default())
@@ -946,8 +940,8 @@ mod tests {
 
         // Test certificate configuration
         let (cert_path, key_path, _temp_dir) = generate_test_certificate();
-        let cert_config = ServiceConfig::new()
-            .with_certificates(cert_path.to_str().unwrap(), key_path.to_str().unwrap());
+        let cert_config =
+            ServiceConfig::new().with_certificates(cert_path.to_str().unwrap(), key_path.to_str().unwrap());
         assert!(cert_config.cert_config.is_some());
     }
 
@@ -1191,9 +1185,7 @@ mod tests {
             .register(Method::GET, "/test_operation", |_, _| HttpResponse::Ok().json(json!({"success": true})))
             .expect("Should register route");
 
-        let config = ServiceConfig::new()
-            .with_port(http_port)
-            .with_bind_address("127.0.0.1");
+        let config = ServiceConfig::new().with_port(http_port).with_bind_address("127.0.0.1");
 
         {
             let mut config_guard = instance.config.write().unwrap();
@@ -1223,9 +1215,7 @@ mod tests {
         let port = listener.local_addr().unwrap().port();
         drop(listener);
 
-        let config = ServiceConfig::new()
-            .with_port(port)
-            .with_bind_address("127.0.0.1");
+        let config = ServiceConfig::new().with_port(port).with_bind_address("127.0.0.1");
 
         let service = create_test_instance();
         service.is_running.store(false, Ordering::SeqCst);
@@ -1264,9 +1254,7 @@ mod tests {
         let port = listener.local_addr().unwrap().port();
         drop(listener);
 
-        let config = ServiceConfig::new()
-            .with_port(port)
-            .with_bind_address("127.0.0.1");
+        let config = ServiceConfig::new().with_port(port).with_bind_address("127.0.0.1");
 
         {
             let mut config_guard = service.config.write().unwrap();
@@ -1324,9 +1312,7 @@ mod tests {
             port
         };
 
-        let config = ServiceConfig::new()
-            .with_port(port)
-            .with_bind_address("127.0.0.1");
+        let config = ServiceConfig::new().with_port(port).with_bind_address("127.0.0.1");
 
         {
             let mut config_guard = service.config.write().unwrap();
