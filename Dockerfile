@@ -129,13 +129,13 @@ RUN apt-get update && \
     apt-get install -y openssl && \
     rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /tmp/certs && \
+RUN mkdir -p /etc/attestation_server/certs && \
     openssl req -x509 -newkey rsa:4096 -nodes \
-        -keyout /tmp/certs/key.pem \
-        -out /tmp/certs/cert.pem \
+        -keyout /etc/attestation_server/certs/key.pem \
+        -out /etc/attestation_server/certs/cert.pem \
         -days 365 \
         -subj "/CN=127.0.0.1"
-COPY certs/* /tmp/certs/
+COPY certs/* /etc/attestation_server/certs/
 # Copy dynamic libraries
 COPY --from=builder /var/test_docker/app/target/release/*.so /usr/local/lib/
 

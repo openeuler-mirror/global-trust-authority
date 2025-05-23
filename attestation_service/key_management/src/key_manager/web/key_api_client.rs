@@ -9,6 +9,7 @@ use std::fs::read;
 use std::future::Future;
 use std::path::Path;
 use std::pin::Pin;
+use crate::config::{Config, ConfigLoader, YamlConfigLoader, CONFIG_CACHE};
 
 pub struct KeyApiClient {
     client: Client,
@@ -46,10 +47,14 @@ impl KeyApiClient {
 
 fn get_https_client() -> Client {
     let current_dir = std::env::current_dir().unwrap();
-    let cert_path = current_dir.clone().join("/tmp/certs/ra_client_cert.pem");
-    let key_path = current_dir.clone().join("/tmp/certs/ra_client_key.pem");
+    YamlConfigLoader.load_config();
+    let yml_config = CONFIG_CACHE.get().unwrap().clone();
+    let cert_path = current_dir.clone().join(yml_config.lock().unwrap().key_cli_cert_path.clone());
+    let key_path = current_dir.clone().join(yml_config.lock().unwrap().key_cli_key_path.clone());
     let cert_path = Path::new(&cert_path);
     let key_path = Path::new(&key_path);
+    dbg!(&cert_path);
+    dbg!(&key_path);
     let cert = read(cert_path)
         .map_err(|e| {
             KeyManagerError::new(format!(
@@ -66,7 +71,8 @@ fn get_https_client() -> Client {
     let identity =
         Identity::from_pem(&identity_data).map_err(|e| KeyManagerError::new(format!("Identity error: {}", e))).unwrap();
     // 3. Load the root certificate of KeyManager (used to verify the server)
-    let ca_cert = read(current_dir.join("/tmp/certs/km_cert.pem").to_str().unwrap())
+    let ca_cert =
+        read(current_dir.join(yml_config.lock().unwrap().key_ca_cert_path().clone()).to_str().unwrap())
         .map_err(|e| KeyManagerError::new(format!("Failed to read CA cert: {}", e)))
         .unwrap();
     let ca_cert = Certificate::from_pem(&ca_cert)

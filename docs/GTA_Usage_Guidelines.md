@@ -22,7 +22,7 @@ Configuration of nonce, token, policy, certificate, baseline on server side
 
 |     Configuration Level     |          Field Name          |               Field Meaning                | Field Type |                                    Default/Example Values                                     |
 | :--------------: | :------------------------: |:------------------------------------------:| :------: |:---------------------------------------------------------------------------------------------:|
-|  key_management  |     vault_get_key_url      | Vault service URL for getting signing keys |  string  |                     "https://10.10.0.180:8082/v1/vault/get_signing_keys"                      |
+|  key_management  |     vault_get_key_url      | Vault service URL for getting signing keys |  string  |                     "https://127.0.0.1:8082/v1/vault/get_signing_keys"                      |
 |  key_management  |      is_require_sign       |       Whether to request a signature       | boolean  |                                             true                                              |
 | token_management |            jku             |                JWK Set URL                 |  string  |                                             "jku"                                             |
 | token_management |            kid             |                   Key ID                   |  string  |                                             "kid"                                             |
