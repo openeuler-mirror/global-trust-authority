@@ -19,19 +19,21 @@ use tss_esapi::{
         Data,
         SignatureScheme,
         HashScheme,
-        SymmetricDefinition,
         Public,
         CapabilityData,
     },
-    interface_types::algorithm::HashingAlgorithm,
     traits::Marshall,
-    handles::{KeyHandle, TpmHandle, PersistentTpmHandle, NvIndexHandle, NvIndexTpmHandle},
-    interface_types::resource_handles,
-    interface_types::ecc::EccCurve,
-    constants::CapabilityType,
-    constants::SessionType,
-    attributes::SessionAttributesBuilder,
-    constants::response_code::{FormatZeroResponseCode, Tss2ResponseCode},
+    handles::{KeyHandle, TpmHandle, PersistentTpmHandle, NvIndexTpmHandle},
+    interface_types::{
+        algorithm::HashingAlgorithm,
+        resource_handles::NvAuth,
+        ecc::EccCurve,
+    },
+    constants::{
+        CapabilityType,
+        response_code::Tss2ResponseCode,
+    },
+    abstraction::nv,
 };
 use std::io::Error as IoError;
 
@@ -99,59 +101,28 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
             }
         }
     }
-    fn create_ctx_with_session(&self) -> Result<Context, PluginError> {
-        let mut ctx = self.context_new()?;
-        let session = ctx
-            .start_auth_session(
-                None,
-                None,
-                None,
-                SessionType::Hmac,
-                SymmetricDefinition::AES_256_CFB,
-                HashingAlgorithm::Sha256,
-            )
-            .unwrap();
-        let (session_attributes, session_attributes_mask) = SessionAttributesBuilder::new()
-            .with_decrypt(true)
-            .with_encrypt(true)
-            .build();
-        ctx.tr_sess_set_attributes(
-            session.unwrap(),
-            session_attributes,
-            session_attributes_mask,
-        )
-            .unwrap();
-        ctx.set_sessions((session, None, None));
 
+    fn create_ctx_without_session(&self) -> Result<Context, PluginError> {
+        let ctx = self.context_new()?;
         Ok(ctx)
     }
 
-    fn get_nv_cert_data(ctx: &mut Context, nv_index: u64) -> Result<Option<Vec<u8>>, PluginError> {
-        // Create NV index handle
-        let nv_index_handle = NvIndexTpmHandle::new(nv_index as u32)
-            .map_err(|e| PluginError::InternalError(format!("Invalid NV index value: {}", e)))?;
+    fn get_nv_cert_data(context: &mut Context, nv_index: u64) -> Result<Option<Vec<u8>>, PluginError> {
+        let index: u32 = u32::try_from(nv_index)
+            .map_err(|_| PluginError::InternalError("Invalid NV index value".to_string()))?;
+        let nv_idx: NvIndexTpmHandle = NvIndexTpmHandle::new(index)
+            .map_err(|e| PluginError::InternalError(format!("Failed to create NV index handle: {}", e)))?;
 
-        // Get handle from TPM
-        let nv_handle = ctx
-            .tr_from_tpm_public(nv_index_handle.into())
-            .map(NvIndexHandle::from)
-            .map_err(|e| PluginError::InternalError(format!("Failed to get NV handle from TPM: {}", e)))?;
+        let nv_auth_handle: NvAuth = context.execute_without_session(|ctx| {
+            ctx.tr_from_tpm_public(TpmHandle::NvIndex(nv_idx))
+                .map(|v| NvAuth::NvIndex(v.into()))
+        }).map_err(|e| PluginError::InternalError(format!("Failed to get NV handle from TPM: {}", e)))?;
 
-        // Get NV index public data to determine size
-        let (nv_public, _) = ctx.nv_read_public(nv_handle)
-            .map_err(|e| PluginError::InternalError(format!("Failed to read NV public data: {}", e)))?;
-
-        let nvSize = nv_public.data_size();
-
-        // Read certificate data from NV
-        let cert_data = ctx.nv_read(
-            resource_handles::NvAuth::NvIndex(nv_handle),
-            nv_handle,
-            nvSize as u16,
-            0,  // Starting offset
-        )
+        let cert_data:Vec<u8> = context.execute_with_nullauth_session(|ctx| {
+            nv::read_full(ctx, nv_auth_handle, nv_idx)
+        })
             .map_err(|e| PluginError::InternalError(format!("Failed to read certificate from NV index: {}", e)))?;
-        Ok(Some(cert_data.value().to_vec()))
+        Ok(Some(cert_data))
     }
 
     // Read X509 certificate from TPM NV
@@ -279,7 +250,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
 
     // Common methods shared by all TPM plugins
     fn collect_aik(&self, node_id: &str) -> Result<String, PluginError> {
-        let mut ctx = self.create_ctx_with_session()?;
+        let mut ctx = self.create_ctx_without_session()?;
 
         // Get the persistent AK handle and check if it exists
         let persistent_handle = PersistentTpmHandle::new(self.config().ak_handle as u32)
