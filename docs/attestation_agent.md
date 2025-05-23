@@ -10,8 +10,7 @@ Attestation Agent is the client component of the remote attestation system, prov
 ## 2. Development Environment Setup
 
 ### 2.1 Required Components
-- Rust 1.70.0 or higher
-- OpenSSL development library
+- Rust 1.82.0 or higher
 - libssl-dev (for OpenSSL)
 - libtss2-dev (for TPM 2.0 access)
 - pkg-config

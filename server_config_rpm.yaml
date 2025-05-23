@@ -1,10 +1,10 @@
 attestation_service:
   key_management:
-    vault_get_key_url: "https://127.0.0.1:8082/v1/vault/get_signing_keys"
+    vault_get_key_url: "https://10.10.0.180:8082/v1/vault/get_signing_keys"
     is_require_sign: true
-    key_ca_cert_path: "/etc/attestation_server/certs/km_cert.pem"
-    key_cli_key_path: "/etc/attestation_server/certs/ra_client_key.pem"
-    key_cli_cert_path: "/etc/attestation_server/certs/ra_client_cert.pem"
+    key_ca_cert_path: "/tmp/certs/km_cert.pem"
+    key_cli_key_path: "/tmp/certs/ra_client_key.pem"
+    key_cli_cert_path: "/tmp/certs/ra_client_cert.pem"
   token_management:
     jku: "jku"
     kid: "kid"
@@ -12,7 +12,7 @@ attestation_service:
     iss: "iss"
     eat_profile: "eat_profile"
     mq_enabled: false
-    token_topic: "huawei_token_topic"
+    token_topic: "ra_token_topic"
   policy:
     export_policy_file:
       - name: "tpm_boot"

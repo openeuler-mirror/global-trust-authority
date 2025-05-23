@@ -22,7 +22,7 @@ Configuration of nonce, token, policy, certificate, baseline on server side
 
 |     Configuration Level     |          Field Name          |               Field Meaning                | Field Type |                                    Default/Example Values                                     |
 | :--------------: | :------------------------: |:------------------------------------------:| :------: |:---------------------------------------------------------------------------------------------:|
-|  key_management  |     vault_get_key_url      | Vault service URL for getting signing keys |  string  |                     "https://127.0.0.1:8082/v1/vault/get_signing_keys"                      |
+|  key_management  |     vault_get_key_url      | Vault service URL for getting signing keys |  string  |                     "https://10.10.0.180:8082/v1/vault/get_signing_keys"                      |
 |  key_management  |      is_require_sign       |       Whether to request a signature       | boolean  |                                             true                                              |
 | token_management |            jku             |                JWK Set URL                 |  string  |                                             "jku"                                             |
 | token_management |            kid             |                   Key ID                   |  string  |                                             "kid"                                             |
@@ -53,7 +53,47 @@ rpm_build for rpm builds
 ![输入图片说明](https://foruda.gitee.com/images/1747300931159837528/617c4777_15438102.png "屏幕截图")
 
 
-## Building a docker image
+#### agent_config.yaml
+Configuration of agent ip, server url, log file and plugins information on agent side
+
+
+| Configuration Level | Field Name | Field Meaning | Field Type | Default/Example Values |
+|-------------------|------------|---------------|------------|----------------------|
+| agent | listen_address | IP address for the agent to listen | string | "0.0.0.0" |
+| agent | listen_port | Port number for the agent to listen | integer | 8088 |
+| agent | uuid | Unique agent identifier, same as common name field in IAK certificate | string | "a4e7c719-6b05-4ac6-b95a-7e71a9d6f9d5" |
+| agent | user_id | Unique identifier for the user | string | "test_01" |
+| server | server_url | Base URL of the attestation server | string | "http://127.0.0.1:8080" |
+| server | tls.cert_path | TLS certificate path | string | "/path/to/cert.pem" |
+| server | tls.key_path | TLS private key path | string | "/path/to/key.pem" |
+| server | tls.ca_path | CA certificate path | string | "/path/to/key.pem" |
+| logging | level | Logging level | string | "info" (options: trace, debug, info, warn, error) |
+| logging | file | Log file Path | string | "/var/log/ra-agent.log" |
+| plugins | name | Plugin name | string | "tpm_boot", "tpm_ima" |
+| plugins | path | Plugin so path | string | "/usr/lib64/libtpm_boot_attester.so", "/usr/lib64/libtpm_ima_attester.so" |
+| plugins | policy_id | List of policy IDs associated with the plugin | array | [] |
+| plugins | enabled | Whether the plugin is enabled | boolean | true |
+| plugins | params.attester_type | attester type | string | "tpm_boot", "tpm_ima" |
+| plugins | params.tcti_config | TPM Command Transmission Interface configuration | string | "device" (options: device, mssim, swtpm, tabrmd, libtpm) |
+| plugins | params.ak_handle | Attestation Key handle | string | "0x81010020" |
+| plugins | params.ak_nv_index | Attestation Key NV index | string | "0x150001b" |
+| plugins | params.pcr_selections.banks | PCR banks to use | array | [0,1,2,3,4,5,6,7] for tpm_boot, [10] for tpm_ima |
+| plugins | params.pcr_selections.hash_alg | Hash algorithm to use | string | "sha256" (options: sha1, sha256, sha384, sha512, sm3) |
+| plugins | params.quote_signature_scheme.signature_algo | Signature algorithm for quotes | string | "rsassa" (options: rsapss, rsassa, ecdsa) |
+| plugins | params.quote_signature_scheme.hash_alg | Hash algorithm for quotes | string | "sha256" (options: sha1, sha256, sha384, sha512, sm3) |
+| plugins | params.log_file_path | Measurement log file path | string | "/sys/kernel/security/tpm0/binary_bios_measurements" for tpm_boot, "/sys/kernel/security/ima/ascii_runtime_measurements" for tpm_ima |
+| schedulers | name |  Scheduler task name | string | "challenge", "config_sync" |
+| schedulers | retry_enabled | Whether to enable retry mechanism | boolean | true/false |
+| schedulers | intervals | Task execution interval in seconds | integer | 86400 (24 hours) for challenge, 300 (5 minutes) for config_sync |
+| schedulers | initial_delay.min_seconds | Minimum initial delay in seconds | integer | 1 |
+| schedulers | initial_delay.max_seconds | Maximum initial delay in seconds | integer | 60 |
+| schedulers | max_retries | Maximum number of retry attempts | integer | 1 |
+| schedulers | enabled | Whether the scheduler is enabled | boolean | true |
+
+#### attestation_agent.service
+The agent supports auto-start at startup, and this file cannot be customized and modified
+
+## Deployment by docker
 
 ### Uploading certificates that interact with key_manager
 
@@ -104,7 +144,7 @@ Stop the docker container
 docker stop CONTAINER ID
 ```
 
-## rpm deployment
+## Deployment by rpm
 
 ### Uploading TLS certificates with key_manager and install librdkafka
 
@@ -195,6 +235,12 @@ Data that needs to be preset on the server side:
 2. Certificate chain for AIK validation
 3. Public key certificate for validation signature of baseline/policy
 4. ima metrics baseline
+
+
+Data that needs to be preset on the agent side:
+
+1. The device needs to have the TPM, which includes the hardware TPM, vTPM, or fTPM.
+2. The device must be preset with the IAK certificate in the TPM chip
 
 All of the above data is in the Challenge_Request_Challenge_Response_Environment_Preparation.md document.
 

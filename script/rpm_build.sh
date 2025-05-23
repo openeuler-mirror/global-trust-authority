@@ -71,10 +71,10 @@ if [ "$ENABLE_AGENT_RPM" = true ]; then
 fi
 
 if [ "$ENABLE_SERVER_RPM" = true ]; then
-    mkdir -p /etc/attestation_server/certs && \
+    mkdir -p /tmp/certs && \
         openssl req -x509 -newkey rsa:4096 -nodes \
-            -keyout /etc/attestation_server/certs/key.pem \
-            -out /etc/attestation_server/certs/cert.pem \
+            -keyout /tmp/certs/key.pem \
+            -out /tmp/certs/cert.pem \
             -days 365 \
             -subj "/CN=127.0.0.1"
     cp server.spec $RPM_SPEC_DIR

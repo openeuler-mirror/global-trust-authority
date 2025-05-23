@@ -335,103 +335,15 @@ Finally, import the baseline
 # Agent preparation
 ## environmental preparation
 
-1. Agent needs to be deployed in an openEuler environment with a TPM chip (or swtpm, which requires a /dev/tpm0 device node, a tpm_boot log path /sys/kernel/security/tpm0/binary_bios_measurements and a tpm_ima log path /sys/kernel/security/ima/ascii_runtime_measurements) of the openEuler environment;
+1. The agent needs to be deployed in an openEuler environment when deploying RPM, and users can use the source code in other environments.
 
-2. Agent and Server need to be deployed in the same network segment, can ping through each other.
+2. The agent can communicate with the server over the network..
 
-## Issuing AK certificates using a self-signed CA：
+## agent_config.yaml file configuration
 
-1. Before executing the following commands to create ak, please use the tpm2-tools tool to verify whether the nv index and ak key you want to use exists or not, and if it exists, please delete it:
+The agent can configure its own IP address and port in the agent_config.yaml, and the port cannot be occupied by other processes.
 
-tpm_tools related commands
-
-```sh
-# 1.delete nv 
-sudo tpm2_nvundefine 0x150001b
-
-# 2.Delete ak key
-sudo tpm2_evictcontrol -C o -c 0x81010020
-
-# 3.Check if the certificate nv_index exists
-sudo tpm2_getcap handles-nv-index
-
-# 4.Check if the ak key exists
-sudo tpm2_getcap handles-persistent
-
-# 5.View ak public
-sudo tpm2_readpublic -c 0x81010020
-
-```
-
-2.to ensure that the use of the nv index and ak key does not exist, execute the following command to use the self-signed CA to issue AK certificates
-
-```sh
-# 1. Create ak and persistence
-sudo tpm2_createek -c ek.handle -G rsa -u ek.pub
-sudo tpm2_createak -C ek.handle -c ak.ctx -u ak.pub -n ak.name
-sudo tpm2_evictcontrol -C o -c ak.ctx 0x81010020
-
-# 2. Read pem format ak public key
-sudo tpm2_readpublic -c 0x81010020 -o ak.pem -f pem -Q
-
-# 3. Create root CA key and root CA certificate
-openssl genrsa -out rootCA.key 2048
-openssl req -x509 -new -nodes -key rootCA.key -sha256 -days 10950 -out rootCA.crt -subj "/C=CN/O=test CA/OU=test/CN=TPM Root CA v2"
-
-# 4. Generate CSR
-# 1) Create correctly formatted configuration file
-cat > cert.conf << EOF
-[ req ]
-distinguished_name = req_distinguished_name
-req_extensions = v3_req
-prompt = no
-
-[ req_distinguished_name ]
-CN = TPM AK
-O = My Organization
-C = CN
-
-[ v3_req ]
-basicConstraints = critical, CA:FALSE
-keyUsage = critical, digitalSignature
-extendedKeyUsage = clientAuth, serverAuth
-EOF
-
-# 2) Creating CSRs
-openssl req -new -key rootCA.key -out temp.csr -config cert.conf
-
-# 3) Issuance of certificate Signing with CA, mandatory use of TPM public key
-sudo openssl x509 -req -in temp.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial -days 3650 -out ak.crt -force_pubkey ak.pem
-
-# 5. Viewing Certificates
-openssl x509 -in ak.crt -noout -text
-
-# 6. Transder certificates
-openssl x509 -in ak.crt -inform PEM -out ak.der -outform DER
-
-# 7. certificate write tpm nv index
-# 1) Check the certificate size
-ll ak.der
-
-# 2) Create NVRAM space: -s pass in the size of ak.cer, 0x150001b is the nv_index where the certificate is going to be written to
-sudo tpm2_nvdefine -C o -s 778 0x150001b -a "ppread|ppwrite|authread|ownerread|ownerwrite"
-
-# 3) Write certificate data
-sudo tpm2_nvwrite -C o 0x150001b -i ak.der
-
-# 4) Verify that the write was successful
-sudo tpm2_nvread 0x150001b > ak_read.der
-```
-
-After execution, send the generated rootCA.crt to Serevr testers to import into Server side.
-
-Note: The CN name of the rootCA.crt imported from the Server side (the content of the CN field in step 3 above) needs to be unique, i.e., there can't be two rootCA.crts with the same CN name on the Server side, or the certificate chain will fail when the evidence is verified on the Server side.
-
-# 3、agent_config.yaml file configuration:
-
-The ip and port of Agent and Server can be configured in the agent_config.yaml file, and the respective ports cannot be occupied by other processes.
-
-For example, in the following agent_config.yaml file, port 8088 is only occupied by the Agent and port 8080 is occupied by the Server:
+For example, in the following agent_config.yaml file, port 8088 is configured by the agent, because the 8088 port is already occupied by the server.
 
 ```sh
 agent:
@@ -448,7 +360,7 @@ server:
   ca_path: "/path/to/key.pem"
 ```
 
-# 4、Test Method Example：
+## Test Method Example
 
 get_token：
 
