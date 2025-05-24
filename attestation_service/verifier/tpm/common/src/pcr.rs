@@ -254,7 +254,7 @@ impl PcrValues {
     ) -> Result<String, PluginError> {
         let digest_alg = CryptoVerifier::hash_str_to_message_digest(algorithm)?;
 
-        let mut target_value = hex::decode(target_value)
+        let target_value = hex::decode(target_value)
             .map_err(|e| PluginError::InputError(format!("Failed to decode target value: {}", e)))?;
 
         let mut current_value = hex::decode(initial_value)
@@ -290,5 +290,66 @@ impl PcrValues {
         }
 
         Ok(hex::encode(current_value))
+    }
+
+    /// Create initial PCR value based on PCR index according to TPM 2.0 specification:
+    /// PCR 0-15: initialize with all zeros (platform firmware and configuration)
+    /// PCR 16: initialize with all zeros (debug)
+    /// PCR 17-22: initialize with all ones (platform specific)
+    /// PCR 23: initialize with all zeros (application support)
+    /// PCR 0: locality information is included in the last byte if provided
+    ///
+    /// # Arguments
+    /// * `hash_alg` - The hash algorithm name
+    /// * `pcr_index` - The PCR index (0-23)
+    /// * `locality` - The locality value (only used for PCR 0)
+    ///
+    /// # Returns
+    /// * `Result<String, PluginError>` - The initial PCR value or an error
+    pub fn create_initial_pcr_value(hash_alg: &str, pcr_index: u32, locality: Option<u8>) -> Result<String, PluginError> {
+        let digest_size = match hash_alg {
+            "sha1" => 20,
+            "sha256" => 32,
+            "sha384" => 48,
+            "sha512" => 64,
+            "sm3" => 32,
+            _ => return Err(PluginError::InputError(format!("Unsupported hash algorithm: {}", hash_alg))),
+        };
+
+        let mut initial_value = if pcr_index <= 15 || pcr_index == 16 || pcr_index == 23 {
+            // PCR 0-15, 16, and 23: initialize with all zeros
+            vec![0u8; digest_size]
+        } else if pcr_index >= 17 && pcr_index <= 22 {
+            // PCR 17-22: initialize with all ones
+            vec![0xffu8; digest_size]
+        } else {
+            return Err(PluginError::InputError(format!("Invalid PCR index: {}", pcr_index)));
+        };
+
+        // For PCR 0, include locality information in the last byte if provided
+        if pcr_index == 0 {
+            if let Some(loc) = locality {
+                initial_value[digest_size - 1] = loc;
+            }
+        }
+        
+        Ok(initial_value
+            .into_iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>())
+    }
+
+    /// Set the PCR value for a given index. If the entry exists, update it; otherwise, insert a new entry.
+    pub fn set_pcr_value(&mut self, index: u32, value: String) {
+        if let Some(entry) = self.pcr_values.iter_mut().find(|e| e.pcr_index == index) {
+            entry.pcr_value = value;
+        } else {
+            self.pcr_values.push(PcrValueEntry {
+                pcr_index: index,
+                pcr_value: value,
+                replay_value: None,
+                is_matched: None,
+            });
+        }
     }
 }

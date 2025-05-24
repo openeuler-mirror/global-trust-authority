@@ -30,3 +30,5 @@ attestation_service:
       path: "/usr/lib64/libtpm_boot_verifier.so"
     - name: "tpm_ima"
       path: "/usr/lib64/libtpm_ima_verifier.so"
+    - name: "tpm_dim"
+      path: "/usr/lib64/libtpm_dim_verifier.so"

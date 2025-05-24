@@ -3,7 +3,6 @@ use config_manager::types::context::{ServerConfig, CONFIG};
 use env_config_parse::find_file;
 use std::future::Future;
 use std::pin::Pin;
-use std::path::PathBuf;
 
 const CONFIG_FILE_NAME: &str = "server_config.yaml";
 

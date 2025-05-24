@@ -49,6 +49,23 @@ plugins:
         signature_algo: "rsassa" # options: rsapss, rsassa, ecdsa
         hash_alg: "sha256" # options: sha1, sha256, sha384, sha512, sm3
       log_file_path: "/sys/kernel/security/ima/ascii_runtime_measurements"
+  
+  - name: "tpm_dim"
+    path: "/usr/lib64/libtpm_dim_attester.so"
+    policy_id: []
+    enabled: true
+    params:
+      attester_type: "tpm_dim"
+      tcti_config: "device" # options: device, mssim, swtpm, tabrmd, libtpm
+      ak_handle: 0x81010020
+      ak_nv_index: 0x150001b
+      pcr_selections: 
+        banks: [12] # options: 12
+        hash_alg: "sha256" # options: sha1, sha256, sha384, sha512, sm3
+      quote_signature_scheme: # optional
+        signature_algo: "rsapss" # options: rsapss, rsassa, ecdsa
+        hash_alg: "sha256" # options: sha1, sha256, sha384, sha512, sm3
+      log_file_path: "/sys/kernel/security/dim/ascii_runtime_measurements"
 
 schedulers:
   - name: "challenge"      # Remote attestation task
