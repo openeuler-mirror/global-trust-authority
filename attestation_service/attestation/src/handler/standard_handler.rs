@@ -95,7 +95,13 @@ impl StandardHandler {
         match nonce_type {
             "default" => {
                 if let Some(n) = nonce {
-                    Ok(Some(n.value.clone().into_bytes()))
+                    match BASE64.decode(&n.value) {
+                        Ok(bytes) => Ok(Some(bytes)),
+                        Err(e) => {
+                            error!("Failed to decode base64 nonce: {}", e);
+                            Err(AttestationError::NonceVerificationError(format!("failed to decode base64 nonce: {}", e)))
+                        }
+                    }
                 } else {
                     error!("Missing nonce for default type");
                     Err(AttestationError::NonceVerificationError("missing nonce for default type".into()))

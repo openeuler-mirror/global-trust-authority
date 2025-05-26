@@ -21,6 +21,8 @@ use reqwest::Method;
 use agent_utils::Client;
 use serde_json::Value;
 use once_cell::sync::Lazy;
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 
 #[derive(Debug, Clone)]
 pub struct NodeToken {
@@ -219,10 +221,15 @@ fn collect_evidence(
 ) -> Result<serde_json::Value, ChallengeError> {
     let (plugin, _) = find_plugin_for_attester_type(attester_type)?;
     let node_id = get_node_id()?;
-    let nonce_bytes = nonce_value.as_ref().map(|s| s.as_bytes());
+    let nonce_bytes = nonce_value.as_ref().map(|s| {
+        STANDARD.decode(s).map_err(|e| {
+            log::error!("Failed to decode base64 nonce: {}", e);
+            ChallengeError::NonceInvalid(format!("Failed to decode base64 nonce: {}", e))
+        })
+    }).transpose()?;
 
     let _tpm_lock = acquire_process_lock()?;
-    match plugin.collect_evidence(Some(&node_id), nonce_bytes) {
+    match plugin.collect_evidence(Some(&node_id), nonce_bytes.as_deref()) {
         Ok(evidence_value) => {
             log::info!("Evidence collected for attester_type: {}", attester_type);
             Ok(evidence_value)
