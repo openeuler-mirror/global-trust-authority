@@ -138,12 +138,12 @@ impl KeyLifecycle for KeySubject {
 
             let max_version = vault_response.find_max_version().unwrap();
             info!("Max version: {}", max_version);
-            if db_version >= max_version {
+            if db_version > max_version {
                 info!(
                     "db_version is large than max_version, db_version: {}, max_version: {}",
                     db_version, max_version
                 );
-                return Ok(());
+                panic!("The key data version is incorrect, and the service failed to start");
             }
             let key_store = KeyStore::global();
             let latest_version = key_store.get_latest_version().unwrap();

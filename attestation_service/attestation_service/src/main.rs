@@ -15,7 +15,6 @@ mod middlewares;
 mod routes;
 mod utils;
 
-use crate::middlewares::filter::default_filter::DefaultFilter;
 use crate::middlewares::mq::create_mq_topics;
 use crate::routes::routes::configure_user_routes;
 use crate::utils::env_setting_center::{get_cert_path, get_env_by_key, get_env_value_or_default, get_key_path, load_env};
@@ -76,8 +75,6 @@ async fn main() -> std::io::Result<()> {
                         actix_web::error::ErrorBadRequest(format!("Form payload too large: {}", err))
                     }))
                     .wrap(middleware::Logger::default())
-                    .wrap(DefaultFilter)
-                    // .configure(|cfg| configure_user_routes(cfg, create_challenge_governor(), create_management_governor()))
                     .configure(|cfg| {
                         configure_user_routes(cfg, challenge_governor.clone(), management_governor.clone())
                     }),
