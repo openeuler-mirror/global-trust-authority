@@ -653,33 +653,25 @@ impl PolicyHandler {
         let config = CONFIG.get_instance().unwrap();
         let is_verify_policy_signature = config.attestation_service.policy.is_verify_policy_signature;
         if content_type == "jwt" && is_verify_policy_signature {
-            // Decode base64 JWT content
-            let jwt = STANDARD
-                .decode(content)
-                .map_err(|_| PolicyError::IncorrectFormatError("Failed to decode base64 JWT content".to_string()))
-                .and_then(|bytes| {
-                    String::from_utf8(bytes)
-                        .map_err(|_| PolicyError::IncorrectFormatError("JWT content is not valid UTF-8".to_string()))
-                })?;
-
-            let parts: Vec<&str> = jwt.splitn(3, '.').collect();
+            let parts: Vec<&str> = content.splitn(3, '.').collect();
             if parts.len() != 3 {
                 return Err(PolicyError::IncorrectFormatError("Invalid JWT format".to_string()));
             }
-
-            let header_payload = format!("{}.{}", parts[0], parts[1]);
-            let signature = parts[2];
-
             let alg = JwtParser::get_alg(content).map_err(|e| PolicyError::InvalidPolicyContent(e.to_string()))?;
-            CertService::verify_by_cert(
+            let signature = JwtParser::get_signature(content).map_err(|e| PolicyError::InvalidPolicyContent(e.to_string()))?;
+            let base_data = JwtParser::get_base_data(content);
+            let verify_result = CertService::verify_by_cert(
                 POLICY_CERT_TYPE,
                 user_id.as_str(),
-                header_payload.as_bytes(),
+                &signature,
                 alg,
-                signature.as_bytes(),
+                &base_data.as_bytes(),
             )
             .await
             .map_err(|e| PolicyError::PolicySignatureVerificationError(e.to_string()))?;
+            if !verify_result {
+                return Err(PolicyError::PolicySignatureVerificationError("Can not verify certificate".to_string()));
+            }
             Ok(())
         } else if content_type == "text" && is_verify_policy_signature {
             Err(PolicyError::IncorrectFormatError(

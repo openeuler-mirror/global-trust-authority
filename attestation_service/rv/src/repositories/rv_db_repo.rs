@@ -409,6 +409,6 @@ impl RvDbRepo {
             db_model.set_key_version(Set(key_version));
         }
         Self::update_by_id_and_version(conn, db_model, id, version).await?;
-        Ok((version, org_name, org_attester_type))
+        Ok((version + 1, org_name, org_attester_type))
     }
 }

@@ -73,12 +73,8 @@ pub trait RefValueTrait {
         req_body: Json<Value>,
     ) -> Result<HttpResponse, RefValueError> {
         let user_id = extract_user_id(&req)?;
-        // 1、参数校验
         let add_rv_body = parse_and_validate::<RvAddReqBody>(req_body)?;
-
-        // 解析jwt并校验
         verify_by_cert(&user_id, &add_rv_body.content).await?;
-
         let id = {
             let mut hasher = DefaultHasher::new();
             let _ = &user_id.hash(&mut hasher);
@@ -94,6 +90,7 @@ pub trait RefValueTrait {
             .op_description(&add_rv_body.description)
             .attester_type(&add_rv_body.attester_type)
             .content(&add_rv_body.content)
+            .is_default(add_rv_body.is_default.unwrap_or(false))
             .build();
         let is_require_sign = CONFIG.get_instance().unwrap().attestation_service.key_management.is_require_sign;
         if is_require_sign {
@@ -106,9 +103,11 @@ pub trait RefValueTrait {
 
         info!("Ref value added successfully");
         Ok(HttpResponse::Ok().json(serde_json::json!({
-            "id": rv_model.id,
-            "version": "0",
-            "name": add_rv_body.name
+            "refvalue": {
+                "id": rv_model.id,
+                "version": "1",
+                "name": add_rv_body.name
+            }
         })))
     }
 
@@ -139,9 +138,11 @@ pub trait RefValueTrait {
 
         info!("Reference Value updated successfully");
         Ok(HttpResponse::Ok().json(serde_json::json!({
-            "id": update_rv_body.id,
-            "version": version,
-            "name": name
+            "refvalue": {
+                "id": update_rv_body.id,
+                "version": version,
+                "name": name
+            }
         })))
     }
 

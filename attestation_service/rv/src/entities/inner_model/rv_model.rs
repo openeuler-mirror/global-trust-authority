@@ -95,8 +95,8 @@ impl RefValueModelBuilder {
             description: "".to_string(),
             attester_type: "".to_string(),
             content: "".to_string(),
-            is_default: true,
-            version: 0,
+            is_default: false,
+            version: 1,
             valid_code: 0,
         }
     }

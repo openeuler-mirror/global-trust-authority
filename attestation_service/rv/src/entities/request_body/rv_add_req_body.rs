@@ -37,7 +37,7 @@ pub struct RvAddReqBody {
 }
 
 fn default_rv() -> Option<bool> {
-    Option::from(true)
+    Option::from(false)
 }
 
 fn validate_attester_type(attester_type: &str) -> Result<(), ValidationError> {
