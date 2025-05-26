@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
  * Global Trust Authority is licensed under the Mulan PSL v2.
@@ -12,7 +10,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
->>>>>>> 45a23bf (feat:support dim attester&verifier)
 use tpm_dim_verifier::dim_verifier::TpmDimPlugin;
 use tpm_common_verifier::{GenerateEvidence, PcrValues, Logs};
 use plugin_manager::{ServiceHostFunctions, ServicePlugin};

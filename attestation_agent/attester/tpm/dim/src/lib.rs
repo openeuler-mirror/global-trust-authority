@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-// Re-export all modules
-mod dim_attester;
-
-// Public exports
-=======
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
  * Global Trust Authority is licensed under the Mulan PSL v2.
@@ -18,5 +12,4 @@ mod dim_attester;
 
 mod dim_attester;
 
->>>>>>> 45a23bf (feat:support dim attester&verifier)
 pub use dim_attester::TpmDimPlugin;

@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
  * Global Trust Authority is licensed under the Mulan PSL v2.
@@ -12,7 +10,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
->>>>>>> 45a23bf (feat:support dim attester&verifier)
 use serde_json::Value;
 use serde::{Serialize, Deserialize};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};

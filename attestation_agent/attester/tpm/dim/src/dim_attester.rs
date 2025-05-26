@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-// TPM DIM plugin implementation
-=======
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
  * Global Trust Authority is licensed under the Mulan PSL v2.
@@ -13,7 +10,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
->>>>>>> 45a23bf (feat:support dim attester&verifier)
 use tpm_common_attester::{TpmPluginBase, TpmPluginConfig, Log};
 use plugin_manager::{AgentPlugin, PluginError, PluginBase, QueryConfigurationFn, AgentHostFunctions};
 use serde_json;
