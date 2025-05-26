@@ -319,29 +319,28 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 ##### Request Parameters
 | Field | Sub-field | Type | Required | parameter constraint | Description |
 |-------|-----------|------|----------|-------------|-------------|
-| name | | string | Yes | Length 1-255 characters | Certificate name |
-| description | | string | No | Length 0-512 characters | Description |
-| type | | string | Yes | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, supported enums: refvalue/policy/tpm_boot/tpm_ima/crl |
-| content | | string | Yes |  | Certificate content |
-| is_default | | boolean | No | true false | Whether it's default certificate, defaults to false |
-| cert_revoked_list | | array of string | No |  | Certificate revocation list |
+| name | | string | Yes      | Length 1-255 characters | Certificate name |
+| description | | string | No       | Length 0-512 characters | Description |
+| type | | string | Yes      | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, supported enums: refvalue/policy/tpm_boot/tpm_ima/crl |
+| content | | string | No       |  | Certificate content |
+| is_default | | boolean | No       | true false | Whether it's default certificate, defaults to false |
+| cert_revoked_list | | string | No       |  | Certificate revocation list |
 
 ##### Response Parameters
-| Field | Sub-field | Type | Required | Description |
-|-------|-----------|------|----------|-------------|
-| message | | string | No | Error message |
-| certs | | object | No | Certificate |
-| | cert_id | string | No | Certificate ID |
-| | cert_name | string | No | Certificate name |
-| | version | string | No | Certificate version number |
-| cert_revoked_list | | array of string | | |
-| | cert_id | string | No | Certificate ID |
-| | cert_revoked_date | long | No | Certificate revocation time |
-| | cert_revoked_reason | string | No | Certificate revocation reason |
+| Field | Sub-field           | Type | Required | Description                      |
+|------|---------------------|------|----------|----------------------------------|
+| message |                     | string | No | Error message                    |
+| cert |                     | object | No | Certificate                      |
+| | cert_id             | string | No | Certificate ID                   |
+| | cert_name           | string | No | Certificate name                 |
+| | version             | string | No | Certificate version number       |
+| crl |                     | object | |                                  |
+| | crl_id              | string | No | Certificate revocation list id   |
+| | crl_name   | string | No | Certificate revocation list name |
 
 ##### Example of request
 
-###### request body
+###### insert cert request body
 
 ```
 {
@@ -354,7 +353,7 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 }
 ```
 
-###### response body
+###### insert cert response body
 
  ```
 {
@@ -362,6 +361,27 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
         "cert_id": "4740ac7fb9c659e5a1cafad301e1ed00",
         "cert_name": "root.crt.refvalue",
         "version": 1
+    }
+}
+ ```
+
+###### insert crl request body
+
+```
+{
+	"name": "crl.pem",
+	"type": ["crl"],
+	"crl_content": "-----BEGIN X509 CRL-----\nMIICAzCB7AIBATANBgkqhkiG9w0BAQsFADA+MQswCQYDVQQGEwJDTjEQMA4GA1UECAwHQmVpamluZzEOMAwGA1UECgwFTXlPcmcxDTALBgNVBAMMBE15Q0EXDTI1MDUyNjAyMzQwN1oXDTI1MDYyNTAyMzQwN1owajAzAhQC2wpY0qN4T92QbgwLGWWHe9iZphcNMjUwNTI2MDIzNDA3WjAMMAoGA1UdFQQDCgEBMDMCFHWjBOk+pritGnQS16/3gXqLBkVKFw0yNTA1MjYwMjI5MzdaMAwwCgYDVR0VBAMKAQGgDjAMMAoGA1UdFAQDAgECMA0GCSqGSIb3DQEBCwUAA4IBAQBCqlEhEtKc+yGPX2hst9lrOgkHPICrH5U7Xmzz6DGC6AY+/Wf+UuFAxB/OfIpVioH/bTQALaZURMwmYrga6QuhP1zVeccF2h4mgZpd2xEfVlZlLn0KUs1voa20e24opBFmBsg2VgCmbfzxADjJF7cHSNu5Hse730jDsCKh0Kv6BUM6kty1CKBQhz8bvYauGmgngfZdsSw7jKSdEhgITfxKJfTulaHEaLaukR4r9QOJmxlypml7oetqmaae0Xfaur9O6I1zYrSEVUqJGHiI0t93MDssyhY68eHdn1S5A5gZK3AynmTiyxtXY8FWKrgv5VZvCFSiYlZGAujaUGHriKyL\n-----END X509 CRL-----"
+}
+```
+
+###### insert crl response body
+
+ ```
+{
+    "crl": {
+        "crl_id": "11398858-cc4b-49f8-8e6e-b98c82aaf496",
+        "crl_name": "crl.pem"
     }
 }
  ```
@@ -375,11 +395,11 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 ##### Request Parameters
 | Field | Type | Required | parameter constraint | Description |
 |-------|------|----------|-------------|-------------|
-| id | string | Yes | Length 1-32 characters | Certificate ID |
-| name | string | No | Length 1-255 characters | Certificate name |
-| description | string | No | Length 0-512 characters | Description |
-| type | string | Yes | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, range: {attester_type}, "policy", "refvalue" |
-| is_default | boolean | No | true or false | Whether it's default certificate, defaults to false |
+| id | string | Yes      | Length 1-32 characters | Certificate ID |
+| name | string | No       | Length 1-255 characters | Certificate name |
+| description | string | No       | Length 0-512 characters | Description |
+| type | string | No       | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, range: {attester_type}, "policy", "refvalue" |
+| is_default | boolean | No       | true or false | Whether it's default certificate, defaults to false |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
@@ -423,39 +443,46 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 **Request Method**: `GET /global-trust-authority/v1/service/cert`
 
 ##### Request Parameters
+Note: To query revoked certificates, type must specify crl.
+
 | Field | Sub-field | Type | Required | parameter constraint | Description |
 |-------|-----------|------|----------|-------------|-------------|
 | type | | string | No | refvalue/policy/tpm_boot/tpm_ima/crl | Query certificate for specified purpose |
 | ids | | Array[string] | No |  | Certificate ID, maximum 10 |
 
 ##### Response Parameters
-| Field | Sub-field | Type | Required | Description |
-|-------|-----------|------|----------|-------------|
-| message | | string | No | Error message |
-| total_size | | int | Yes | Total number of certificates |
-| certs | | Array[object] | Yes | Certificate information |
-| | cert_id | string | Yes | Certificate ID |
-| | cert_name | string | Yes | Certificate name |
-| | description | string | No | Certificate description |
-| | content | string | No | Certificate content |
-| | type | string | No | Certificate purpose |
-| | is_default | boolean | No | Whether it's default certificate |
-| | version | string | Yes | Certificate version |
-| | create_time | long | No | Creation timestamp |
-| | update_time | long | No | Update timestamp |
-| | valid_code | int | No | 0-Normal; 1-Signature verification failed; 2-Revoked |
-| | cert_revoked_date | long | No | Certificate revocation time, optional when type is crl |
-| | cert_revoked_reason | string | No | Certificate revocation reason, optional when type is crl |
+| Field      | Sub-field           | Type | Required | Description |
+|------------|---------------------|------|----------|-------------|
+| message    |                     | string | No | Error message |
+| certs      |                     | Array[object] | No | Certificate information |
+|            | cert_id             | string | Yes | Certificate ID |
+|            | cert_name           | string | Yes | Certificate name |
+|            | description         | string | No | Certificate description |
+|            | content             | string | No | Certificate content |
+|            | type                | string | No | Certificate purpose |
+|            | is_default          | boolean | No | Whether it's default certificate |
+|            | version             | string | Yes | Certificate version |
+|            | create_time         | long | No | Creation timestamp |
+|            | update_time         | long | No | Update timestamp |
+|            | valid_code          | int | No | 0-Normal; 1-Signature verification failed; 2-Revoked |
+|            | cert_revoked_date   | long | No | Certificate revocation time, optional when type is crl |
+|            | cert_revoked_reason | string | No | Certificate revocation reason, optional when type is crl |
+| crls       |                     | Array[object] | No | Certificate revocation list information |
+|            | crl_id              | string | Yes | Certificate revocation list ID |
+|            | crl_name            | string | Yes | Certificate revocation list name |
+|            | crl_content         | string | Yes | Certificate revocation list content |
+
+
 
 ##### Example of request
 
-###### request url
+###### query cert request url
 
 ```
 http://10.10.0.102:8080/global-trust-authority/v1/service/cert?ids=4740ac7fb9c659e5a1cafad301e1ed00
 ```
 
-###### response body
+###### query cert response body
 
  ```
 {
@@ -477,6 +504,26 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/cert?ids=4740ac7fb9c65
 }
  ```
 
+###### query crl request url
+
+```
+http://10.10.0.102:8080/global-trust-authority/v1/service/cert?cert_type=crl
+```
+
+###### query crl response body
+
+ ```
+{
+    "crls": [
+        {
+            "crl_id": "3ca52323-aa6a-4e70-af1f-46f015630d77",
+            "crl_name": "crl.pem",
+            "crl_content": "-----BEGIN X509 CRL-----\nMIICAzCB7AIBATANBgkqhkiG9w0BAQsFADA+MQswCQYDVQQGEwJDTjEQMA4GA1UECAwHQmVpamluZzEOMAwGA1UECgwFTXlPcmcxDTALBgNVBAMMBE15Q0EXDTI1MDUyNjAyMzQwN1oXDTI1MDYyNTAyMzQwN1owajAzAhQC2wpY0qN4T92QbgwLGWWHe9iZphcNMjUwNTI2MDIzNDA3WjAMMAoGA1UdFQQDCgEBMDMCFHWjBOk+pritGnQS16/3gXqLBkVKFw0yNTA1MjYwMjI5MzdaMAwwCgYDVR0VBAMKAQGgDjAMMAoGA1UdFAQDAgECMA0GCSqGSIb3DQEBCwUAA4IBAQBCqlEhEtKc+yGPX2hst9lrOgkHPICrH5U7Xmzz6DGC6AY+/Wf+UuFAxB/OfIpVioH/bTQALaZURMwmYrga6QuhP1zVeccF2h4mgZpd2xEfVlZlLn0KUs1voa20e24opBFmBsg2VgCmbfzxADjJF7cHSNu5Hse730jDsCKh0Kv6BUM6kty1CKBQhz8bvYauGmgngfZdsSw7jKSdEhgITfxKJfTulaHEaLaukR4r9QOJmxlypml7oetqmaae0Xfaur9O6I1zYrSEVUqJGHiI0t93MDssyhY68eHdn1S5A5gZK3AynmTiyxtXY8FWKrgv5VZvCFSiYlZGAujaUGHriKyL\n-----END X509 CRL-----"
+        }
+    ]
+}
+ ```
+
 #### 3.2.4 Delete Certificate
 
 **Description**: Delete certificate
@@ -484,16 +531,36 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/cert?ids=4740ac7fb9c65
 **Request Method**: `DELETE /global-trust-authority/v1/service/cert`
 
 ##### Request Parameters
-| Field | Sub-field | Type | Required | parameter constraint | Description |
-|-------|-----------|------|----------|-------------|-------------|
-| delete_type | | string | Yes | "id""type""all" | Delete type "id""type""all" |
-| ids | | Array[string] | No | Maximum 10 ids | Certificate ID list |
-| type | | string | No | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, refvalue/policy/tpm_boot/tpm_ima/crl |
+Note: To delete revoked certificates, type must specify crl.
+
+| Field | Sub-field | Type | Required | parameter constraint | Description                                            |
+|-------|-----------|------|----------|-------------|--------------------------------------------------------|
+| delete_type | | string | No       | "id""type""all" | Delete type "id""type""all", When the type is crl, there is no need to pass it                         |
+| ids | | Array[string] | No       | Maximum 10 ids | Certificate ID list                                    |
+| type | | string | No       | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, refvalue/policy/tpm_boot/tpm_ima/crl |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
 |-------|-----------|------|----------|-------------|
 | message | | string | No | Error message |
+
+###### delete cert request body
+
+```
+{
+	"delete_type": "id",
+	"ids": ["9acc144ed3515b1a84a4e00bccaeb4e2"]
+}
+```
+
+###### delete crl request body
+
+```
+{
+	"type": "crl",
+	"ids": ["7b7462bd-7187-4cb9-a392-14f0e5fa8656"]
+}
+```
 
 ### 3.3 Challenge Related
 

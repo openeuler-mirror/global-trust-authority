@@ -1,9 +1,20 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * Global Trust Authority is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 mod controllers;
 mod middlewares;
 mod routes;
 mod utils;
 
-use crate::middlewares::filter::default_filter::DefaultFilter;
 use crate::middlewares::mq::create_mq_topics;
 use crate::routes::routes::configure_user_routes;
 use crate::utils::env_setting_center::{get_cert_path, get_env_by_key, get_env_value_or_default, get_key_path, load_env};
@@ -64,8 +75,6 @@ async fn main() -> std::io::Result<()> {
                         actix_web::error::ErrorBadRequest(format!("Form payload too large: {}", err))
                     }))
                     .wrap(middleware::Logger::default())
-                    .wrap(DefaultFilter)
-                    // .configure(|cfg| configure_user_routes(cfg, create_challenge_governor(), create_management_governor()))
                     .configure(|cfg| {
                         configure_user_routes(cfg, challenge_governor.clone(), management_governor.clone())
                     }),

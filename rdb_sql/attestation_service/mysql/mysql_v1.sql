@@ -63,10 +63,20 @@ create table IF NOT EXISTS t_cert_revoked_list
     user_id             varchar(64)            null comment 'User ID',
     cert_revoked_date   bigint(1)              null comment 'Certificate revocation date',
     cert_revoked_reason varchar(32)            null comment 'Certificate revocation reason',
+    crl_id              varchar(36)        not null comment 'Certificate revocation list id',
     signature           varbinary(512)         null comment 'Signature for integrity verification',
     key_version         varchar(36)            null comment 'Version of the key used for signing',
     key_id              varchar(128)           null comment 'ID of the key used for signing',
     valid_code          int                    null comment '0-Normal, 1-Signature verification failed, this field is not within the integrity verification scope, only for backend storage/viewing, all logic needs to recheck certificate status'
+);
+
+create table IF NOT EXISTS t_crl_info
+(
+    crl_id          varchar(36)        not null comment 'Certificate revocation list id'
+    primary key,
+    user_id         varchar(64)        not null comment 'User ID',
+    name            varchar(255)       not null comment 'Certificate revocation list name',
+    crl_content     blob               not null comment 'Certificate revocation list content'
 );
 
 CREATE TABLE IF NOT EXISTS T_REF_VALUE

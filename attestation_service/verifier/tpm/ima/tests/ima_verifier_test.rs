@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * Global Trust Authority is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 use tpm_ima_verifier::TpmImaPlugin;
 use plugin_manager::{ServicePlugin, PluginError, ServiceHostFunctions};
 use tpm_common_verifier::{PcrValues, Logs, PcrValueEntry, GenerateEvidence};
@@ -35,7 +47,7 @@ async fn test_generate_evidence_with_valid_log() {
     
     // Create logs vector
     let logs = vec![Logs {
-        log_type: "tpm_ima".to_string(),
+        log_type: "ImaLog".to_string(),
         log_data: encoded_log,
     }];
     
@@ -57,8 +69,7 @@ async fn test_generate_evidence_with_valid_log() {
     let plugin = TpmImaPlugin::new("tpm_ima".to_string(), host_functions);
     
     // Generate evidence
-    let result = plugin.generate_evidence(  "test_user", &logs, &mut pcr_values).await;
-    
+    let result = plugin.generate_evidence("test_user", &logs, &mut pcr_values).await;
     // Verify result
     assert!(result.is_ok());
     let evidence_json = result.unwrap();

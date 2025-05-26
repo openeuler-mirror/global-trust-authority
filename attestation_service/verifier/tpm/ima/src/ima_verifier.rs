@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * Global Trust Authority is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 use serde_json::Value;
 use plugin_manager::{ServicePlugin, PluginError, PluginBase, ServiceHostFunctions};
 use tpm_common_verifier::{GenerateEvidence, Evidence, EvidenceResult, PcrValues, LogResult, Logs};
@@ -50,7 +62,7 @@ impl GenerateEvidence for TpmImaPlugin {
         if log_data.log_type != "ImaLog" {
             return Err(PluginError::InputError("Log type is not ImaLog".to_string()));
         }
-        let mut ima_log = ImaLog::new(&log_data.log_data)?;
+        let mut ima_log = ImaLog::new(&log_data.log_data, &pcr_values.hash_alg)?;
         let is_log_valid: bool = match ima_log.verify(pcr_values, &self.service_host_functions, user_id).await {
             Ok(res) => res,
             Err(_) => false

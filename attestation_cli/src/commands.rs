@@ -1,5 +1,17 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * Global Trust Authority is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 use clap::Subcommand;
-use crate::entities::{CertType, ContentType, DeleteCertType, DeleteType, NonceType, PolicyDeleteType};
+use crate::entities::{CertType, ContentType, UpdateCertType, DeleteType, NonceType, PolicyDeleteType};
 
 #[derive(Subcommand)]
 pub enum CertificateCommands {
@@ -21,9 +33,9 @@ pub enum CertificateCommands {
         #[clap(long, allow_hyphen_values = true)]
         content: Option<String>,
 
-        /// Revoked certificate file address, cert-type must be crl
-        #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
-        revoke_certificate_file: Option<Vec<String>>,
+        /// Certificate revoked list content, starting with @ indicates the file path
+        #[clap(short, long, allow_hyphen_values = true )]
+        crl_content: Option<String>,
 
         /// Is default certificate, default is' No '
         #[clap(short, long)]
@@ -33,8 +45,8 @@ pub enum CertificateCommands {
     /// Delete certificate
     Delete {
         /// Delete type
-        #[clap(short, long, required = true, value_enum)]
-        delete_type: DeleteType,
+        #[clap(short, long, value_enum)]
+        delete_type: Option<DeleteType>,
 
         /// Certificate id list
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
@@ -42,7 +54,7 @@ pub enum CertificateCommands {
 
         /// Certificate type
         #[clap(short, long, value_enum)]
-        cert_type: Option<DeleteCertType>,
+        cert_type: Option<CertType>,
     },
 
     /// Update certificate information
@@ -61,7 +73,7 @@ pub enum CertificateCommands {
 
         /// Certificate type
         #[clap(short, long, value_enum, num_args = 1.., value_delimiter = ' ')]
-        cert_type: Option<Vec<CertType>>,
+        cert_type: Option<Vec<UpdateCertType>>,
 
         /// Is default certificate
         #[clap(short, long)]
@@ -72,7 +84,7 @@ pub enum CertificateCommands {
     Get {
         /// Certificate type
         #[clap(short, long, value_enum)]
-        cert_type: Option<DeleteCertType>,
+        cert_type: Option<CertType>,
 
         /// Certificate id list
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
