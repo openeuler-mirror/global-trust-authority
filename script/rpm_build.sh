@@ -59,7 +59,7 @@ tar -zcf ${SOURCE_DIR_NAME}.tar.gz ${SOURCE_DIR_NAME}
 mv ${SOURCE_DIR_NAME}.tar.gz $RPM_SOURCE_DIR
 
 cd ${SOURCE_DIR_NAME}
-cargo vendor
+cargo vendor --respect-source-config
 tar -zcf vendor.tar.gz vendor
 mv vendor.tar.gz $RPM_SOURCE_DIR
 

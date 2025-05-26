@@ -9,7 +9,7 @@ attestation_service:
     iss: "iss"
     eat_profile: "eat_profile"
     mq_enabled: false
-    token_topic: "huawei_token_topic"
+    token_topic: "ra_token_topic"
   policy:
     export_policy_file:
       - name: "tpm_boot"
@@ -30,3 +30,5 @@ attestation_service:
       path: "/usr/lib64/libtpm_boot_verifier.so"
     - name: "tpm_ima"
       path: "/usr/lib64/libtpm_ima_verifier.so"
+    - name: "tpm_dim"
+      path: "/usr/lib64/libtpm_dim_verifier.so"

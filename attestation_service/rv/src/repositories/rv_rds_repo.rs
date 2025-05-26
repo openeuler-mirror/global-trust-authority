@@ -3,7 +3,7 @@ use crate::error::ref_value_error::RefValueError;
 use cache::client::RedisClient;
 use redis;
 use redis::AsyncCommands;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use log::info;
 
 pub struct RvRedisRepo {}

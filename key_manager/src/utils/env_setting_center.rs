@@ -113,3 +113,24 @@ pub fn get_root_ca_cert() -> Result<String, AppError> {
     let ca_cert = env::var(ROOT_CA_CERT_PATH).map_err(|_| AppError::EnvConfigError(String::from(ROOT_CA_CERT_PATH)))?;
     Ok(ca_cert)
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+    use super::Environment;
+
+    #[test]
+    fn test_env_check() {
+        let test_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testdata");
+        let config_path = test_dir.join(".env");
+        let _ = dotenv::from_path(config_path);
+        match Environment::check() {
+            Ok(_) => {
+                assert!(true);
+            },
+            Err(_err) => {
+                assert!(false);
+            }
+        }
+    }
+}

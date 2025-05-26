@@ -40,11 +40,11 @@ pub fn get_https_address() -> String {
 }
 
 pub fn get_key_path() -> String {
-    get_env_by_key("KEY_PATH".to_string())
+    get_env_by_key("SERVER_KEY_PATH".to_string())
 }
 
 pub fn get_cert_path() -> String {
-    get_env_by_key("CERT_PATH".to_string())
+    get_env_by_key("SERVER_CERT_PATH".to_string())
 }
 
 pub fn get_env_by_key(key: String) -> String {

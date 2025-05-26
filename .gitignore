@@ -2,7 +2,7 @@
 # will have compiled files and executables
 debug/
 target/
-huawei-ra-log/logs/
+ra-log/logs/
 .vscode/
 .idea
 

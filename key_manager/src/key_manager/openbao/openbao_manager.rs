@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use serde_json::{from_str, from_value, Value};
 use crate::config::config;
 use crate::config::config::TOKEN_ARRAY;
-use crate::key_manager::base_key_manager::PrivateKey;
+use crate::key_manager::base_key_manager::{get_command_service, PrivateKey};
 use crate::key_manager::openbao::openbao_command::{OpenBaoManager, Version};
 use crate::key_manager::secret_manager_factory::SecretManager;
 use crate::models::cipher_models::PutCipherReq;
@@ -12,9 +12,8 @@ use crate::utils::errors::AppError;
 
 #[async_trait]
 impl SecretManager for OpenBaoManager {
-    async fn get_all_secret(&self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError> {
-        let mut bao = OpenBaoManager::default();
-        if !bao.check_status() {
+    async fn get_all_secret(&mut self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError> {
+        if !self.check_status() {
             return Err(AppError::OpenbaoNotAvailable(String::new()));
         }
         let mut map = HashMap::new();
@@ -24,9 +23,8 @@ impl SecretManager for OpenBaoManager {
         Ok(map)
     }
 
-    fn import_secret(&self, cipher: &PutCipherReq) -> Result<String, AppError> {
-        let mut bao = OpenBaoManager::default();
-        if !bao.check_status() {
+    fn import_secret(&mut self, cipher: &PutCipherReq) -> Result<String, AppError> {
+        if !self.check_status() {
             return Err(AppError::OpenbaoNotAvailable("service not ready".to_string()));
         }
 
@@ -37,11 +35,12 @@ impl SecretManager for OpenBaoManager {
             private_key_value = format!("@{}", cipher.key_file);
         }
 
-        let result = bao.clean().kv().put().mount(&config::SECRET_PATH)
+        self.clean().kv().put().mount(&config::SECRET_PATH)
             .map_name(cipher.key_name.as_str())
             .key_value("encoding", cipher.encoding.as_str())
             .key_value("algorithm", cipher.algorithm.as_str())
-            .key_value("private_key", private_key_value.as_str()).run();
+            .key_value("private_key", private_key_value.as_str());
+        let result = get_command_service().execute(self.get_command(), self.get_args(), self.get_envs());
         match result {
             Ok(output) => {
                 if !output.status.success() {
@@ -58,27 +57,26 @@ impl SecretManager for OpenBaoManager {
         }
     }
 
-    fn init_system(&self) -> Result<(), AppError> {
+    fn init_system(&mut self) -> Result<(), AppError> {
         // 设置当前openbao的登录环境
-        let mut bao = OpenBaoManager::default();
-        let check = Self::check_secrets(&mut bao)?;
+        let check = self.check_secrets()?;
         if !check {
-            Self::create_secrets(&mut bao)?;
+            self.create_secrets()?;
         }
         for item in TOKEN_ARRAY {
-            if Self::check_metadata_map(&mut bao, item)? {
+            if self.check_metadata_map(item)? {
                 continue
             }
-            Self::create_metadata(&mut bao, item)?;
+            self.create_metadata(item)?;
         }
         Ok(())
     }
 }
 
 impl OpenBaoManager {
-    fn create_secrets(bao: &mut OpenBaoManager) -> Result<(), AppError> {
-        bao.clean();
-        let result = bao.secrets().enable().path(config::SECRET_PATH).kv_v2().run();
+    fn create_secrets(&mut self) -> Result<(), AppError> {
+        self.clean().secrets().enable().path(config::SECRET_PATH).kv_v2();
+        let result = get_command_service().execute(self.get_command(), self.get_args(), self.get_envs());
         match result {
             Ok(output) => {
                 if !output.status.success() {
@@ -94,10 +92,10 @@ impl OpenBaoManager {
         Ok(())
     }
 
-    pub fn check_secrets(bao: &mut OpenBaoManager) -> Result<bool, AppError> {
-        bao.clean();
+    pub fn check_secrets(&mut self) -> Result<bool, AppError> {
         // 创建密钥路径
-        let result = bao.secrets().list().detailed().format_json().run();
+        self.clean().secrets().list().detailed().format_json();
+        let result = get_command_service().execute(self.get_command(), self.get_args(), self.get_envs());
         match result {
             Ok(output) => {
                 if !output.status.success() {
@@ -118,9 +116,9 @@ impl OpenBaoManager {
         }
     }
 
-    fn check_metadata_map(bao: &mut OpenBaoManager, item: &str) -> Result<bool, AppError> {
-        bao.clean();
-        let result = bao.kv().metadata().get().mount(config::SECRET_PATH).map_name(item).run();
+    fn check_metadata_map(&mut self, item: &str) -> Result<bool, AppError> {
+        self.clean().kv().metadata().get().mount(config::SECRET_PATH).map_name(item);
+        let result = get_command_service().execute(self.get_command(), self.get_args(), self.get_envs());
         match result {
             Ok(output) => {
                 Ok(output.status.success())
@@ -132,9 +130,9 @@ impl OpenBaoManager {
         }
     }
 
-    pub fn create_metadata(bao: &mut OpenBaoManager, item: &str) -> Result<(), AppError> {
-        bao.clean();
-        let result = bao.kv().metadata().put().mount(config::SECRET_PATH).max_versions(&u32::MAX).map_name(item).run();
+    pub fn create_metadata(&mut self, item: &str) -> Result<(), AppError> {
+        self.clean().kv().metadata().put().mount(config::SECRET_PATH).max_versions(&u32::MAX).map_name(item);
+        let result = get_command_service().execute(self.get_command(), self.get_args(), self.get_envs());
         match result {
             Ok(output) => {
                 if !output.status.success() {
@@ -155,7 +153,8 @@ async fn get_single_private_key(key_name: &str) -> Result<Vec<PrivateKey>, AppEr
     log::info!("start get {} private key", key_name);
     let mut openbao = OpenBaoManager::default();
     let mut vec = Vec::<PrivateKey>::new();
-    let result = openbao.kv().metadata().get().format_json().mount(&config::SECRET_PATH).map_name(key_name).run();
+    openbao.clean().kv().metadata().get().format_json().mount(&config::SECRET_PATH).map_name(key_name);
+    let result = get_command_service().execute(openbao.get_command(), openbao.get_args(), openbao.get_envs());
     let json: Value;
     match result {
         Ok(out) => {
@@ -211,7 +210,8 @@ async fn get_single_private_key(key_name: &str) -> Result<Vec<PrivateKey>, AppEr
 async fn get_version_data(key_name: &str, item: &i32) -> Result<PrivateKey, AppError> {
     let mut openbao =  OpenBaoManager::default();
     let private_key;
-    let info = openbao.clean().kv().get().format_json().version(&item).mount(&config::SECRET_PATH).map_name(key_name).run();
+    openbao.clean().kv().get().format_json().version(&item).mount(&config::SECRET_PATH).map_name(key_name);
+    let info = get_command_service().execute(openbao.get_command(), openbao.get_args(), openbao.get_envs());
     match info {
         Ok(info) => {
             if !info.status.success() {
@@ -244,4 +244,311 @@ async fn get_version_data(key_name: &str, item: &i32) -> Result<PrivateKey, AppE
         }
     }
     Ok(private_key)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use std::os::unix::process::ExitStatusExt;
+    use std::path::Path;
+    use std::process::{ExitStatus, Output};
+    use std::sync::Arc;
+    use mockall::predicate::{always, eq};
+    use serde_json::json;
+    use serial_test::serial;
+    use crate::config::config::{self, TOKEN_ARRAY};
+    use crate::key_manager::base_key_manager::{MockCommandExecutor, MOCK_COMMAND_EXECUTOR};
+    use crate::key_manager::openbao::openbao_command::OpenBaoManager;
+    use crate::key_manager::secret_manager_factory::{SecretManager, SecretManagerFactory, SecretManagerType};
+    use crate::models::cipher_models::PutCipherReq;
+
+    fn mock_check_status_success(mock: &mut MockCommandExecutor) {
+        let mut bao = OpenBaoManager::new();
+        let vec: Vec<String> = bao.clean().status().format_json().get_args().to_vec();
+        mock.expect_execute()
+            .with(always(), eq(vec), always())
+            .returning(move |_, _, _| {
+                Ok(Output { 
+                    status: ExitStatus::default(), 
+                    stdout: serde_json::to_vec(&json!({
+                        "type": "shamir",
+                        "initialized": true,
+                        "sealed": false,
+                        "t": 3,
+                        "n": 5,
+                        "progress": 0,
+                        "nonce": "",
+                        "version": "2.2.0",
+                        "build_date": "2025-03-05T13:07:08Z",
+                        "migration": false,
+                        "cluster_name": "vault-cluster-29ba4222",
+                        "cluster_id": "9bf3fb42-9eeb-b89e-2965-2064741d3aac",
+                        "recovery_seal": false,
+                        "storage_type": "file",
+                        "ha_enabled": false,
+                        "active_time": "0001-01-01T00:00:00Z"
+                    })).unwrap(),
+                    stderr: Vec::new() 
+                })
+            });
+    }
+
+    fn mock_get_metadata_success(mock: &mut MockCommandExecutor) {
+        let mut bao = OpenBaoManager::new();
+        for ele in TOKEN_ARRAY {
+            let vec: Vec<String> = bao.clean().kv().metadata().get().format_json().mount(&config::SECRET_PATH).map_name(ele).get_args().to_vec();
+            mock.expect_execute()
+                .with(always(), eq(vec), always())
+                .returning(move |_, _, _| {
+                    Ok(Output { 
+                        status: ExitStatus::default(), 
+                        stdout: serde_json::to_vec(&json!({
+                            "request_id": "b83d6ae9-bd83-275d-2e6e-7dfd569b60e8",
+                            "lease_id": "",
+                            "lease_duration": 0,
+                            "renewable": false,
+                            "data": {
+                                "cas_required": false,
+                                "created_time": "2025-05-12T02:38:08.436254138Z",
+                                "current_version": 63,
+                                "custom_metadata": null,
+                                "delete_version_after": "0s",
+                                "max_versions": 0,
+                                "oldest_version": 54,
+                                "updated_time": "2025-05-15T07:53:16.257468396Z",
+                                "versions": {
+                                    "1": {
+                                        "created_time": "2025-05-15T07:52:58.171754685Z",
+                                        "deletion_time": "",
+                                        "destroyed": false
+                                    }
+                                }
+                            },
+                            "warnings": null
+                        })).unwrap(),
+                        stderr: Vec::new() 
+                    })
+                });
+        }
+        
+    }
+
+    fn mock_get_single_success(mock: &mut MockCommandExecutor) {
+        let mut bao = OpenBaoManager::new();
+        for ele in TOKEN_ARRAY {
+            let vec: Vec<String> = bao.clean().kv().get().format_json().version(&1).mount(&config::SECRET_PATH).map_name(ele).get_args().to_vec();
+            mock.expect_execute()
+                .with(always(), eq(vec), always())
+                .returning(move |_, _, _| {
+                    Ok(Output { 
+                        status: ExitStatus::default(), 
+                        stdout: serde_json::to_vec(&json!({
+                            "request_id": "4fbdfdaf-05ec-dc23-43cb-da3ac3acbc76",
+                            "lease_id": "",
+                            "lease_duration": 0,
+                            "renewable": false,
+                            "data": {
+                                "data": {
+                                "algorithm": "rsa_3072",
+                                "encoding": "pem",
+                                "private_key": "Hello World"
+                                },
+                                "metadata": {
+                                "created_time": "2025-05-15T07:53:16.257468396Z",
+                                "custom_metadata": null,
+                                "deletion_time": "",
+                                "destroyed": false,
+                                "version": 1
+                                }
+                            },
+                            "warnings": null
+                        })).unwrap(),
+                        stderr: Vec::new() 
+                    })
+                });
+        }
+    }
+
+    fn mock_check_secret_success(mock: &mut MockCommandExecutor) {
+        let mut bao = OpenBaoManager::new();
+        let vec: Vec<String> = bao.clean().secrets().list().detailed().format_json().get_args().to_vec();
+        mock.expect_execute()
+            .with(always(), eq(vec), always())
+            .returning(move |_, _, _| {
+                Ok(Output { 
+                    status: ExitStatus::default(), 
+                    stdout: serde_json::to_vec(&json!({})).unwrap(),
+                    stderr: Vec::new() 
+                })
+            });
+    }
+
+    fn mock_create_secret_success(mock: &mut MockCommandExecutor) {
+        let mut bao = OpenBaoManager::new();
+        let vec: Vec<String> = bao.clean().secrets().enable().path(config::SECRET_PATH).kv_v2().get_args().to_vec();
+        mock.expect_execute()
+            .with(always(), eq(vec), always())
+            .returning(move |_, _, _| {
+                Ok(Output { 
+                    status: ExitStatus::default(), 
+                    stdout: serde_json::to_vec(&json!({})).unwrap(),
+                    stderr: Vec::new() 
+                })
+            });
+    }
+
+    fn mock_check_metadata_map_success(mock: &mut MockCommandExecutor) {
+        let mut bao = OpenBaoManager::new();
+        for ele in TOKEN_ARRAY {
+            let vec: Vec<String> = bao.clean().kv().metadata().get().mount(config::SECRET_PATH).map_name(ele).get_args().to_vec();
+            mock.expect_execute()
+                .with(always(), eq(vec), always())
+                .returning(move |_, _, _| {
+                    Ok(Output { 
+                        status: ExitStatus::default(), 
+                        stdout: serde_json::to_vec(&json!({})).unwrap(),
+                        stderr: Vec::new() 
+                    })
+                });
+        }
+    }
+
+    fn mock_check_metadata_map_fail(mock: &mut MockCommandExecutor) {
+        let mut bao = OpenBaoManager::new();
+        for ele in TOKEN_ARRAY {
+            let vec: Vec<String> = bao.clean().kv().metadata().get().mount(config::SECRET_PATH).map_name(ele).get_args().to_vec();
+            mock.expect_execute()
+                .with(always(), eq(vec), always())
+                .returning(move |_, _, _| {
+                    Ok(Output { 
+                        status: ExitStatus::from_raw(1), 
+                        stdout: serde_json::to_vec(&json!({})).unwrap(),
+                        stderr: Vec::new() 
+                    })
+                });
+        }
+    }
+
+    fn mock_create_metadata_success(mock: &mut MockCommandExecutor) {
+        let mut bao = OpenBaoManager::new();
+        for ele in TOKEN_ARRAY {
+            let vec: Vec<String> = bao.clean().kv().metadata().put().mount(config::SECRET_PATH).max_versions(&u32::MAX).map_name(ele).get_args().to_vec();
+            mock.expect_execute()
+                .with(always(), eq(vec), always())
+                .returning(move |_, _, _| {
+                    Ok(Output { 
+                        status: ExitStatus::default(), 
+                        stdout: serde_json::to_vec(&json!({})).unwrap(),
+                        stderr: Vec::new() 
+                    })
+                });
+        }
+    }
+
+    fn mock_import_secrets_success(mock: &mut MockCommandExecutor, cipher: &PutCipherReq) {
+        let mut bao = OpenBaoManager::new();
+        let vec: Vec<String> = bao.clean().clean().kv().put().mount(&config::SECRET_PATH)
+            .map_name(cipher.key_name.as_str())
+            .key_value("encoding", cipher.encoding.as_str())
+            .key_value("algorithm", cipher.algorithm.as_str())
+            .key_value("private_key", cipher.private_key.as_str()).get_args().to_vec();
+        mock.expect_execute()
+            .with(always(), eq(vec), always())
+            .returning(move |_, _, _| {
+                Ok(Output { 
+                    status: ExitStatus::default(), 
+                    stdout: serde_json::to_vec(&json!({})).unwrap(),
+                    stderr: Vec::new() 
+                })
+            });
+    }
+
+    #[tokio::test]
+    #[serial] 
+    async fn test_get_all_secrate_success() {
+        let test_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testdata");
+        let config_path = test_dir.join(".env");
+        let _ = dotenv::from_path(config_path);
+
+        let mut mock = MockCommandExecutor::new();
+        mock_check_status_success(&mut mock);
+        mock_get_metadata_success(&mut mock);
+        mock_get_single_success(&mut mock);
+        
+        *MOCK_COMMAND_EXECUTOR.lock().unwrap() = Some(Arc::new(mock));
+
+        let mut bao = SecretManagerFactory::create_manager(SecretManagerType::OpenBao);
+        let result = bao.get_all_secret().await;
+        assert!(result.is_ok());
+        let map = result.unwrap();
+        for ele in TOKEN_ARRAY {
+            assert!(map.contains_key(ele));
+            assert!(!map.get(ele).unwrap().is_empty())
+        }
+        *MOCK_COMMAND_EXECUTOR.lock().unwrap() = None;
+    }
+
+    #[test]
+    #[serial] 
+    fn test_init_system_success() {
+        let test_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testdata");
+        let config_path = test_dir.join(".env");
+        let _ = dotenv::from_path(config_path);
+
+        let mut mock = MockCommandExecutor::new();
+        mock_check_secret_success(&mut mock);
+        mock_create_secret_success(&mut mock);
+        mock_check_metadata_map_fail(&mut mock);
+        mock_create_metadata_success(&mut mock);
+        
+        *MOCK_COMMAND_EXECUTOR.lock().unwrap() = Some(Arc::new(mock));
+
+        let mut bao = OpenBaoManager::new();
+        let result = bao.init_system();
+        assert!(result.is_ok());
+        *MOCK_COMMAND_EXECUTOR.lock().unwrap() = None;
+    }
+
+    #[test]
+    #[serial] 
+    fn test_init_system_not_create_metadata() {
+        let test_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testdata");
+        let config_path = test_dir.join(".env");
+        let _ = dotenv::from_path(config_path);
+
+        let mut mock = MockCommandExecutor::new();
+        mock_check_secret_success(&mut mock);
+        mock_create_secret_success(&mut mock);
+        mock_check_metadata_map_success(&mut mock);
+        
+        *MOCK_COMMAND_EXECUTOR.lock().unwrap() = Some(Arc::new(mock));
+
+        let mut bao = OpenBaoManager::new();
+        let result = bao.init_system();
+        assert!(result.is_ok());
+        *MOCK_COMMAND_EXECUTOR.lock().unwrap() = None;
+    }
+
+    #[test]
+    #[serial] 
+    fn test_import_sercts_metadata() {
+        let test_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testdata");
+        let config_path = test_dir.join(".env");
+        let _ = dotenv::from_path(config_path);
+        let cipher = PutCipherReq {
+            key_name: String::from("NSK"),
+            encoding: String::from("pem"),
+            algorithm: String::from("rsa_3072"),
+            private_key: String::from("hello world"),
+            key_file: String:: from("hello world")
+        };
+        let mut mock = MockCommandExecutor::new();
+        mock_check_status_success(&mut mock);
+        mock_import_secrets_success(&mut mock, &cipher);
+        *MOCK_COMMAND_EXECUTOR.lock().unwrap() = Some(Arc::new(mock));
+        let mut bao = OpenBaoManager::new();
+        let result = bao.import_secret(&cipher);
+        assert!(result.is_ok());
+        *MOCK_COMMAND_EXECUTOR.lock().unwrap() = None;
+    }
 }
