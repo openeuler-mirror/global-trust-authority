@@ -30,6 +30,8 @@ pub struct Model {
     pub cert_revoked_date: Option<i64>,
     #[sea_orm(column_name = "cert_revoked_reason")]
     pub cert_revoked_reason: Option<String>,
+    #[sea_orm(column_name = "crl_id")]
+    pub crl_id: String,
     #[sea_orm(column_name = "signature")]
     pub signature: Option<Vec<u8>>,
     #[sea_orm(column_name = "key_version")]

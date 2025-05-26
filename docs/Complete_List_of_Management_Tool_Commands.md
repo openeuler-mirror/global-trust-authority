@@ -63,9 +63,22 @@ sudo attestation_cli -u "test_01" certificate set \
 	--is-default
 
 #Insert the list of revocations
-sudo attestation_cli -u "test_01" certificate set \
+sudo attestation_cli -u "test_lyt" certificate set \
+	--name "crl.pem" \
 	--cert-type "crl" \
-	--revoke-certificate-file "/home/openssl/certificate.pem" "/home/openssl/certificate.pem"
+	--crl-content "-----BEGIN X509 CRL-----
+MIICAzCB7AIBATANBgkqhkiG9w0BAQsFADA+MQswCQYDVQQGEwJDTjEQMA4GA1UE
+CAwHQmVpamluZzEOMAwGA1UECgwFTXlPcmcxDTALBgNVBAMMBE15Q0EXDTI1MDUy
+NjAyMzQwN1oXDTI1MDYyNTAyMzQwN1owajAzAhQC2wpY0qN4T92QbgwLGWWHe9iZ
+phcNMjUwNTI2MDIzNDA3WjAMMAoGA1UdFQQDCgEBMDMCFHWjBOk+pritGnQS16/3
+gXqLBkVKFw0yNTA1MjYwMjI5MzdaMAwwCgYDVR0VBAMKAQGgDjAMMAoGA1UdFAQD
+AgECMA0GCSqGSIb3DQEBCwUAA4IBAQBCqlEhEtKc+yGPX2hst9lrOgkHPICrH5U7
+Xmzz6DGC6AY+/Wf+UuFAxB/OfIpVioH/bTQALaZURMwmYrga6QuhP1zVeccF2h4m
+gZpd2xEfVlZlLn0KUs1voa20e24opBFmBsg2VgCmbfzxADjJF7cHSNu5Hse730jD
+sCKh0Kv6BUM6kty1CKBQhz8bvYauGmgngfZdsSw7jKSdEhgITfxKJfTulaHEaLau
+kR4r9QOJmxlypml7oetqmaae0Xfaur9O6I1zYrSEVUqJGHiI0t93MDssyhY68eHd
+n1S5A5gZK3AynmTiyxtXY8FWKrgv5VZvCFSiYlZGAujaUGHriKyL
+-----END X509 CRL-----"
 ```
 
 #### Certificate Deletion
@@ -87,6 +100,11 @@ sudo attestation_cli -u "test_01" certificate delete \
 sudo attestation_cli -u "test_01" certificate delete \
 	--delete-type "type" \
 	--cert-type "policy" 
+	
+#Delete revoked certificate
+sudo attestation_cli -u "test_lyt" certificate delete \
+	--cert-type "crl" \
+	--ids "7763f0a1-385a-43b8-84b8-4e4e448de73f"
 ```
 
 #### Certificate Modification
@@ -161,6 +179,10 @@ sudo attestation_cli -u "test_01" certificate get \
 #Search by certificate id
 sudo attestation_cli -u "test_01" certificate get \
 	--ids "id1" "id2"
+	
+# Query Revocation Certificate
+sudo attestation_cli -u "test_lyt" certificate get \
+	--cert-type "crl" 
 ```
 
 

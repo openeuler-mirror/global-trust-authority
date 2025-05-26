@@ -17,3 +17,4 @@ pub mod prelude;
 pub mod cert_info;
 pub mod cert_revoked_list;
 pub mod cert_error;
+pub mod crl_info;
