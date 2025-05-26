@@ -293,7 +293,7 @@ async fn test_query_page_by_attester_type_and_uid_success() {
     let page_num = 1;
     let page_size = 10;
 
-    // 创建模拟的返回数据
+    // mock test data
     let mock_models = vec![
         Model {
             id: "1".to_string(),
