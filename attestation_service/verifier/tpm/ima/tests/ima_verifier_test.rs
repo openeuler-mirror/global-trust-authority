@@ -47,7 +47,7 @@ async fn test_generate_evidence_with_valid_log() {
     
     // Create logs vector
     let logs = vec![Logs {
-        log_type: "tpm_ima".to_string(),
+        log_type: "ImaLog".to_string(),
         log_data: encoded_log,
     }];
     
@@ -69,8 +69,7 @@ async fn test_generate_evidence_with_valid_log() {
     let plugin = TpmImaPlugin::new("tpm_ima".to_string(), host_functions);
     
     // Generate evidence
-    let result = plugin.generate_evidence(  "test_user", &logs, &mut pcr_values).await;
-    
+    let result = plugin.generate_evidence("test_user", &logs, &mut pcr_values).await;
     // Verify result
     assert!(result.is_ok());
     let evidence_json = result.unwrap();
