@@ -59,7 +59,7 @@ tar -zcf ${SOURCE_DIR_NAME}.tar.gz ${SOURCE_DIR_NAME}
 mv ${SOURCE_DIR_NAME}.tar.gz $RPM_SOURCE_DIR
 
 cd ${SOURCE_DIR_NAME}
-cargo vendor
+cargo vendor --respect-source-config
 tar -zcf vendor.tar.gz vendor
 mv vendor.tar.gz $RPM_SOURCE_DIR
 
@@ -71,10 +71,10 @@ if [ "$ENABLE_AGENT_RPM" = true ]; then
 fi
 
 if [ "$ENABLE_SERVER_RPM" = true ]; then
-    mkdir -p /tmp/certs && \
+    mkdir -p /etc/attestation_server/certs && \
         openssl req -x509 -newkey rsa:4096 -nodes \
-            -keyout /tmp/certs/key.pem \
-            -out /tmp/certs/cert.pem \
+            -keyout /etc/attestation_server/certs/key.pem \
+            -out /etc/attestation_server/certs/cert.pem \
             -days 365 \
             -subj "/CN=127.0.0.1"
     cp server.spec $RPM_SPEC_DIR

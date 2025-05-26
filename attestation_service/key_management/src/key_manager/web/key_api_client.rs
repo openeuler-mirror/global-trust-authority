@@ -1,4 +1,14 @@
-// src/key_api_client/mod.rs
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * Global Trust Authority is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
 
 use crate::key_manager::error::KeyManagerError;
 use crate::key_manager::model::VaultResponse;
@@ -9,6 +19,7 @@ use std::fs::read;
 use std::future::Future;
 use std::path::Path;
 use std::pin::Pin;
+use crate::config::{Config, ConfigLoader, YamlConfigLoader, CONFIG_CACHE};
 
 pub struct KeyApiClient {
     client: Client,
@@ -28,7 +39,6 @@ impl KeyApiClient {
     pub fn get_keys(&self, url: &str) -> Pin<Box<dyn Future<Output = Result<VaultResponse, Box<KeyManagerError>>>>> {
         let client = self.client.clone();
         let url = url.to_string();
-        dbg!(&url);
         Box::pin(async move {
             let mut response = client
                 .get(&url)
@@ -46,8 +56,10 @@ impl KeyApiClient {
 
 fn get_https_client() -> Client {
     let current_dir = std::env::current_dir().unwrap();
-    let cert_path = current_dir.clone().join("/tmp/certs/ra_client_cert.pem");
-    let key_path = current_dir.clone().join("/tmp/certs/ra_client_key.pem");
+    YamlConfigLoader.load_config();
+    let yml_config = CONFIG_CACHE.get().unwrap().clone();
+    let cert_path = current_dir.clone().join(yml_config.lock().unwrap().key_cli_cert_path.clone());
+    let key_path = current_dir.clone().join(yml_config.lock().unwrap().key_cli_key_path.clone());
     let cert_path = Path::new(&cert_path);
     let key_path = Path::new(&key_path);
     let cert = read(cert_path)
@@ -66,7 +78,8 @@ fn get_https_client() -> Client {
     let identity =
         Identity::from_pem(&identity_data).map_err(|e| KeyManagerError::new(format!("Identity error: {}", e))).unwrap();
     // 3. Load the root certificate of KeyManager (used to verify the server)
-    let ca_cert = read(current_dir.join("/tmp/certs/km_cert.pem").to_str().unwrap())
+    let ca_cert =
+        read(current_dir.join(yml_config.lock().unwrap().key_ca_cert_path().clone()).to_str().unwrap())
         .map_err(|e| KeyManagerError::new(format!("Failed to read CA cert: {}", e)))
         .unwrap();
     let ca_cert = Certificate::from_pem(&ca_cert)

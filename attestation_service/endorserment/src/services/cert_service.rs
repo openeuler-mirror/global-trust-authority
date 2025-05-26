@@ -1,24 +1,37 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * Global Trust Authority is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 use crate::entities::cert_error::CertVerifyError;
-use crate::entities::{cert_info, cert_revoked_list};
+use crate::entities::{cert_info, cert_revoked_list, crl_info};
 use crate::repositories::cert_repository::CertRepository;
 use actix_web::web::Data;
 use actix_web::HttpResponse;
 use chrono::NaiveDateTime;
+use common_log::{debug, error, info};
 use config_manager::types::CONFIG;
 use futures::stream::{self, StreamExt};
-use common_log::{debug, error, info};
 use key_management::api::{impls::DefaultCryptoImpl, CryptoOperations};
-use openssl::asn1::Asn1TimeRef;
+use openssl::asn1::{Asn1Time, Asn1TimeRef};
 use openssl::error::ErrorStack;
 use openssl::hash::MessageDigest;
 use openssl::nid::Nid;
 use openssl::sign::Verifier;
 use openssl::x509::{ReasonCode, X509Crl, X509};
 use rdb::get_connection;
-use sea_orm::{ActiveValue, DatabaseConnection, DatabaseTransaction, DbErr, TransactionTrait};
+use sea_orm::{query, ActiveValue, DatabaseConnection, DatabaseTransaction, DbErr, TransactionTrait};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::BTreeMap;
+use std::fmt::format;
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
@@ -40,16 +53,16 @@ pub enum DeleteType {
 }
 #[derive(Debug, Deserialize)]
 pub struct DeleteRequest {
-    pub delete_type: DeleteType,
+    pub delete_type: Option<DeleteType>,
     pub ids: Option<Vec<String>>,
     #[serde(rename = "type")]
     pub cert_type: Option<String>,
 }
 
-#[derive(Debug, Validate, Deserialize, Serialize)]
+#[derive(Debug, Validate, Deserialize, Serialize, Clone)]
 pub struct AddCertRequest {
     #[validate(length(min = 1, max = 255))]
-    pub name: Option<String>,
+    pub name: String,
     #[validate(length(max = 512))]
     pub description: Option<String>,
     #[serde(rename = "type")]
@@ -58,7 +71,7 @@ pub struct AddCertRequest {
     pub content: Option<String>,
     pub is_default: Option<bool>,
     #[validate(length(min = 1))]
-    pub cert_revoked_list: Option<Vec<String>>,
+    pub crl_content: Option<String>,
 }
 
 #[derive(Debug, Validate, Deserialize)]
@@ -80,6 +93,13 @@ pub struct QueryResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     pub certs: Vec<CertRespInfo>,
+}
+
+#[derive(Default, Serialize)]
+pub struct CertRevokeListInfo {
+    pub crl_id: String,
+    pub crl_name: String,
+    pub crl_content: String,
 }
 
 #[derive(Default, Serialize)]
@@ -249,6 +269,39 @@ pub struct CertService;
 impl CertService {
     pub(crate) const MAX_NUMBER_OF_QUERIES: usize = 100;
 
+    async fn query_crl_info(
+        db: Data<Arc<DatabaseConnection>>,
+        ids: &Option<Vec<String>>,
+        user_id: &str,
+    ) -> actix_web::Result<HttpResponse> {
+        let mut crl_ids: Vec<String> = Vec::new();
+        if let Some(ids) = ids {
+            crl_ids = ids.clone();
+        }
+        let result = if crl_ids.is_empty() {
+            CertRepository::query_user_crl_info(&db, user_id).await
+        } else {
+            CertRepository::query_user_crl_info_by_ids(&db, crl_ids, user_id).await
+        };
+        match result {
+            Ok(crl_infos) => {
+                let query_response = json!({
+                    "crls": crl_infos.into_iter()
+                            .map(|crl_info| CertRevokeListInfo {
+                                crl_id: crl_info.crl_id,
+                                crl_name: crl_info.name,
+                                crl_content: String::from_utf8_lossy(&crl_info.crl_content).to_string(),
+                            }).collect::<Vec<CertRevokeListInfo>>(),
+                });
+                Ok(HttpResponse::Ok().json(query_response))
+            },
+            Err(e) => {
+                error!("Query crl_info error: {:?}", e);
+                Ok(HttpResponse::InternalServerError().body(format!("Query crl_info error: {:?}", e)))
+            },
+        }
+    }
+
     pub async fn get_all_certs(
         db: Data<Arc<DatabaseConnection>>,
         ids: &Option<Vec<String>>,
@@ -267,6 +320,9 @@ impl CertService {
         let valid_types =
             [CertificateType::REFVALUE, CertificateType::POLICY, CertificateType::TPM_BOOT, CertificateType::TPM_IMA];
         if let Some(cert_type) = &cert_type {
+            if cert_type == CertificateType::CRL {
+                return Self::query_crl_info(db, ids, user_id).await;
+            }
             if !valid_types.contains(&cert_type.as_str()) {
                 error!("Invalid certificate type");
                 return Ok(HttpResponse::BadRequest().body("Invalid certificate type".to_string()));
@@ -395,7 +451,7 @@ impl CertService {
         let cert_type = delete_request.cert_type.clone();
 
         match CertRepository::delete_certs(&db, delete_type, ids, cert_type, user_id).await {
-            Ok(_) => Ok(HttpResponse::Ok().json(DeleteResponse { message: "success".to_string() })),
+            Ok(_) => Ok(HttpResponse::Ok().finish()),
             Err(e) => {
                 error!("Failed to delete certs: {:?}", e);
                 Ok(HttpResponse::BadRequest().body(e.to_string()))
@@ -420,228 +476,323 @@ impl CertService {
                 return Ok(HttpResponse::BadRequest()
                     .body("When a revoked certificate is passed in, the type can only be crl".to_string()));
             }
-            if request.cert_revoked_list.is_none() {
+            if request.crl_content.is_none() {
                 error!("Cert revoked list is required for CRL type");
                 return Ok(HttpResponse::BadRequest().body("Cert revoked list is required for CRL type".to_string()));
             }
         } else {
-            if request.name.is_none() || request.content.is_none() {
-                error!("Name and content are required for this type");
-                return Ok(HttpResponse::BadRequest().body("Name and content are required for this type".to_string()));
+            if request.content.is_none() {
+                error!("Content are required for this type");
+                return Ok(HttpResponse::BadRequest().body("Content are required for this type".to_string()));
             }
         }
         // Processing certificate types
         if !request.cert_type.contains(&CertificateType::CRL.to_string()) {
-            // Analyze certificate content
-            let cert_content = request.content.clone().unwrap();
-            return match parse_cert_content(&cert_content.as_bytes()) {
-                Ok(cert) => {
-                    if !CertService::verify_cert(&cert) {
-                        error!("The imported certificate is invalid.");
-                        return Ok(HttpResponse::BadRequest().body("The imported certificate is invalid.".to_string()));
-                    }
-                    // Obtain certificate serial number and issuer
-                    let serial_num = get_cert_serial_number(&cert);
-                    let issuer = get_cert_issuer_name(&cert);
-                    let owner = get_cert_subject_name(&cert);
-                    // Generate certificate ID
-                    let cert_id = generate_cert_id(&serial_num, &issuer, &user_id);
-                    let timestamp_millis = chrono::Utc::now().timestamp_millis();
-                    // Sign using key management
-                    let cert_model_sig = cert_info::Model {
-                        id: cert_id.clone(),
-                        serial_num: Some(serial_num.clone()),
-                        user_id: Some(user_id.to_string()),
-                        cert_type: Some(json!(request.cert_type.clone())),
-                        name: request.name.clone(),
-                        issuer: Some(issuer.clone()),
-                        owner: Some(owner.clone()),
-                        cert_info: Some(cert_content.clone().into_bytes()),
-                        is_default: request.is_default,
-                        description: request.description.clone(),
-                        version: Some(1),
-                        create_time: Some(timestamp_millis),
-                        update_time: Some(timestamp_millis),
-                        ..Default::default()
-                    };
-                    let (signature, key_version) = CertService::get_signature(&cert_model_sig).await;
-                    // Build cert_info::ActiveModel
-                    let cert_info = cert_info::ActiveModel {
-                        id: ActiveValue::Set(cert_id.clone()),
-                        serial_num: ActiveValue::Set(Some(serial_num)),
-                        user_id: ActiveValue::Set(Some(user_id.to_string())),
-                        cert_type: ActiveValue::Set(Some(json!(request.cert_type.clone()))),
-                        name: ActiveValue::Set(request.name.clone()),
-                        issuer: ActiveValue::Set(Some(issuer)),
-                        owner: ActiveValue::Set(Some(owner)),
-                        cert_info: ActiveValue::Set(Some(cert_content.into_bytes())),
-                        is_default: ActiveValue::Set(request.is_default),
-                        description: ActiveValue::Set(request.description.clone()),
-                        version: ActiveValue::Set(Some(1)),
-                        create_time: ActiveValue::Set(Some(timestamp_millis)),
-                        update_time: ActiveValue::Set(Some(timestamp_millis)),
-                        signature: ActiveValue::Set(signature),
-                        key_version: ActiveValue::Set(key_version),
-                        valid_code: ActiveValue::Set(Some(ValidCode::NORMAL)),
-                        ..Default::default()
-                    };
+            Self::insert_cert_info(request, user_id, db).await
+        } else {
+            Self::insert_crl(request, user_id, db).await
+        }
+    }
 
-                    // Insert certificate information
-                    match CertRepository::insert_cert_info(
-                        &db,
-                        cert_info,
-                        CONFIG.get_instance().unwrap().attestation_service.cert.single_user_cert_limit,
-                    )
-                    .await
-                    {
-                        Ok(count) => {
-                            if count == 0 {
-                                error!(
-                                    "User has reached the maximum number of cert or cert name or cert is exist, please retry!"
-                                );
-                                return Ok(HttpResponse::BadRequest().body(
-                                    "User has reached the maximum number of cert or cert name or cert is exist, please retry!"
-                                        .to_string(),
-                                ));
-                            }
-                            Ok(HttpResponse::Ok().json(AddCertResponse {
-                                cert: Some(CertRespInfo {
-                                    cert_id: Some(cert_id),
-                                    cert_name: request.name.clone(),
-                                    version: Some(1),
-                                    ..Default::default()
-                                }),
-                                ..Default::default()
-                            }))
-                        },
-                        Err(e) => {
-                            error!("Failed to insert cert info: {:?}", e);
-                            Ok(HttpResponse::InternalServerError().body(e.to_string()))
-                        },
+    async fn verify_revocation_list(
+        request: AddCertRequest,
+        user_id: &str,
+        db: Data<Arc<DatabaseConnection>>,
+    ) -> Result<X509Crl, HttpResponse> {
+        // Analyze certificate revocation list
+        let crl = match parse_crl_content(&request.crl_content.clone().unwrap()) {
+            Ok(crl) => crl,
+            Err(e) => {
+                error!("Failed to parse CRL content: {:?}", e);
+                return Err(HttpResponse::BadRequest().body(format!("Failed to parse CRL content: {:?}", e)));
+            },
+        };
+
+        // Verify that the entries in the revocation list are empty
+        if crl.get_revoked().is_none() {
+            error!("Failed to get CRL revoked");
+            return Err(HttpResponse::BadRequest().body("Failed to get CRL revoked".to_string()));
+        }
+
+        // Check the validity period
+        if let Some(next_update) = crl.next_update() {
+            match Asn1Time::days_from_now(0) {
+                Ok(now_time) => {
+                    if next_update < now_time {
+                        error!("CRL next update time is timeout");
+                        return Err(HttpResponse::BadRequest().body("CRL next update time is timeout".to_string()));
                     }
                 },
                 Err(e) => {
-                    error!("Failed to parse certificate content: {:?}", e);
-                    Ok(HttpResponse::BadRequest().body(e.to_string()))
+                    error!("get now time error: {:?}", e);
+                    return Err(HttpResponse::InternalServerError().body(format!("get now time error: {:?}", e)));
                 },
             };
-        } else {
-            // Process certificate revocation list
-            let crl_list = request.cert_revoked_list.clone().unwrap();
-            let mut cert_revoked_list = Vec::new();
-            for crl_content in crl_list {
-                // Analyze certificate revocation list
-                let crl = match parse_crl_content(&crl_content) {
-                    Ok(crl) => crl,
-                    Err(e) => {
-                        error!("Failed to parse CRL content: {:?}", e);
-                        return Ok(HttpResponse::BadRequest().body(e.to_string()));
-                    },
-                };
-                let issuer = get_crl_issuer_name(&crl);
-                if crl.get_revoked().is_none() {
-                    error!("Failed to get CRL revoked");
-                    return Ok(HttpResponse::BadRequest().body("Failed to get CRL revoked".to_string()));
-                }
-                for revoked in crl.get_revoked().unwrap() {
-                    // Obtain certificate serial number and issuer
-                    let serial_bn = revoked.serial_number().to_bn().map_err(|_| return "".to_string()).unwrap();
-                    let serial_num = hex::encode(serial_bn.to_vec());
-                    // Obtain revocation time
-                    let revocation_timestamp = match asn1_time_to_timestamp(revoked.revocation_date()) {
-                        Ok(revocation_timestamp) => revocation_timestamp,
-                        Err(e) => {
-                            error!("Failed to parse CRL revocation date: {:?}", e);
-                            return Ok(
-                                HttpResponse::BadRequest().body("Failed to parse CRL revocation date".to_string())
-                            );
-                        },
-                    };
-                    // Obtain the reason for revocation
-                    let reason_code = match revoked.extension::<ReasonCode>() {
-                        Ok(reason) => match reason {
-                            Some(reason) => reason.1.get_i64().unwrap_or(0),
-                            None => {
-                                error!("this user's revoke certs has exceeded the online limit");
-                                return Ok(
-                                    HttpResponse::BadRequest().body("CRL revocation reason code is empty".to_string())
-                                );
-                            },
-                        },
-                        Err(e) => {
-                            error!("Failed to parse CRL revocation reason code: {:?}", e);
-                            return Ok(HttpResponse::BadRequest()
-                                .body("Failed to parse CRL revocation reason code".to_string()));
-                        },
-                    };
-                    // Generate certificate ID
-                    let cert_id = generate_cert_id(&serial_num, &issuer, &user_id);
-                    // Sign using key management
-                    let cert_revoked_model_sig = cert_revoked_list::Model {
-                        id: cert_id.clone(),
-                        issuer: Some(issuer.clone()),
-                        serial_num: Some(serial_num.clone()),
-                        user_id: Some(user_id.to_string()),
-                        cert_revoked_date: Some(revocation_timestamp),
-                        cert_revoked_reason: Some(reason_code.to_string()),
-                        ..Default::default()
-                    };
-                    let (signature, key_version) = CertService::get_signature(&cert_revoked_model_sig).await;
-                    // Build cert_revoked_list::ActiveModel
-                    let cert_revoked = cert_revoked_list::ActiveModel {
-                        id: ActiveValue::Set(cert_id),
-                        issuer: ActiveValue::Set(Some(issuer.clone())),
-                        serial_num: ActiveValue::Set(Some(serial_num)),
-                        user_id: ActiveValue::Set(Some(user_id.to_string())),
-                        cert_revoked_date: ActiveValue::Set(Some(revocation_timestamp)),
-                        cert_revoked_reason: ActiveValue::Set(Some(reason_code.to_string())),
-                        signature: ActiveValue::Set(signature),
-                        key_version: ActiveValue::Set(key_version),
-                        valid_code: ActiveValue::Set(Some(ValidCode::NORMAL)),
-                        ..Default::default()
-                    };
-                    cert_revoked_list.push(cert_revoked);
-                }
-                // Insert certificate revocation information
-                match CertRepository::get_user_revoke_cert_num(&db, &user_id).await {
-                    Ok(count) => {
-                        if count + cert_revoked_list.len() as u64
-                            > CONFIG.get_instance().unwrap().attestation_service.cert.single_user_cert_limit {
-                            error!("this user's revoke certs has exceeded the online limit");
-                            return Ok(HttpResponse::BadRequest()
-                                .body("this user's revoke certs has exceeded the online limit".to_string()));
-                        }
-                    },
-                    Err(e) => {
-                        error!("Failed to get revoke cert count: {:?}", e);
-                        return Ok(HttpResponse::InternalServerError().body(e.to_string()));
-                    },
-                }
-                let tx = match db.begin().await {
-                    Ok(tx) => tx,
-                    Err(e) => {
-                        error!("Failed to get database transaction: {}", e);
-                        return Ok(HttpResponse::InternalServerError().body(e.to_string()));
-                    },
-                };
-                for cert_revoked in cert_revoked_list.clone() {
-                    if let Err(e) = CertRepository::insert_cert_revoked(&tx, cert_revoked).await {
-                        error!("Failed to insert cert revoked: {:?}", e);
-                        if let Err(e) = tx.rollback().await {
-                            error!("Failed to rollback database transaction: {}", e);
-                        }
-                        return Ok(HttpResponse::InternalServerError().body(e.to_string()));
-                    }
-                }
-                if let Err(e) = tx.commit().await {
-                    error!("Failed to commit database transaction: {}", e);
-                    return Ok(HttpResponse::InternalServerError().body(e.to_string()));
-                }
-            }
         }
 
-        // Return successful response
-        Ok(HttpResponse::Ok().json(AddCertResponse { message: Some("success".to_string()), ..Default::default() }))
+        // Verify the current number of CRLs owned by the user
+        match CertRepository::get_user_crl_num(&db, &user_id, request.name.clone()).await {
+            Ok(count) => {
+                if count >= CONFIG.get_instance().unwrap().attestation_service.cert.single_user_cert_limit {
+                    error!("this user's crl has arrived the online limit");
+                    return Err(
+                        HttpResponse::BadRequest().body("this user's crl has arrived the online limit".to_string())
+                    );
+                }
+            },
+            Err(e) => {
+                error!("Failed to get user crl count: {:?}", e);
+                return Err(HttpResponse::InternalServerError().body(format!("Failed to get user crl count: {:?}", e)));
+            },
+        }
+        Ok(crl)
+    }
+
+    async fn build_insert_crl_info(
+        request: AddCertRequest,
+        user_id: &str,
+        db: Data<Arc<DatabaseConnection>>,
+    ) -> Result<(Vec<cert_revoked_list::ActiveModel>, crl_info::ActiveModel), HttpResponse> {
+        let crl_content = request.crl_content.clone().unwrap();
+        let crl = Self::verify_revocation_list(request.clone(), user_id, db.clone()).await?;
+        let crl_id = match CertRepository::get_user_crl_id(&db, user_id, request.name.clone()).await {
+            Ok(crl_id) => crl_id,
+            Err(e) => {
+                error!("Get user crl id error: {:?}", e);
+                return Err(HttpResponse::InternalServerError().body(format!("Get user crl id error: {:?}", e)));
+            },
+        };
+        let issuer = get_crl_issuer_name(&crl);
+        let mut cert_revoked_list = Vec::new();
+        for revoked in crl.get_revoked().unwrap() {
+            // Obtain certificate serial number and issuer
+            let serial_bn = revoked.serial_number().to_bn().map_err(|_| return "".to_string()).unwrap();
+            let serial_num = hex::encode(serial_bn.to_vec());
+            // Obtain revocation time
+            let revocation_timestamp = match asn1_time_to_timestamp(revoked.revocation_date()) {
+                Ok(revocation_timestamp) => revocation_timestamp,
+                Err(e) => {
+                    error!("Failed to parse CRL revocation date: {:?}", e);
+                    return Err(
+                        HttpResponse::BadRequest().body(format!("Failed to parse CRL revocation date: {:?}", e))
+                    );
+                },
+            };
+            // Obtain the reason for revocation
+            let reason_code = match revoked.extension::<ReasonCode>() {
+                Ok(reason) => match reason {
+                    Some(reason) => reason.1.get_i64().unwrap_or(0),
+                    None => {
+                        error!("this user's revoke certs has exceeded the online limit");
+                        return Err(HttpResponse::BadRequest().body("CRL revocation reason code is empty".to_string()));
+                    },
+                },
+                Err(e) => {
+                    error!("Failed to parse CRL revocation reason code: {:?}", e);
+                    return Err(
+                        HttpResponse::BadRequest().body(format!("Failed to parse CRL revocation reason code: {:?}", e))
+                    );
+                },
+            };
+            // Generate certificate ID
+            let cert_id = generate_cert_id(&serial_num, &issuer, &user_id);
+            // Sign using key management
+            let cert_revoked_model_sig = cert_revoked_list::Model {
+                id: cert_id.clone(),
+                issuer: Some(issuer.clone()),
+                serial_num: Some(serial_num.clone()),
+                user_id: Some(user_id.to_string()),
+                cert_revoked_date: Some(revocation_timestamp),
+                cert_revoked_reason: Some(reason_code.to_string()),
+                crl_id: crl_id.clone(),
+                ..Default::default()
+            };
+            let (signature, key_version) = CertService::get_signature(&cert_revoked_model_sig).await;
+            // Build cert_revoked_list::ActiveModel
+            let cert_revoked = cert_revoked_list::ActiveModel {
+                id: ActiveValue::Set(cert_id),
+                issuer: ActiveValue::Set(Some(issuer.clone())),
+                serial_num: ActiveValue::Set(Some(serial_num)),
+                user_id: ActiveValue::Set(Some(user_id.to_string())),
+                cert_revoked_date: ActiveValue::Set(Some(revocation_timestamp)),
+                cert_revoked_reason: ActiveValue::Set(Some(reason_code.to_string())),
+                crl_id: ActiveValue::Set(crl_id.clone()),
+                signature: ActiveValue::Set(signature),
+                key_version: ActiveValue::Set(key_version),
+                valid_code: ActiveValue::Set(Some(ValidCode::NORMAL)),
+                ..Default::default()
+            };
+            cert_revoked_list.push(cert_revoked);
+        }
+
+        // Assemble revocation table data
+        let crl_info = crl_info::ActiveModel {
+            crl_id: ActiveValue::Set(crl_id.clone()),
+            user_id: ActiveValue::Set(user_id.to_string()),
+            name: ActiveValue::Set(request.name.clone().to_string()),
+            crl_content: ActiveValue::Set(crl_content.into_bytes()),
+        };
+
+        Ok((cert_revoked_list, crl_info))
+    }
+
+    async fn insert_crl(
+        request: AddCertRequest,
+        user_id: &str,
+        db: Data<Arc<DatabaseConnection>>,
+    ) -> actix_web::Result<HttpResponse> {
+        // Query the revocation list ID corresponding to the database, and if not, randomly generate a UUID
+        let (cert_revoked_list, crl_info): (Vec<cert_revoked_list::ActiveModel>, crl_info::ActiveModel) =
+            match Self::build_insert_crl_info(request.clone(), user_id, db.clone()).await {
+                Ok((cert_revoked_list, crl_info)) => (cert_revoked_list, crl_info),
+                Err(e) => return Ok(e),
+            };
+        let tx = match db.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                error!("Failed to get database transaction: {}", e);
+                return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+            },
+        };
+        // Delete data from revocation table
+        if let Err(e) =
+            CertRepository::delete_user_crl_by_ids(&tx, vec![crl_info.crl_id.clone().unwrap()], user_id).await
+        {
+            error!("Failed to delete crl: {:?}", e);
+            if let Err(e) = tx.rollback().await {
+                error!("Failed to rollback database transaction: {}", e);
+            }
+            return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+        }
+        // Insert revocation table data
+        if let Err(e) = CertRepository::insert_crl_info(&tx, crl_info.clone()).await {
+            error!("Failed to insert crl: {:?}", e);
+            if let Err(e) = tx.rollback().await {
+                error!("Failed to rollback database transaction: {}", e);
+            }
+            return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+        }
+
+        for cert_revoked in cert_revoked_list.clone() {
+            if let Err(e) = CertRepository::insert_cert_revoked(&tx, cert_revoked).await {
+                error!("Failed to insert cert revoked: {:?}", e);
+                if let Err(e) = tx.rollback().await {
+                    error!("Failed to rollback database transaction: {}", e);
+                }
+                return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+            }
+        }
+        if let Err(e) = tx.commit().await {
+            error!("Failed to commit database transaction: {}", e);
+            return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+        }
+
+        Ok(HttpResponse::Ok().json(json!({
+            "crl":{
+                "crl_id": crl_info.crl_id.clone().unwrap().to_string(),
+                "crl_name": request.name.clone().to_string(),
+            }
+        })))
+    }
+
+    async fn insert_cert_info(
+        request: AddCertRequest,
+        user_id: &str,
+        db: Data<Arc<DatabaseConnection>>,
+    ) -> actix_web::Result<HttpResponse> {
+        // Analyze certificate content
+        let cert_content = request.content.clone().unwrap();
+        match parse_cert_content(&cert_content.as_bytes()) {
+            Ok(cert) => {
+                if !CertService::verify_cert(&cert) {
+                    error!("The imported certificate is invalid.");
+                    return Ok(HttpResponse::BadRequest().body("The imported certificate is invalid.".to_string()));
+                }
+                // Obtain certificate serial number and issuer
+                let serial_num = get_cert_serial_number(&cert);
+                let issuer = get_cert_issuer_name(&cert);
+                let owner = get_cert_subject_name(&cert);
+                // Generate certificate ID
+                let cert_id = generate_cert_id(&serial_num, &issuer, &user_id);
+                let timestamp_millis = chrono::Utc::now().timestamp_millis();
+                // Sign using key management
+                let cert_model_sig = cert_info::Model {
+                    id: cert_id.clone(),
+                    serial_num: Some(serial_num.clone()),
+                    user_id: Some(user_id.to_string()),
+                    cert_type: Some(json!(request.cert_type.clone())),
+                    name: Some(request.name.clone()),
+                    issuer: Some(issuer.clone()),
+                    owner: Some(owner.clone()),
+                    cert_info: Some(cert_content.clone().into_bytes()),
+                    is_default: request.is_default,
+                    description: request.description.clone(),
+                    version: Some(1),
+                    create_time: Some(timestamp_millis),
+                    update_time: Some(timestamp_millis),
+                    ..Default::default()
+                };
+                let (signature, key_version) = CertService::get_signature(&cert_model_sig).await;
+                // Build cert_info::ActiveModel
+                let cert_info = cert_info::ActiveModel {
+                    id: ActiveValue::Set(cert_id.clone()),
+                    serial_num: ActiveValue::Set(Some(serial_num)),
+                    user_id: ActiveValue::Set(Some(user_id.to_string())),
+                    cert_type: ActiveValue::Set(Some(json!(request.cert_type.clone()))),
+                    name: ActiveValue::Set(Some(request.name.clone())),
+                    issuer: ActiveValue::Set(Some(issuer)),
+                    owner: ActiveValue::Set(Some(owner)),
+                    cert_info: ActiveValue::Set(Some(cert_content.into_bytes())),
+                    is_default: ActiveValue::Set(request.is_default),
+                    description: ActiveValue::Set(request.description.clone()),
+                    version: ActiveValue::Set(Some(1)),
+                    create_time: ActiveValue::Set(Some(timestamp_millis)),
+                    update_time: ActiveValue::Set(Some(timestamp_millis)),
+                    signature: ActiveValue::Set(signature),
+                    key_version: ActiveValue::Set(key_version),
+                    valid_code: ActiveValue::Set(Some(ValidCode::NORMAL)),
+                    ..Default::default()
+                };
+
+                // Insert certificate information
+                match CertRepository::insert_cert_info(
+                    &db,
+                    cert_info,
+                    CONFIG.get_instance().unwrap().attestation_service.cert.single_user_cert_limit,
+                )
+                .await
+                {
+                    Ok(count) => {
+                        if count == 0 {
+                            error!(
+                                    "User has reached the maximum number of cert or cert name or cert is exist, please retry!"
+                                );
+                            return Ok(HttpResponse::BadRequest().body(
+                            "User has reached the maximum number of cert or cert name or cert is exist, please retry!"
+                                .to_string(),
+                        ));
+                        }
+                        Ok(HttpResponse::Ok().json(AddCertResponse {
+                            cert: Some(CertRespInfo {
+                                cert_id: Some(cert_id),
+                                cert_name: Some(request.name.clone()),
+                                version: Some(1),
+                                ..Default::default()
+                            }),
+                            ..Default::default()
+                        }))
+                    },
+                    Err(e) => {
+                        error!("Failed to insert cert info: {:?}", e);
+                        Ok(HttpResponse::InternalServerError().body(e.to_string()))
+                    },
+                }
+            },
+            Err(e) => {
+                error!("Failed to parse certificate content: {:?}", e);
+                Ok(HttpResponse::BadRequest().body(e.to_string()))
+            },
+        }
     }
 
     /// Verify requests and update certificates
@@ -712,8 +863,7 @@ impl CertService {
                         cert_info.is_default = ActiveValue::Set(Some(is_default));
                     }
                     cert_model_sig.version = Some(cert_info_model.version.clone().unwrap_or(1) + 1);
-                    cert_info.version =
-                        ActiveValue::Set(Some(cert_info_model.version.clone().unwrap_or(1) + 1));
+                    cert_info.version = ActiveValue::Set(Some(cert_info_model.version.clone().unwrap_or(1) + 1));
                     cert_model_sig.update_time = Some(timestamp_millis);
                     cert_info.update_time = ActiveValue::Set(Some(timestamp_millis));
 
@@ -1143,6 +1293,8 @@ impl CertService {
 }
 
 // test begin
+use crate::entities::crl_info::Model;
+use crate::entities::prelude::CrlInfo;
 use openssl::asn1::Asn1Integer;
 use openssl::asn1::Asn1String;
 use openssl::bn::BigNum;
@@ -1242,7 +1394,7 @@ fn test_generate_cert_id_success() {
 
 #[test]
 fn test_generate_cert_id_deterministic_success() {
-     // Test determinism: multiple calls should produce the same result
+    // Test determinism: multiple calls should produce the same result
     let inputs = vec![("123", "issuer1", "user1"), ("456", "issuer2", "user2"), ("789", "issuer3", "user3")];
 
     for (serial, issuer, user) in inputs {
@@ -1265,7 +1417,6 @@ fn test_generate_cert_id_uniqueness_success() {
     assert_eq!(ids.len(), unique_ids.len(), "All generated IDs should be unique");
 }
 
-
 #[test]
 fn test_get_cert_serial_number_success() {
     // Create a test certificate
@@ -1280,7 +1431,7 @@ fn test_get_cert_serial_number_success() {
 
     // Test getting the serial number
     let result = get_cert_serial_number(&cert);
-    assert_eq!(result, "075bcd15");  // Hexadecimal representation of 123456789
+    assert_eq!(result, "075bcd15"); // Hexadecimal representation of 123456789
 }
 
 #[test]
@@ -1289,7 +1440,7 @@ fn test_get_cert_serial_number_when_serial_large_then_success() {
     let mut builder = X509Builder::new().unwrap();
 
     // Set a large serial number
-    let serial = BigNum::from_dec_str("340282366920938463463374607431768211456").unwrap();  // 2^128
+    let serial = BigNum::from_dec_str("340282366920938463463374607431768211456").unwrap(); // 2^128
     let serial_asn1 = Asn1Integer::from_bn(&serial).unwrap();
     builder.set_serial_number(&serial_asn1).unwrap();
 

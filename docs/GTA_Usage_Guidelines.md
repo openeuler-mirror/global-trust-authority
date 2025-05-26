@@ -8,6 +8,22 @@ git clone https://gitee.com/openeuler/global-trust-authority.git
 
 ## Modify the configuration file
 
+#### key_manager .env
+
+The .env file configures the KeyManager module settings. In an RPM installation, these configurations need to be modified, whereas in a Docker environment, no changes are required.
+The current configuration is set as follows:
+
+|         Field Name         |            Field Meaning             | Field Type |        Default/Example Values        |
+|:--------------------------:|:------------------------------------:|:----------:|:------------------------------------:|
+|      KEY_MANAGER_PORT      |           The startup port           |   string   |                 8082                 |
+|     ROOT_CA_CERT_PATH      |           Current mTLS CA            |   string   |         /path/to/km_cert.pem         |
+| KEY_MANAGER_CERT_FILE_PATH | The current server-side certificate. |   string   | /path/to/key_manager_server_cert.pem |
+| KEY_MANAGER_KEY_FILE_PATH  |  The current server's private key.   |   string   | /path/to/key_manager_server_key.pem  |
+|   KEY_MANAGER_LOG_LEVEL    |        The current log level         |   string   |                 info                 |
+|    KEY_MANAGER_LOG_PATH    |  The directory path for log files.   |   string   | /var/log/key_manager/key_manager.log |
+|   KEY_MANAGER_ROOT_TOKEN   |    The access token for OpenBao.     |   string   |      s.8aIUbu85l5nJggtq5Unml4Kg      |
+|  KEY_MANAGER_SECRET_ADDR   |   The access endpoint for OpenBao    |   string   |        http://127.0.0.1:8200/        |
+
 #### .env / .env.rpm
 
 ```
@@ -22,7 +38,7 @@ Configuration of nonce, token, policy, certificate, baseline on server side
 
 |     Configuration Level     |          Field Name          |               Field Meaning                | Field Type |                                    Default/Example Values                                     |
 | :--------------: | :------------------------: |:------------------------------------------:| :------: |:---------------------------------------------------------------------------------------------:|
-|  key_management  |     vault_get_key_url      | Vault service URL for getting signing keys |  string  |                     "https://10.10.0.180:8082/v1/vault/get_signing_keys"                      |
+|  key_management  |     vault_get_key_url      | Vault service URL for getting signing keys |  string  |                      "https://127.0.0.1:8082/v1/vault/get_signing_keys"                       |
 |  key_management  |      is_require_sign       |       Whether to request a signature       | boolean  |                                             true                                              |
 | token_management |            jku             |                JWK Set URL                 |  string  |                                             "jku"                                             |
 | token_management |            kid             |                   Key ID                   |  string  |                                             "kid"                                             |
@@ -148,7 +164,7 @@ docker stop CONTAINER ID
 
 ### Uploading TLS certificates with key_manager and install librdkafka
 
-Create the certs folder in the /tmp directory and place the a_client_key.pem, ra_client_cert.pem and km_cert.pem certificates into the specified directory.
+Create the certs folder in the /tmp directory and place the ra_client_key.pem, ra_client_cert.pem and km_cert.pem certificates into the specified directory.
 
 ```
 /tmp/certs
@@ -168,6 +184,7 @@ sudo make install && \
 sudo ldconfig
 
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 ```
 
 Last viewed version number 2.3.0
@@ -204,8 +221,21 @@ Updating / installing...
    1:ra-server-0.0.1-1                ################################# [100%]
 ```
 
-### Run the rpm package
+### Deployment attestation_service
+#### Pre-middleware
+Install and run these components before deployment:
 
+- **MySQL**
+
+- **Redis**
+
+- **ZooKeeper**
+
+- **Kafka**
+
+> **Note**: ZooKeeper ≥3.6 uses port 8080 (UI) by default - change if conflicting.
+
+#### start
 Execute the command to start the service
 
 ```
