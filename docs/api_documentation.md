@@ -136,7 +136,7 @@
 #### 3.1.1 Add Baseline
 **Description**: Add baseline
 
-**Request Method**: `POST /global-trust-authority/v1/service/refvalue`
+**Request Method**: `POST /global-trust-authority/v1/service/ref_value`
 
 ##### Request Parameters
 | Field | Sub-field | Type | Required | parameter constraint | Description |
@@ -162,7 +162,7 @@
 
 ```
 {
-    "name": "syyx",
+    "name": "test",
     "description": "test",
     "attester_type": "tpm_ima",
     "is_default":true,
@@ -173,11 +173,13 @@
 ###### response body
 
  ```
- {
-     "id": "2b0ead4b-6a15-4239-bf68-b1413df538bb",
-     "name": "syyx",
-     "version": 1
- }
+{
+    "refvalue": {
+        "id": "7255326052342740548",
+        "version": "1",
+        "name": "test"
+    }
+}
  ```
 
 
@@ -186,7 +188,7 @@
 
 **Description**: Update baseline
 
-**Request Method**: `PUT /global-trust-authority/v1/service/refvalue`
+**Request Method**: `PUT /global-trust-authority/v1/service/ref_value`
 
 ##### Request Parameters
 | Field | Sub-field | Type | Required | parameter constraint | Description |
@@ -212,9 +214,9 @@
 
 ```
 {
-    "id": "2b0ead4b-6a15-4239-bf68-b1413df538bb",
-    "name": "syyx",
-    "description": "test",
+    "id": "7255326052342740548",
+    "name": "test",
+    "description": "test_description",
     "is_default":true,
     "content": "eyJhbGciOiJSUzM4NCIsInR5cCI6IkpXVCJ9.eyJyZWZlcmVuY2VWYWx1ZXMiOlt7ImZpbGVOYW1lIjoic3l5eC0xLlBBVCIsInNoYTI1NiI6IjEyMzQ1NiJ9XX0.W15mJKFmdMA7FS_yDgC9-EGSxqwyDSEf5TyEkMRasYtJ_zjlMqsz57zpsPdPc384mX9_J6ITpSJKpk454fb7wWbdoi4S5g-3kaCW9WgaDDHiTDr7wbx9CN0e80UotI4vXGA7p0rEV8rExAtxehBP2QjOk9Dp39LKcO6iR5OWlStYevKNUHVVpfpidUiX14tm8lG4uGYOpnyVqoKBjpSS7-fkin5qacYo4XoFNFNwMFxtM57Cv2l-_6ky4n4wNpufJoH8FeE3uao-DX-v37o-DClkNPnP4Sj51Vsdnyx79FIEevnkPXYCizPxdiiN7LS068-EkVkenGv2TFigG8ySi_4FwiVxbHDf8lKjV6nunblgH8jK3uqxZkUwYMDmeej5dsk3624TRUxK-29d1KGnpB6ax-lGKqcqzYkJOa7CykmZyOJgo8aTj19qlC2MY_xN7iY-ZP1uvXvzvNF01UoOWIBmVsj0UH_moI-2huFu-k7PPmy661cwskKpycH3o813s7jEW-dTFtiht7iq1kDwIB5iMJWq-kxjAfwf8ICOUhimM2hoYPgCUxAlPguNnN26o2NWGKAdXhZdipARqyrZU5PwJU-iJwMernOKE1qtBpi-UKb5F9YbJ2EkRZTrUKW1hs9iMaPCauZWYJM1PXh3uPG98a7CbFGIwYql6B7pN6M"
 }
@@ -224,9 +226,11 @@
 
  ```
 {
-    "id": "2b0ead4b-6a15-4239-bf68-b1413df538bb",
-    "name": "syyx",
-    "version": 2
+    "refvalue": {
+        "id": "7255326052342740548",
+        "version": "2",
+        "name": "test"
+    }
 }
  ```
 
@@ -234,7 +238,7 @@
 
 **Description**: Query baseline
 
-**Request Method**: `GET /global-trust-authority/v1/service/refvalue`
+**Request Method**: `GET /global-trust-authority/v1/service/ref_value`
 
 ##### Request Parameters
 | Field | Sub-field | Type | Required | parameter constraint | Description |
@@ -291,7 +295,7 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 
 **Description**: Delete baseline
 
-**Request Method**: `DELETE /global-trust-authority/service/v1/refvalue`
+**Request Method**: `DELETE /global-trust-authority/service/v1/ref_value`
 
 ##### Request Parameters
 | Field | Sub-field | Type | Required | parameter constraint | Description |
@@ -658,9 +662,11 @@ When content_type is jwt, jwt content:
 
  ```
 {
-    "id": "685e03ef-c111-4633-99b1-647262639682",
-    "name": "test_policy628176847040204",
-    "version": 1
+    "policy": {
+        "id": "349fb201-311d-4cd9-9ef5-a7b9f33a5ecf",
+        "name": "test_policy",
+        "version": 1
+    }
 }
  ```
 
@@ -696,8 +702,8 @@ When content_type is jwt, jwt content:
 
 ```
 {
-    "id": "685e03ef-c111-4633-99b1-647262639682",
-    "name": "Tes2t",
+    "id": "349fb201-311d-4cd9-9ef5-a7b9f33a5ecf",
+    "name": "Test",
     "description": "123",
     "content": "cGFja2FnZSBkaWdlc3RfdmVyaWZpY2F0aW9uCgppbXBvcnQgZnV0dXJlLmtleXdvcmRzLmlmCmltcG9ydCBmdXR1cmUua2V5d29yZHMuaW4KCiMgRGVmYXVsdCByZXN1bHQgaXMgcGFzcwpkZWZhdWx0IHJlc3VsdCA9IHsic3RhdHVzIjogInBhc3MifQoKIyBNYWluIHJ1bGUgdG8gZXZhbHVhdGUgdGhlIGlucHV0IGFnYWluc3QgYmFzZWxpbmUKcmVzdWx0ID0gb3V0cHV0IGlmIHsKICAgICMgR2V0IGlucHV0IGRhdGEKICAgIGlucHV0X2RhdGEgOj0gaW5wdXQKICAgIAogICAgIyBFeHRyYWN0IGFsbCBTSEEyNTYgZGlnZXN0cyBmcm9tIGV2ZW50cwogICAgZGlnZXN0cyA6PSBbZGlnZXN0IHwKICAgICAgICBldmVudCA6PSBpbnB1dF9kYXRhLmV2ZW50c1tfXQogICAgICAgIGRpZ2VzdF9vYmogOj0gZXZlbnQuRGlnZXN0c1tfXQogICAgICAgIGRpZ2VzdF9vYmouQWxnb3JpdGhtSWQgPT0gInNoYTI1NiIKICAgICAgICBkaWdlc3QgOj0gZGlnZXN0X29iai5EaWdlc3QKICAgIF0KICAgIAogICAgIyBGaW5kIG1pc3NpbmcgZGlnZXN0cyB1c2luZyB0aGUgUnVzdCBmdW5jdGlvbgogICAgIyBUaGlzIGZ1bmN0aW9uIG5vdyByZWFkcyB0aGUgYmFzZWxpbmUgZnJvbSBhIGZpbGUgZGlyZWN0bHkKICAgIG1pc3NpbmdfZGlnZXN0cyA6PSBmaW5kX21pc3NpbmdfZGlnZXN0cyhkaWdlc3RzKQogICAgCiAgICAjIENyZWF0ZSBtYXBwaW5nIG9mIG1pc3NpbmcgZGlnZXN0cyB0byBldmVudCBudW1iZXJzCiAgICBtaXNzaW5nX2V2ZW50cyA6PSB7ZGlnZXN0OiB7ImV2ZW50X251bWJlciI6IGV2ZW50LkV2ZW50TnVtfSB8CiAgICAgICAgZXZlbnQgOj0gaW5wdXRfZGF0YS5ldmVudHNbX10KICAgICAgICBkaWdlc3Rfb2JqIDo9IGV2ZW50LkRpZ2VzdHNbX10KICAgICAgICBkaWdlc3Rfb2JqLkFsZ29yaXRobUlkID09ICJzaGEyNTYiCiAgICAgICAgZGlnZXN0IDo9IGRpZ2VzdF9vYmouRGlnZXN0CiAgICAgICAgZGlnZXN0IGluIG9iamVjdC5rZXlzKG1pc3NpbmdfZGlnZXN0cykKICAgIH0KICAgIAogICAgIyBEZXRlcm1pbmUgaWYgYW55IGRpZ2VzdHMgYXJlIG1pc3NpbmcKICAgIGNvdW50KG9iamVjdC5rZXlzKG1pc3NpbmdfZGlnZXN0cykpID4gMAogICAgCiAgICAjIENyZWF0ZSBvdXRwdXQgd2l0aCBmYWlsdXJlIHN0YXR1cyBhbmQgbWlzc2luZyBkaWdlc3RzCiAgICBvdXRwdXQgOj0gewogICAgICAgICJzdGF0dXMiOiAiZmFpbCIsCiAgICAgICAgIm1pc3NpbmdfZGlnZXN0cyI6IG1pc3NpbmdfZXZlbnRzCiAgICB9Cn0=",
     "content_type": "text"
@@ -708,9 +714,11 @@ When content_type is jwt, jwt content:
 
  ```
 {
-    "id": "685e03ef-c111-4633-99b1-647262639682",
-    "name": "Tes2t",
-    "version": 2
+    "policy": {
+        "id": "349fb201-311d-4cd9-9ef5-a7b9f33a5ecf",
+        "name": "test_policy",
+        "version": 2
+    }
 }
  ```
 

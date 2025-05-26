@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS T_REF_VALUE
     signature           VARBINARY(512)              COMMENT 'Policy signature',
     key_version         VARCHAR(32)                 COMMENT 'Signature version',
     valid_code          INT                         COMMENT '0-Normal, 1-Signature verification failed, this field is not within the integrity verification scope, only for backend storage/viewing, all logic needs to recheck certificate status',
-    unique (NAME)
+    unique (NAME, uid)
 );
 
 CREATE TABLE IF NOT EXISTS T_REF_VALUE_DETAIL

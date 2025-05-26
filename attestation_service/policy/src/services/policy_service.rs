@@ -72,9 +72,11 @@ impl PolicyService {
             Ok(_) => {
                 info!("Policy added successfully");
                 Ok(HttpResponse::Ok().json(serde_json::json!({
-                    "id": policy.id,
-                    "name": policy.name,
-                    "version": policy.version
+                    "policy": {
+                        "id": policy.id,
+                        "name": policy.name,
+                        "version": policy.version
+                    }
                 })))
             },
             Err(e) => {
@@ -147,9 +149,11 @@ impl PolicyService {
             Ok((id, name, version)) => {
                 info!("Policy {} updated successfully. Version: {}", id, version);
                 Ok(HttpResponse::Ok().json(serde_json::json!({
-                    "id": id,
-                    "name": name,
-                    "version": version
+                    "policy":{
+                        "id": id,
+                        "name": name,
+                        "version": version
+                    }
                 })))
             },
             Err(e) => match e {
