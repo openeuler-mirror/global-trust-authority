@@ -19,7 +19,7 @@ redis.workspace = true
 tokio.workspace = true
 attestation.workspace = true
 futures.workspace = true
-key_management = {workspace = true, features = ["rpm_build"]}
+key_management = {workspace = true}
 token_management.workspace = true
 nonce.workspace = true
 #policy.workspace = true
@@ -34,10 +34,10 @@ serde_yaml.workspace = true
 cache.workspace = true
 env_config_parse.workspace = true
 mq.workspace = true
-rdb = {workspace = true, features = ["rpm_build"]}
+rdb = {workspace = true}
 ratelimit.workspace = true
 common_log.workspace = true
-server_config = {workspace = true, features = ["rpm_build"]}
+server_config = {workspace = true}
 config_manager.workspace = true
 
 [features]
