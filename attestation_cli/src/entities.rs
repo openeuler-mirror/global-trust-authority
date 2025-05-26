@@ -51,7 +51,7 @@ pub enum CertType {
 #[derive(clap::ValueEnum, Clone, Debug, Serialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 #[clap(rename_all = "lowercase")]
-pub enum DeleteCertType {
+pub enum UpdateCertType {
     RefValue,
 
     Policy,

@@ -10,18 +10,22 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use crate::entities::prelude::{CertInfo, CertRevokedList};
-use crate::entities::{cert_info, cert_revoked_list};
+use crate::entities::prelude::{CertInfo, CertRevokedList, CrlInfo};
+use crate::entities::{cert_info, cert_revoked_list, crl_info};
 use crate::services::cert_service;
 use crate::services::cert_service::DeleteType;
+use actix_web::web::Data;
+use actix_web::HttpResponse;
+use common_log::{error, info};
 use config_manager::types::CONFIG;
-use common_log::info;
 use sea_orm::sea_query::Expr;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, DatabaseBackend, DatabaseConnection,
     DatabaseTransaction, DbErr, DeleteResult, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
-    Statement, UpdateResult,
+    Statement, TransactionTrait, UpdateResult,
 };
+use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct CertRepository;
 
@@ -97,6 +101,102 @@ impl CertRepository {
         }
         let count = query.filter(cert_info::Column::Name.is_in(name.clone())).count(db).await;
         Ok(count? > 0)
+    }
+
+    pub async fn get_user_crl_id(db: &DatabaseConnection, user_id: &str, name: String) -> Result<String, DbErr> {
+        let query = CrlInfo::find();
+        let crl_info =
+            query.filter(crl_info::Column::UserId.eq(user_id)).filter(crl_info::Column::Name.eq(name)).all(db).await?;
+        if crl_info.is_empty() {
+            return Ok(Uuid::new_v4().to_string());
+        }
+        let crl_info = crl_info.get(0).unwrap();
+        Ok(crl_info.clone().crl_id)
+    }
+
+    pub async fn get_user_crl_num(db: &DatabaseConnection, user_id: &str, name: String) -> Result<u64, DbErr> {
+        let query = CrlInfo::find();
+        query.filter(crl_info::Column::UserId.eq(user_id)).filter(crl_info::Column::Name.ne(name)).count(db).await
+    }
+
+    pub async fn delete_user_crl_by_ids(
+        db: &DatabaseTransaction,
+        crl_ids: Vec<String>,
+        user_id: &str,
+    ) -> Result<DeleteResult, DbErr> {
+        let delete_result = CrlInfo::delete_many()
+            .filter(crl_info::Column::UserId.eq(user_id))
+            .filter(crl_info::Column::CrlId.is_in(crl_ids.clone()))
+            .exec(db)
+            .await?;
+        CertRevokedList::delete_many()
+            .filter(cert_revoked_list::Column::CrlId.is_in(crl_ids.clone()))
+            .filter(cert_revoked_list::Column::UserId.eq(user_id))
+            .exec(db)
+            .await?;
+        Ok(delete_result)
+    }
+
+    pub async fn delete_user_crl(db: &DatabaseTransaction, user_id: &str) -> Result<DeleteResult, DbErr> {
+        let delete_result = CrlInfo::delete_many().filter(crl_info::Column::UserId.eq(user_id)).exec(db).await?;
+        CertRevokedList::delete_many().filter(cert_revoked_list::Column::UserId.eq(user_id)).exec(db).await?;
+        Ok(delete_result)
+    }
+
+    pub async fn insert_crl_info(db: &DatabaseTransaction, crl_info: crl_info::ActiveModel) -> Result<(), DbErr> {
+        crl_info.insert(db).await?;
+        Ok(())
+    }
+
+    pub async fn query_user_crl_info_by_ids(
+        db: &DatabaseConnection,
+        crl_ids: Vec<String>,
+        user_id: &str,
+    ) -> Result<Vec<crl_info::Model>, DbErr> {
+        let query = CrlInfo::find();
+        Ok(query
+            .filter(crl_info::Column::UserId.eq(user_id))
+            .filter(crl_info::Column::CrlId.is_in(crl_ids))
+            .all(db)
+            .await?)
+    }
+
+    pub async fn query_user_crl_info(db: &DatabaseConnection, user_id: &str) -> Result<Vec<crl_info::Model>, DbErr> {
+        let query = CrlInfo::find();
+        Ok(query
+            .filter(crl_info::Column::UserId.eq(user_id))
+            .all(db)
+            .await?)
+    }
+
+    async fn delete_crl_info(
+        ids: Option<Vec<String>>,
+        user_id: &str,
+        db: &DatabaseConnection,
+    ) -> Result<DeleteResult, DbErr> {
+        let mut crl_ids: Vec<String> = Vec::new();
+        if let Some(ids) = &ids {
+            if ids.len() > CONFIG.get_instance().unwrap().attestation_service.cert.single_user_cert_limit as usize {
+                return Err(DbErr::Custom("IDs exceed maximum limit".to_string()));
+            }
+            crl_ids = ids.clone();
+        }
+        let tx = db.begin().await?;
+        let result = if crl_ids.is_empty() {
+            Self::delete_user_crl(&tx, user_id).await
+        } else {
+            Self::delete_user_crl_by_ids(&tx, crl_ids.clone(), user_id).await
+        };
+        match result {
+            Ok(result) => {
+                tx.commit().await?;
+                Ok(result)
+            },
+            Err(e) => {
+                tx.rollback().await?;
+                Err(e)
+            },
+        }
     }
 
     pub async fn get_user_revoke_cert_num(db: &DatabaseConnection, user_id: &str) -> Result<u64, DbErr> {
@@ -207,12 +307,18 @@ impl CertRepository {
 
     pub async fn delete_certs(
         db: &DatabaseConnection,
-        delete_type: DeleteType,
+        delete_type: Option<DeleteType>,
         ids: Option<Vec<String>>,
         cert_type: Option<String>,
         user_id: &str,
     ) -> Result<DeleteResult, DbErr> {
-        match delete_type {
+        if cert_type.clone().is_some() && cert_type.clone().unwrap() == "crl" {
+            return Ok(Self::delete_crl_info(ids, user_id, db).await?);
+        }
+        if delete_type.is_none() {
+            return Err(DbErr::Custom("Delete type is empty".to_string()));
+        }
+        match delete_type.unwrap() {
             DeleteType::Id => {
                 // Check if there are more than 10 IDs
                 if let Some(ids) = &ids {
@@ -232,14 +338,6 @@ impl CertRepository {
                     .filter(cert_info::Column::UserId.eq(user_id))
                     .exec(db)
                     .await?;
-
-                // Delete certificate revocation information
-                CertRevokedList::delete_many()
-                    .filter(cert_revoked_list::Column::Id.is_in(ids.unwrap_or_default()))
-                    .filter(cert_revoked_list::Column::UserId.eq(user_id))
-                    .exec(db)
-                    .await?;
-
                 Ok(cert_delete_result)
             },
             DeleteType::Type => {
@@ -273,10 +371,6 @@ impl CertRepository {
                 // Delete all certificate information
                 let cert_delete_result =
                     CertInfo::delete_many().filter(cert_info::Column::UserId.eq(user_id)).exec(db).await?;
-
-                // Delete all certificate revocation information
-                CertRevokedList::delete_many().filter(cert_revoked_list::Column::UserId.eq(user_id)).exec(db).await?;
-
                 Ok(cert_delete_result)
             },
         }

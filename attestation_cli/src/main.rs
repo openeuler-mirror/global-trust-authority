@@ -124,21 +124,18 @@ lazy_static! {
 async fn deal_certificate_commands(command: &CertificateCommands, server_url: String, client: Client, user: &String) {
     let url = format!("{}/cert", &server_url);
     match command {
-        CertificateCommands::Set { name, description, cert_type, content, revoke_certificate_file, is_default } => {
+        CertificateCommands::Set { name, description, cert_type, content, crl_content, is_default } => {
             let request_body = if cert_type.contains(&CertType::Crl) {
-                if revoke_certificate_file.is_none() {
+                if crl_content.is_none() {
                     eprintln!("when cert-type is crl, the revoke-certificate-file must be filled in");
                     return;
                 }
-                let cert_revoked_list: Vec<String> = revoke_certificate_file
-                    .as_ref()
-                    .unwrap()
-                    .iter()
-                    .map(|file| fs::read_to_string(file).unwrap())
-                    .collect();
+                let name = get_name(name, crl_content);
+                let crl_content = get_content(crl_content).unwrap();
                 json!({
+                    "name": name,
                     "type": cert_type,
-                    "cert_revoked_list": cert_revoked_list,
+                    "crl_content": crl_content,
                 })
             } else {
                 if content.is_none() {
