@@ -153,9 +153,7 @@ impl Config {
 
         // 4. Validate plugin configuration
         for (idx, plugin) in self.plugins.iter().enumerate() {
-            if let Err(err) = self.validate_plugin(plugin, idx) {
-                return Err(err);
-            }
+            self.validate_plugin(plugin, idx)?;
         }
 
         // 5. Validate scheduler configuration
@@ -207,15 +205,11 @@ impl Config {
             match params {
                 PluginParams::TpmBoot(config) => {
                     // Validate TPM base configuration
-                    if let Err(err) = Self::validate_tpm_base_config(&config.tpm_base, &plugin.name, idx) {
-                        return Err(err);
-                    }
+                    Self::validate_tpm_base_config(&config.tpm_base, &plugin.name, idx)?;
                 },
                 PluginParams::TpmIma(config) => {
                     // Validate TPM base configuration
-                    if let Err(err) = Self::validate_tpm_base_config(&config.tpm_base, &plugin.name, idx) {
-                        return Err(err);
-                    }
+                    Self::validate_tpm_base_config(&config.tpm_base, &plugin.name, idx)?;
 
                     // Validate IMA log path
                     if config.log_file_path.is_empty() {
@@ -241,7 +235,7 @@ impl Config {
 
         // Validate AK handle
         if let Some(handle) = tpm_base.ak_handle {
-            if handle < TPM_KEY_HANDLE_MIN || handle > TPM_KEY_HANDLE_MAX {
+            if !(TPM_KEY_HANDLE_MIN..=TPM_KEY_HANDLE_MAX).contains(&handle) {
                 return Err(format!(
                     "Plugin #{} '{}' has AK handle value 0x{:x} outside valid range (0x{:x}-0x{:x})",
                     idx, plugin_name, handle, TPM_KEY_HANDLE_MIN, TPM_KEY_HANDLE_MAX
@@ -251,7 +245,7 @@ impl Config {
 
         // Validate NV index
         if let Some(index) = tpm_base.ak_nv_index {
-            if index < TPM_NV_INDEX_MIN || index > TPM_NV_INDEX_MAX {
+            if !(TPM_NV_INDEX_MIN..=TPM_NV_INDEX_MAX).contains(&index) {
                 return Err(format!(
                     "Plugin #{} '{}' has NV index value 0x{:x} outside valid range (0x{:x}-0x{:x})",
                     idx, plugin_name, index, TPM_NV_INDEX_MIN, TPM_NV_INDEX_MAX
@@ -320,8 +314,8 @@ impl Config {
 ///
 /// The configuration file is loaded using the following priority order:
 /// 1. Command line specified path (if provided and the file exists)
-/// 2. Current working directory: ./agent_config.yaml
-/// 3. System-wide configuration: /etc/attestation_agent/agent_config.yaml
+/// 2. Current working directory: ./`agent_config.yaml`
+/// 3. System-wide configuration: /`etc/attestation_agent/agent_config.yaml`
 ///
 /// If no configuration file is found in any of these locations, an error is returned.
 pub static AGENT_CONFIG: ConfigSingleton<Config> = ConfigSingleton::new();
@@ -339,7 +333,7 @@ impl ConfigManager {
 
         // Use simple validation method instead of complex validator validation
         AGENT_CONFIG.get_instance().and_then(|config| {
-            config.validate().map_err(|e| format!("Configuration validation failed: {}", e).into())
+            config.validate().map_err(|e| format!("Configuration validation failed: {}", e))
         })?;
 
         Ok(Self { config_path: actual_path })

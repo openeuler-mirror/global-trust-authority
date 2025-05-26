@@ -33,7 +33,7 @@ pub fn query_configuration(plugin_name: String) -> Option<String> {
     let plugin = config.plugins.iter().find(|p| p.name == plugin_name)?;
 
     // Get and serialize the plugin parameters to JSON string
-    let params = match &plugin.params {
+    match &plugin.params {
         Some(params) => match ConfigManager::to_json(params) {
             Ok(json) => Some(json),
             Err(e) => {
@@ -41,10 +41,8 @@ pub fn query_configuration(plugin_name: String) -> Option<String> {
                 None
             },
         },
-        None => Some("null".to_string()), // If no params, return JSON null
-    };
-
-    params
+        None => Some("null".to_string()), // If no params, return JSON nullclear
+    }
 }
 
 /// Load and initialize plugins based on configuration

@@ -12,10 +12,10 @@
 
 pub mod challenge;
 pub mod challenge_error;
-pub mod token;
 pub mod evidence;
 pub mod process_lock;
+pub mod token;
 
-pub use challenge::{AttesterInfo, do_challenge, get_cached_token_for_current_node, set_cached_tokens};
+pub use challenge::{do_challenge, get_cached_token_for_current_node, set_cached_tokens, AttesterInfo};
 pub use challenge_error::ChallengeError;
 pub use process_lock::platform::acquire_process_lock;

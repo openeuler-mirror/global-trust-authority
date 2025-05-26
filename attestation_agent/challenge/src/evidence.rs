@@ -14,11 +14,11 @@ use serde::Deserialize;
 use serde_json;
 use crate::challenge_error::ChallengeError;
 use crate::challenge::{
-    AttesterInfo, GetEvidenceResponse, Nonce, collect_evidences_core, get_node_id, validate_nonce_fields
+    collect_evidences_core, get_node_id, validate_nonce_fields, AttesterInfo, GetEvidenceResponse, Nonce,
 };
 
 /// Request structure for evidence collection, including nonce and attester info
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct GetEvidenceRequest {
     // Optional list of attester types to collect evidence from
     #[serde(default)]
@@ -61,17 +61,6 @@ impl GetEvidenceRequest {
             attester_data: self.attester_data.filter(|d| !d.is_null()),
         }
     }
-
-    /// Creates a default instance with all fields set to None
-    pub fn default() -> Self {
-        Self {
-            attester_types: None,
-            nonce_type: None,
-            user_nonce: None,
-            nonce: None,
-            attester_data: None,
-        }
-    }
 }
 
 /// Manager for evidence collection logic
@@ -85,22 +74,19 @@ impl EvidenceManager {
         user_nonce: Option<&String>,
         nonce: Option<&Nonce>,
     ) -> Result<(String, Option<String>), ChallengeError> {
-        let nonce_type = nonce_type
-            .map(|t| t.to_lowercase())
-            .unwrap_or_else(|| "default".to_string());
+        let nonce_type = nonce_type.map_or_else(|| "default".to_string(), |t| t.to_lowercase());
 
         let nonce_value = match nonce_type.as_str() {
             "ignore" => None,
             "user" => {
-                let user_nonce_str = match user_nonce {
-                    Some(n) => n,
-                    None => {
-                        log::error!("User nonce not provided but nonce_type is 'user'");
-                        return Err(ChallengeError::UserNonceNotProvided);
-                    }
+                let user_nonce_str = if let Some(n) = user_nonce {
+                    n
+                } else {
+                    log::error!("User nonce not provided but nonce_type is 'user'");
+                    return Err(ChallengeError::UserNonceNotProvided);
                 };
-                let user_nonce_len = user_nonce_str.as_bytes().len();
-                if user_nonce_len < 64 || user_nonce_len > 1024 {
+                let user_nonce_len = user_nonce_str.len();
+                if !(64..=1024).contains(&user_nonce_len) {
                     log::error!("user_nonce length invalid: {} bytes", user_nonce_len);
                     return Err(ChallengeError::NonceInvalid(format!(
                         "user_nonce length must be between 64 and 1024 bytes, got {} bytes",
@@ -110,12 +96,11 @@ impl EvidenceManager {
                 user_nonce_str.clone().into()
             },
             "default" => {
-                let nonce = match nonce {
-                    Some(n) => n,
-                    None => {
-                        log::error!("Nonce not provided but nonce_type is 'default'");
-                        return Err(ChallengeError::NonceNotProvided);
-                    }
+                let nonce = if let Some(n) = nonce {
+                    n
+                } else {
+                    log::error!("Nonce not provided but nonce_type is 'default'");
+                    return Err(ChallengeError::NonceNotProvided);
                 };
                 if let Err(e) = validate_nonce_fields(nonce) {
                     log::error!("Nonce validation failed: {}", e);
@@ -125,10 +110,11 @@ impl EvidenceManager {
             },
             _ => {
                 log::error!("Invalid nonce_type: '{}'", nonce_type);
-                return Err(ChallengeError::NonceTypeError(
-                    format!("Invalid nonce_type: '{}'. Must be one of: ignore, user, default", nonce_type)
-                ));
-            }
+                return Err(ChallengeError::NonceTypeError(format!(
+                    "Invalid nonce_type: '{}'. Must be one of: ignore, user, default",
+                    nonce_type
+                )));
+            },
         };
 
         Ok((nonce_type, nonce_value))
@@ -138,23 +124,14 @@ impl EvidenceManager {
     pub fn get_evidence(request: &GetEvidenceRequest) -> Result<GetEvidenceResponse, ChallengeError> {
         log::info!("Starting evidence collection");
 
-        let (nonce_type, nonce_value) = Self::process_nonce(
-            request.nonce_type.as_deref(),
-            request.user_nonce.as_ref(),
-            request.nonce.as_ref(),
-        )?;
+        let (nonce_type, nonce_value) =
+            Self::process_nonce(request.nonce_type.as_deref(), request.user_nonce.as_ref(), request.nonce.as_ref())?;
 
         let attester_info = request.attester_types.as_ref().map(|types| {
-            types.iter().map(|t| AttesterInfo {
-                attester_type: Some(t.clone()),
-                policy_ids: None,
-            }).collect::<Vec<_>>()
+            types.iter().map(|t| AttesterInfo { attester_type: Some(t.clone()), policy_ids: None }).collect::<Vec<_>>()
         });
 
-        let evidences = collect_evidences_core(
-            &attester_info,
-            &nonce_value,
-        )?;
+        let evidences = collect_evidences_core(&attester_info, &nonce_value)?;
 
         let node_id = get_node_id()?;
 

@@ -141,7 +141,7 @@ impl SchedulerConfig {
     /// Sets the maximum delay before the first execution.
     ///
     /// This defines the upper bound of the delay range, where the actual delay will be
-    /// randomly chosen between min_delay and max_delay.
+    /// randomly chosen between `min_delay` and `max_delay`.
     ///
     /// # Arguments
     ///
@@ -182,7 +182,7 @@ impl SchedulerConfig {
     /// Sets the maximum delay between retry attempts.
     ///
     /// This defines the upper bound of the retry delay range, where the actual delay will be
-    /// randomly chosen between min_delay and max_delay.
+    /// randomly chosen between `min_delay` and `max_delay`.
     ///
     /// # Arguments
     ///
@@ -319,7 +319,7 @@ struct SingleTaskScheduler {
 }
 
 impl SingleTaskScheduler {
-    /// Creates a new SingleTaskScheduler with the provided configuration.
+    /// Creates a new `SingleTaskScheduler` with the provided configuration.
     ///
     /// # Arguments
     ///
@@ -327,7 +327,7 @@ impl SingleTaskScheduler {
     ///
     /// # Returns
     ///
-    /// A new SingleTaskScheduler instance
+    /// A new `SingleTaskScheduler` instance
     fn new(config: SchedulerConfig, task: BoxedTask) -> Self {
         let (tx, rx) = mpsc::channel(3);
 
@@ -379,7 +379,7 @@ impl SingleTaskScheduler {
             }
 
             if config.enabled {
-                Self::handle_cron_execution(task, config, state, rx, queue_size).await;
+                Self::handle_execution(task, config, state, rx, queue_size).await;
             } else {
                 Self::finish_execution(&state, &config.name).await;
                 info!("The {} task is not scheduled to run periodically", config.name);
@@ -446,7 +446,7 @@ impl SingleTaskScheduler {
         }
 
         info!("Executing first run of task: {}", config.name);
-        let result = Self::execute_task(&task).await;
+        let result = Self::execute_task(task).await;
 
         match result {
             Ok(_) => {
@@ -461,7 +461,7 @@ impl SingleTaskScheduler {
                     return Err(AgentError::ExecutionError("Retry not enabled".to_string()));
                 }
 
-                return Self::handle_first_execution_retry(task, config, state, &rx).await;
+                return Self::handle_first_execution_retry(task, config, state, rx).await;
             },
         }
     }
@@ -476,7 +476,7 @@ impl SingleTaskScheduler {
         let mut attempts = 0;
 
         while attempts < config.retry_max_attempts {
-            let total_delay = Self::calculate_delay(&retry_config);
+            let total_delay = Self::calculate_delay(retry_config);
 
             debug!(
                 "Waiting {:?} before retrying first execution of task: {} (range: {:?} to {:?})",
@@ -523,7 +523,7 @@ impl SingleTaskScheduler {
         Err(AgentError::ExecutionError("All retry attempts exhausted".to_string()))
     }
 
-    async fn handle_cron_execution(
+    async fn handle_execution(
         task: Arc<BoxedTask>,
         config: SchedulerConfig,
         state: Arc<Mutex<SchedulerState>>,
@@ -534,8 +534,13 @@ impl SingleTaskScheduler {
 
         while !Self::should_stop(&state).await {
             match Self::wait_and_execute(&task, &config, &rx, &queue_size).await {
-                Ok(true) => break,     // Stop the scheduler
-                Ok(false) => continue, // Continue the loop
+                Ok(true) => {
+                    info!("Stopping scheduled execution of task '{}'", config.name);
+                    break;
+                },
+                Ok(false) => {
+                    info!("Continuing scheduled execution of task '{}'", config.name);
+                },
                 Err(e) => {
                     error!("Error during task execution: {}", e);
                     break;
@@ -598,9 +603,10 @@ impl SingleTaskScheduler {
 
         select! {
             _ = sleep_future => Ok(WaitResult::TimeToExecute),
-            cmd = rx_guard.recv() => match cmd {
-                Some(_) => Ok(WaitResult::StopRequested),
-                None => {
+            cmd = rx_guard.recv() => {
+                if cmd.is_some() {
+                    Ok(WaitResult::StopRequested)
+                } else {
                     error!("Command channel closed unexpectedly, all senders have been dropped");
                     Err(AgentError::ExecutionError("Command channel closed unexpectedly".to_string()))
                 }

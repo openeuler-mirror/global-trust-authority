@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-/// Plugin trait definitions
+// Plugin trait definitions
 
 use async_trait::async_trait;
 use serde_json::Value;

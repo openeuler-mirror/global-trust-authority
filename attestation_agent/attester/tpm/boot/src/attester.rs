@@ -13,9 +13,7 @@
 // TPM Boot plugin implementation
 use tpm_common_attester::{TpmPluginBase, TpmPluginConfig, Log};
 use plugin_manager::{AgentPlugin, PluginError, PluginBase, QueryConfigurationFn, AgentHostFunctions};
-use serde_json;
 use std::fs::File;
-use std::io::Read;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 #[derive(Debug)]
@@ -79,9 +77,7 @@ impl TpmPluginBase for TpmBootPlugin {
         }
 
         // Read file contents into a buffer
-        let mut buffer = Vec::new();
-        let mut file = file;  // Need to rebind since file was moved in metadata() call
-        file.read_to_end(&mut buffer).map_err(|e| {
+        let buffer = std::fs::read(&self.config.log_file_path).map_err(|e| {
             PluginError::InternalError(format!("Failed to read boot log file: {}", e))
         })?;
         

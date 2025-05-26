@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use crate::ConfigSingleton;
 
-/// Main configuration structure that matches the server_config.yaml file structure.
+/// Main configuration structure that matches the `server_config.yaml` file structure.
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct ServerConfig {
     /// Common configuration settings
@@ -131,12 +131,12 @@ impl ServerConfig {
     /// 
     /// # Panics
     /// 
-    /// Panics if nonce_bytes is not within the range of 64-1024
+    /// Panics if `nonce_bytes` is not within the range of 64-1024
     /// Panics if any URL contains characters that could lead to log injection
     pub fn validate(&self) {
         // Validate nonce_bytes is within the range of 64-1024
         let nonce_bytes = self.attestation_service.nonce.nonce_bytes;
-        if nonce_bytes < 64 || nonce_bytes > 1024 {
+        if !(64..=1024).contains(&nonce_bytes) {
             panic!("Invalid configuration: nonce_bytes must be between 64 and 1024, got {}", nonce_bytes);
         }
 
@@ -145,7 +145,7 @@ impl ServerConfig {
         Self::validate_all_strings_for_log_injection(&config_value, "root");
     }
 
-    /// Recursively validates all string fields within a serde_json::Value for log injection characters.
+    /// Recursively validates all string fields within a `serde_json::Value` for log injection characters.
     fn validate_all_strings_for_log_injection(value: &Value, path: &str) {
         match value {
             Value::String(s) => {

@@ -12,7 +12,6 @@
 
 // Common configuration for TPM plugins
 use plugin_manager::PluginError;
-use serde_json;
 use tss_esapi::tcti_ldr::TctiNameConf;
 use std::str::FromStr;
 

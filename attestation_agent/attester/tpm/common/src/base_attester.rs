@@ -14,7 +14,6 @@
 use crate::config::TpmPluginConfig;
 use crate::entity::{Evidence, Quote, Pcrs, Log, PcrValue};
 use plugin_manager::{AgentPlugin, PluginError, PluginBase};
-use serde_json;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use openssl::pkey::PKey;
 use openssl::x509::X509;
@@ -22,7 +21,6 @@ use openssl::bn::BigNum;
 use openssl::ec:: {EcKey, EcGroup};
 use openssl::rsa::Rsa;
 use openssl::nid::Nid;
-use hex;
 use tss_esapi::{
     Context,
     structures::{
@@ -321,7 +319,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
 
         let pcr_banks = self.config().pcr_selection.banks.clone();
         // Check if any PCR bank index is out of valid range (0-23)
-        if let Some(invalid_pcr) = pcr_banks.iter().find(|&&pcr| pcr < 0 || pcr > 23) {
+        if let Some(invalid_pcr) = pcr_banks.iter().find(|&&pcr| !(0..=23).contains(&pcr)) {
             return Err(PluginError::InternalError(
                 format!("Invalid PCR bank index {} in configuration. PCR indices must be between 0 and 23", invalid_pcr)
             ));
@@ -354,7 +352,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
             };
             
             pcr_values.push(PcrValue {
-                pcr_index: pcr_index as i32,
+                pcr_index: pcr_index,
                 pcr_value: hex::encode(digest.value()),
             });
         }
@@ -387,7 +385,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
 
         let pcr_banks = self.config().pcr_selection.banks.clone();
         // Check if any PCR bank index is out of valid range (0-23)
-        if let Some(invalid_pcr) = pcr_banks.iter().find(|&&pcr| pcr < 0 || pcr > 23) {
+        if let Some(invalid_pcr) = pcr_banks.iter().find(|&&pcr| !(0..=23).contains(&pcr)) {
             return Err(PluginError::InternalError(
                 format!("Invalid PCR bank index {} in configuration. PCR indices must be between 0 and 23", invalid_pcr)
             ));
@@ -471,16 +469,13 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
             None => return Err(PluginError::InputError("Node ID is required".to_string())),
         };
 
-        let nonce = match nonce {
-            Some(nonce) => nonce,
-            None => &[],
-        };
+        let nonce = nonce.unwrap_or(&[]);
 
         // collect ak_cert, validate node_id
         let ak_cert = self.collect_aik(node_id)?;
 
         // collect quote
-        let quote = self.collect_quote(&nonce)?;
+        let quote = self.collect_quote(nonce)?;
         
         // collect pcrs
         let pcrs = self.collect_pcrs()?;
