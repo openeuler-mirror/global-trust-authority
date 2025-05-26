@@ -75,7 +75,6 @@ async fn main() -> std::io::Result<()> {
                         actix_web::error::ErrorBadRequest(format!("Form payload too large: {}", err))
                     }))
                     .wrap(middleware::Logger::default())
-                    // .configure(|cfg| configure_user_routes(cfg, create_challenge_governor(), create_management_governor()))
                     .configure(|cfg| {
                         configure_user_routes(cfg, challenge_governor.clone(), management_governor.clone())
                     }),
