@@ -9,7 +9,7 @@
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
- 
+
 use serde::Serialize;
 use crate::entities::db_model::rv_db_model::{ActiveModel, Model};
 
