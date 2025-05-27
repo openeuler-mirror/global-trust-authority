@@ -44,16 +44,17 @@ CARGO_BUILD_JOBS=$(nproc) cargo build --release -p tpm_ima_verifier
 
 %install
 rm -rf %{buildroot}
-install -d %{buildroot}%{_bindir}
-install -d %{buildroot}%{_libdir}
-install -d %{buildroot}%{_sysconfdir}/attestation_server/
-install -d %{buildroot}%{_sysconfdir}/attestation_server/export_policy/
+mkdir -m 550 -p %{buildroot}%{_bindir}
+mkdir -m 550 -p %{buildroot}%{_libdir}
+mkdir -m 550 -p %{buildroot}%{_sysconfdir}/attestation_server/
+mkdir -m 550 -p %{buildroot}%{_sysconfdir}/attestation_server/export_policy/
+chmod 750 %{buildroot}%{_sysconfdir}/attestation_server/export_policy/
 
-install -pm 755 %{server_output_dir}/attestation_service      %{buildroot}%{_bindir}
-install -pm 644 %{server_output_dir}/libpolicy.so             %{buildroot}%{_libdir}
-install -pm 644 %{server_output_dir}/libkey_management.so     %{buildroot}%{_libdir}
-install -pm 644 %{server_output_dir}/libtpm_ima_verifier.so   %{buildroot}%{_libdir}
-install -pm 644 %{server_output_dir}/libtpm_boot_verifier.so  %{buildroot}%{_libdir}
+install -pm 550 %{server_output_dir}/attestation_service      %{buildroot}%{_bindir}
+install -pm 550 %{server_output_dir}/libpolicy.so             %{buildroot}%{_libdir}
+install -pm 550 %{server_output_dir}/libkey_management.so     %{buildroot}%{_libdir}
+install -pm 550 %{server_output_dir}/libtpm_ima_verifier.so   %{buildroot}%{_libdir}
+install -pm 550 %{server_output_dir}/libtpm_boot_verifier.so  %{buildroot}%{_libdir}
 install -pm 644 server_config_rpm.yaml                            %{buildroot}%{_sysconfdir}/attestation_server/server_config_rpm.yaml
 install -pm 644 logging.yaml                                  %{buildroot}%{_sysconfdir}/attestation_server/logging.yaml
 install -pm 644 .env.rpm                                      %{buildroot}%{_sysconfdir}/attestation_server/.env.rpm
@@ -63,18 +64,19 @@ install -pm 644 export_policy/tpm_boot                                          
 
 
 %files
-%config %attr(0644, root, root) %{_sysconfdir}/attestation_server/server_config_rpm.yaml
-%config %attr(0644, root, root) %{_sysconfdir}/attestation_server/logging.yaml
-%config %attr(0644, root, root) %{_sysconfdir}/attestation_server/.env.rpm
-%config %attr(0644, root, root) %{_sysconfdir}/attestation_server/mysql_v1.sql
-%config %attr(0644, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_ima
-%config %attr(0644, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_boot
+%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/server_config_rpm.yaml
+%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/logging.yaml
+%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/.env.rpm
+%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/mysql_v1.sql
+%dir %attr(0750, root, root) %{_sysconfdir}/attestation_server/export_policy/
+%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_ima
+%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_boot
 
-%{_bindir}/attestation_service
-%{_libdir}/libpolicy.so
-%{_libdir}/libkey_management.so
-%{_libdir}/libtpm_boot_verifier.so
-%{_libdir}/libtpm_ima_verifier.so
+%attr(0550, root, root) %{_bindir}/attestation_service
+%attr(0550, root, root) %{_libdir}/libpolicy.so
+%attr(0550, root, root) %{_libdir}/libkey_management.so
+%attr(0550, root, root) %{_libdir}/libtpm_boot_verifier.so
+%attr(0550, root, root) %{_libdir}/libtpm_ima_verifier.so
 
 
 %changelog

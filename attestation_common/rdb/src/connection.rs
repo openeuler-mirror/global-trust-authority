@@ -130,14 +130,14 @@ fn get_postgresql_sql_file(db_version: &str) -> String {
 fn get_mysql_sql_file(db_version: &str) -> String {
     #[cfg(feature = "docker_build")]
     {
-        println!("docker_build");
+        info!("docker_build");
         return find_file(format!("mysql_{}.sql", db_version).as_str()).map(|path_buf: PathBuf| {
             path_buf.to_str().unwrap().to_string()
         }).expect("Failed to get mysql_sql file");
     }
     #[cfg(feature = "rpm_build")]
     {
-        println!(" cfg(feature = rpm_build)]");
+        info!(" cfg(feature = rpm_build)]");
         return String::from(format!("/etc/attestation_server/mysql_{}.sql", db_version));
     }
     #[cfg(not(any(feature = "docker_build", feature = "rpm_build")))]

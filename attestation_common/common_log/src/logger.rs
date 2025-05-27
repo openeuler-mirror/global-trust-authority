@@ -23,6 +23,8 @@ use log4rs::{
 };
 use std::env;
 use std::path::PathBuf;
+use std::fs::Permissions;
+use std::os::unix::fs::PermissionsExt;
 use crate::config::{LogConfig, LoggerConfig};
 
 pub struct Logger {
@@ -70,9 +72,26 @@ impl Logger {
             }
 
             let log_out_dir = env::var("LOG_OUTPUT_DIR").expect("LOG_OUTPUT_DIR must be set");
-            let relative_log_directory = format!("{}/logs", log_out_dir);
+
+            // Set LOG_OUTPUT_DIR permissions to 750 (owner rwx, group rx, others none)
+            if let Ok(metadata) = std::fs::metadata(&log_out_dir) {
+                if metadata.is_dir() {
+                    let dir_permissions = Permissions::from_mode(0o750);
+                    if let Err(e) = std::fs::set_permissions(&log_out_dir, dir_permissions) {
+                        error!("Failed to set LOG_OUTPUT_DIR permissions: {}", e);
+                    }
+                }
+            }
+
+            let relative_log_directory = std::path::Path::new(&log_out_dir).join("logs").to_string_lossy().to_string();
 
             std::fs::create_dir_all(&relative_log_directory)?;
+
+            // Set directory permissions to 750 (owner rwx, group rx, others none)
+            let dir_permissions = Permissions::from_mode(0o750);
+            if let Err(e) = std::fs::set_permissions(&relative_log_directory, dir_permissions) {
+                error!("Failed to set log directory permissions: {}", e);
+            }
 
             // scan zip file
             let zip_files: Vec<_> = std::fs::read_dir(&relative_log_directory)?
@@ -110,17 +129,34 @@ impl Logger {
             Err(e) => error!(".env load fail: {}", e),
         }
         let log_out_dir = env::var("LOG_OUTPUT_DIR").expect("LOG_OUTPUT_DIR must be set");
-        let relative_log_directory = format!("{}/{}", log_out_dir, config.log_directory);
+
+        // Set LOG_OUTPUT_DIR permissions to 750 (owner rwx, group rx, others none)
+        if let Ok(metadata) = std::fs::metadata(&log_out_dir) {
+            if metadata.is_dir() {
+                let dir_permissions = Permissions::from_mode(0o750);
+                if let Err(e) = std::fs::set_permissions(&log_out_dir, dir_permissions) {
+                    error!("Failed to set LOG_OUTPUT_DIR permissions: {}", e);
+                }
+            }
+        }
+
+        let relative_log_directory = std::path::Path::new(&log_out_dir).join(&config.log_directory).to_string_lossy().to_string();
 
         // Create log directory
         std::fs::create_dir_all(&relative_log_directory)?;
+
+        // Set directory permissions to 750 (owner rwx, group rx, others none)
+        let dir_permissions = Permissions::from_mode(0o750);
+        if let Err(e) = std::fs::set_permissions(&relative_log_directory, dir_permissions) {
+            error!("Failed to set log directory permissions: {}", e);
+        }
 
         // Get current local time
         let now: DateTime<Local> = Local::now();
         let formatted_time = now.format("%Y%m%d%H%M%S%3f").to_string();
 
         // Configure log file path
-        let log_file = format!("{}/{}", relative_log_directory, config.log_file_name);
+        let log_file = std::path::Path::new(&relative_log_directory).join(&config.log_file_name).to_string_lossy().to_string();
         let archived_log_pattern = format!(
             "{}/{}-{{}}-{}.zip",
             relative_log_directory, config.log_file_name, formatted_time
@@ -138,7 +174,17 @@ impl Logger {
             .encoder(Box::new(PatternEncoder::new(
                 "{d(%Y-%m-%d %H:%M:%S:%3f)} {l} [{M}:{L}] - {m}{n}",
             )))
-            .build(log_file, Box::new(compound_policy))?;
+            .build(log_file.clone(), Box::new(compound_policy))?;
+
+        // Set file permissions to 640 (owner rw, group r, others none)
+        if let Ok(metadata) = std::fs::metadata(&log_file) {
+            if metadata.is_file() {
+                let permissions = Permissions::from_mode(0o640);
+                if let Err(e) = std::fs::set_permissions(&log_file, permissions) {
+                    error!("Failed to set log file permissions: {}", e);
+                }
+            }
+        }
 
         Ok(appender)
     }

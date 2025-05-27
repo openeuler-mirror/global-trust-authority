@@ -77,6 +77,8 @@ if [ "$ENABLE_SERVER_RPM" = true ]; then
             -out /etc/attestation_server/certs/cert.pem \
             -days 365 \
             -subj "/CN=127.0.0.1"
+    chmod 700 /etc/attestation_server/certs
+    chmod 600 /etc/attestation_server/certs/*
     cp server.spec $RPM_SPEC_DIR
     rpmbuild -bb --clean $RPM_SPEC_DIR/server.spec --define "_ra_version ${VERSION}" --define "_ra_release ${RELEASE}"
 fi

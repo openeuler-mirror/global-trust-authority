@@ -35,7 +35,7 @@ impl DbTableInitHandler {
         info!("will init DB sql file!");
         let conn = get_connection().await?.clone();
         let db_version = "v1".to_string();
-        println!("db_version: {}", db_version);
+        info!("db_version: {}", db_version);
         execute_sql_file(&conn, &db_version).await
     }
 }
@@ -43,9 +43,9 @@ impl DbTableInitHandler {
 impl InitHandler for DbTableInitHandler {
     fn handle<'a>(&'a self, context: &'a mut InitContext) -> Pin<Box<dyn Future<Output=Result<(), String>> + 'a>> {
         Box::pin(async move {
-            println!("Initializing db tables...");
+            info!("Initializing db tables...");
             self.init_table().await.expect("Initializing db table failed");
-            println!("Successfully to init db tables.");
+            info!("Successfully to init db tables.");
             if let Some(next) = &self.next {
                 next.handle(context).await
             } else {
