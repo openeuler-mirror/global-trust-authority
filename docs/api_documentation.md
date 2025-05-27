@@ -445,10 +445,10 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 ##### Request Parameters
 Note: To query revoked certificates, type must specify crl.
 
-| Field | Sub-field | Type | Required | parameter constraint | Description |
-|-------|-----------|------|----------|-------------|-------------|
-| type | | string | No | refvalue/policy/tpm_boot/tpm_ima/crl | Query certificate for specified purpose |
-| ids | | Array[string] | No |  | Certificate ID, maximum 10 |
+| Field     | Sub-field | Type | Required | parameter constraint | Description |
+|-----------|-----------|------|----------|-------------|-------------|
+| cert_type | | string | No | refvalue/policy/tpm_boot/tpm_ima/crl | Query certificate for specified purpose |
+| ids       | | Array[string] | No |  | Certificate ID, maximum 10 |
 
 ##### Response Parameters
 | Field      | Sub-field           | Type | Required | Description |
