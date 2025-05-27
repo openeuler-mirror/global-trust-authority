@@ -61,48 +61,48 @@ fn get_platform_lib_filename(name: &str) -> String {
     }
 }
 
-// Helper to build the test plugin
-fn build_test_plugin() -> Result<PathBuf, String> {
-    // Get the path to the test plugin source
+// Helper to build the mock plugin
+fn build_mock_plugin() -> Result<PathBuf, String> {
+    // Get the path to the mock plugin source
     let manifest_dir = match env::var("CARGO_MANIFEST_DIR") {
         Ok(dir) => dir,
         Err(_) => return Err("CARGO_MANIFEST_DIR not set".to_string()),
     };
     
     // Use platform-agnostic path joining
-    let test_plugin_dir = Path::new(&manifest_dir).join("tests").join("test_plugin_for_service");
+    let mock_plugin_dir = Path::new(&manifest_dir).join("tests").join("mock_plugin_for_service");
     
-    if !test_plugin_dir.exists() {
-        return Err(format!("Test plugin directory not found at {:?}", test_plugin_dir));
+    if !mock_plugin_dir.exists() {
+        return Err(format!("Mock plugin directory not found at {:?}", mock_plugin_dir));
     }
     
     // Check if Cargo.toml exists
-    let cargo_toml = test_plugin_dir.join("Cargo.toml");
+    let cargo_toml = mock_plugin_dir.join("Cargo.toml");
     if !cargo_toml.exists() {
         return Err(format!("Cargo.toml not found at {:?}", cargo_toml));
     }
     
-    // Build the test plugin
+    // Build the mock plugin
     // Use platform-agnostic cargo command
     let cargo = if cfg!(windows) { "cargo.exe" } else { "cargo" };
     
     let output = match Command::new(cargo)
         .args(["build", "--release"])
-        .current_dir(&test_plugin_dir)
+        .current_dir(&mock_plugin_dir)
         .output() {
             Ok(output) => output,
             Err(e) => return Err(format!("Failed to execute cargo build: {}", e)),
         };
     
     if !output.status.success() {
-        return Err(format!("Failed to build test plugin: {}", 
+        return Err(format!("Failed to build mock plugin: {}", 
             String::from_utf8_lossy(&output.stderr)));
     }
     
     // Return the path to the built plugin library using platform-specific naming
-    let target_dir = test_plugin_dir.join("target").join("release");
+    let target_dir = mock_plugin_dir.join("target").join("release");
     
-    let lib_filename = get_platform_lib_filename("test_plugin_for_service");
+    let lib_filename = get_platform_lib_filename("mock_plugin_for_service");
     
     let lib_path = target_dir.join(lib_filename);
     
@@ -115,13 +115,13 @@ fn build_test_plugin() -> Result<PathBuf, String> {
 
 #[tokio::test]
 async fn test_plugin_manager_load() {
-    // Build the test plugin
-    let plugin_path = build_test_plugin()
-        .unwrap_or_else(|err| panic!("Failed to build test plugin: {}", err));
+    // Build the mock plugin
+    let plugin_path = build_mock_plugin()
+        .unwrap_or_else(|err| panic!("Failed to build mock plugin: {}", err));
     
     // Create a HashMap with the plugin path
     let mut plugin_paths = HashMap::new();
-    plugin_paths.insert("test_plugin_for_service".to_string(), plugin_path.to_string_lossy().to_string());
+    plugin_paths.insert("mock_plugin_for_service".to_string(), plugin_path.to_string_lossy().to_string());
     
     // Get the host functions
     let host_functions = create_test_host_functions();
@@ -141,15 +141,15 @@ async fn test_plugin_manager_load() {
     // Get the plugin types
     let plugin_types = manager.get_plugin_types();
     assert_eq!(plugin_types.len(), 1);
-    assert_eq!(plugin_types[0], "test_plugin_for_service");
+    assert_eq!(plugin_types[0], "mock_plugin_for_service");
     
     // Get the plugin
-    let plugin = manager.get_plugin("test_plugin_for_service");
+    let plugin = manager.get_plugin("mock_plugin_for_service");
     assert!(plugin.is_some());
     
     // Test the plugin
     let plugin = plugin.unwrap();
-    assert_eq!(plugin.plugin_type(), "test_plugin_for_service");
+    assert_eq!(plugin.plugin_type(), "mock_plugin_for_service");
     assert_eq!(plugin.get_sample_output(), serde_json::json!({
         "cert_verification_result": true,
         "unmatched_value": ["test"],
