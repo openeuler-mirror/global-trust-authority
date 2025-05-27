@@ -25,7 +25,7 @@ pub struct RvDtlDbRepo {}
 impl RvDtlDbRepo {
     pub async fn del_by_rv_ids(txn: &DatabaseTransaction, user_id: &str, rv_ids: &Vec<String>) -> Result<(), RefValueError> {
         Entity::delete_many()
-            .filter(Column::Uid.eq(user_id).add(Column::RefValueId.is_in(rv_ids.clone())))
+            .filter(Column::Uid.eq(user_id).and(Column::RefValueId.is_in(rv_ids.clone())))
             .exec(txn)
         .await.map_err(|e| RefValueError::DbError(e.to_string()))?;
         Ok(())
@@ -33,7 +33,7 @@ impl RvDtlDbRepo {
 
     pub async fn del_by_attester_type(txn: &DatabaseTransaction, user_id: &str, attester_type: &str) -> Result<(), RefValueError> {
         Entity::delete_many()
-            .filter(Column::Uid.eq(user_id).add(Column::AttesterType.eq(attester_type)))
+            .filter(Column::Uid.eq(user_id).and(Column::AttesterType.eq(attester_type)))
             .exec(txn)
             .await.map_err(|e| RefValueError::DbError(e.to_string()))?;
         Ok(())
