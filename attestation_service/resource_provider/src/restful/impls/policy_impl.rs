@@ -13,7 +13,6 @@
 use std::sync::Arc;
 use actix_web::{HttpRequest, HttpResponse};
 use actix_web::web::{Data, Json};
-use awc::cookie::time::format_description::modifier;
 use sea_orm::DatabaseConnection;
 use serde_json::Value;
 use crate::resource_facade::Policy;
@@ -41,9 +40,5 @@ impl Policy for PolicyImpl {
 
     fn query_policy(&self, _req: HttpRequest, _db: Data<Arc<DatabaseConnection>>) -> impl std::future::Future<Output = HttpResponse> + Send {
         async move {HttpResponse::InternalServerError().body("The independent deployment feature is not supported")}
-    }
-
-    fn test(&self) {
-        println!("Added methods")
     }
 }

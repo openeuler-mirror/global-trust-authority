@@ -103,8 +103,4 @@ impl Policy for PolicyProxy {
             }
         }
     }
-
-    fn test(&self) {
-        println!("hello world");
-    }
 }

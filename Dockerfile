@@ -114,10 +114,11 @@ RUN apt-get update && apt-get install -y \
     libcurl4 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy executables from build stage
+# Copy executables from build stage with permissions
 COPY --from=builder /usr/lib/x86_64-linux-gnu/*kafka* /usr/lib/x86_64-linux-gnu/
 RUN ldconfig
 COPY --from=builder /var/test_docker/app/target/release/attestation_service /usr/local/bin/
+RUN chmod 550 /usr/local/bin/attestation_service
 
 ## Copy configuration files
 #COPY logging.yaml /var/test_docker/app/logging.yaml
@@ -134,13 +135,21 @@ RUN mkdir -p /etc/attestation_server/certs && \
         -keyout /etc/attestation_server/certs/key.pem \
         -out /etc/attestation_server/certs/cert.pem \
         -days 365 \
-        -subj "/CN=127.0.0.1"
+        -subj "/CN=127.0.0.1" && \
+    chmod -R 700 /etc/attestation_server/certs
 COPY certs/* /etc/attestation_server/certs/
-# Copy dynamic libraries
+RUN chmod 600 /etc/attestation_server/certs/*
+
+# Copy dynamic libraries with permissions
 COPY --from=builder /var/test_docker/app/target/release/*.so /usr/local/lib/
+RUN chmod 550 /usr/local/lib/*.so
+
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod 550 /usr/local/bin/docker-entrypoint.sh
 
 # Configure dynamic library path
 ENV LD_LIBRARY_PATH=/usr/local/lib
 
 # Set entry point
-ENTRYPOINT ["attestation_service"]
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["attestation_service"]

@@ -121,7 +121,6 @@ impl QuoteVerifier {
                     .map_err(|e| PluginError::InputError(format!("ECDSA signature verification failed: {}", e)))?;
             }
         }
-        println!("Signature verification successful");
         Ok(())
     }
 

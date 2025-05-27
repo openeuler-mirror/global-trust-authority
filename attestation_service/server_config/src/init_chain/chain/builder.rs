@@ -110,7 +110,6 @@ mod tests {
             self.call_count.fetch_add(1, Ordering::SeqCst);
             Box::pin(async move {
                 self.do_something().await?;
-                println!("jixu");
                 if let Some(next) = &self.next {
                     next.handle(context).await
                 } else {

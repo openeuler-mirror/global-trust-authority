@@ -127,7 +127,6 @@ pub trait RefValueTrait {
         req_body: Json<Value>,
     ) -> Result<HttpResponse, RefValueError> {
         let user_id = extract_user_id(&req)?;
-        // 1、参数校验
         let update_rv_body = parse_and_validate::<RvUpdateReqBody>(req_body)?;
 
         if update_rv_body.content.is_some() {

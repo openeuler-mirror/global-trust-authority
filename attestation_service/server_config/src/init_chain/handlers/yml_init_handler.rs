@@ -16,6 +16,7 @@ use env_config_parse::find_file;
 use std::future::Future;
 use std::pin::Pin;
 use std::path::PathBuf;
+use common_log::info;
 
 const CONFIG_FILE_NAME: &str = "server_config.yaml";
 
@@ -34,7 +35,7 @@ impl ConfigInitHandler {
 
     fn load_config(&self) -> Result<ServerConfig, String> {
         // Actual configuration loading logic
-        println!("Loading configuration...");
+        info!("Loading configuration...");
         
         #[cfg(not(debug_assertions))]
         {

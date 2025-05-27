@@ -44,9 +44,9 @@ impl KeyAlgorithm for RsaAlgorithm {
         info!("RsaAlgorithm: load private key success");
 
         // extracting the public key with PSS padding
-        println!("use PSS padding to derive public key");
+        info!("use PSS padding to derive public key");
         let mut signer = openssl::sign::Signer::new_without_digest(&private_pkey).map_err(|e| {
-            println!("create signer failed: {}", e);
+            info!("create signer failed: {}", e);
             KeyManagerError::new(format!("create signer failed: {}", e))
         })?;
 
@@ -55,12 +55,11 @@ impl KeyAlgorithm for RsaAlgorithm {
         signer.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)?;
 
         let pub_key = private_pkey.public_key_to_pem().map_err(|e| {
-            println!("RsaAlgorithm: public_key_to_pem failed: {}", e);
             error!("public key der encode failed: {}", e);
             KeyManagerError::new(format!("public key der encode failed: {}", e))
         })?;
 
-        println!("RsaAlgorithm: public key der encode success");
+        info!("RsaAlgorithm: public key der encode success");
         Ok(KeyPair {
             cached_private: OnceCell::new(),
             cached_public: OnceCell::new(),

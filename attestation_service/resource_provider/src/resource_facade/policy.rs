@@ -56,6 +56,4 @@ pub trait Policy {
     /// * `HttpResponse` - Response containing the query results or error message
 
     async fn query_policy(&self, req: HttpRequest, db: web::Data<Arc<DatabaseConnection>>) -> HttpResponse;
-
-    fn test(&self);
 }

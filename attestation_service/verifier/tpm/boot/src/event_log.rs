@@ -221,7 +221,6 @@ impl EventLog {
                     event_size, parser.remaining(), self.event_number, event_type)
             ));
         }
-        // println!("event_size: {}", event_size);
         // 5. Read event data
         let event_data: Vec<u8> = parser.read_bytes(event_size as usize)
             .map_err(|e| PluginError::InputError(
