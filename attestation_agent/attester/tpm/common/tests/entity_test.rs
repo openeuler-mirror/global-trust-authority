@@ -46,7 +46,7 @@ fn test_evidence_structure() {
             "signature": "sample_signature"
         },
         "pcrs": {
-            "hash_algo": "sha256",
+            "hash_alg": "sha256",
             "pcr_values": [
                 {
                     "pcr_index": 0,
@@ -81,7 +81,7 @@ fn test_evidence_structure() {
     assert!(evidence_json["quote"]["signature"].is_string());
     
     // Verify PCRs structure
-    assert_eq!(evidence_json["pcrs"]["hash_algo"], "sha256");
+    assert_eq!(evidence_json["pcrs"]["hash_alg"], "sha256");
     assert!(evidence_json["pcrs"]["pcr_values"].is_array());
     assert_eq!(evidence_json["pcrs"]["pcr_values"].as_array().unwrap().len(), 2);
     

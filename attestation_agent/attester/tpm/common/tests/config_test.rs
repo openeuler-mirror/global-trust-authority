@@ -20,7 +20,7 @@ fn test_config_from_json_valid() {
         "ak_nv_index": 67890,
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
-            "hash_algo": "sha256"
+            "hash_alg": "sha256"
         },
         "log_file_path": "/path/to/event/log",
         "tcti_config": "device:/dev/tpmrm0"
@@ -38,7 +38,7 @@ fn test_config_from_json_valid() {
     assert_eq!(config.ak_handle, 12345);
     assert_eq!(config.ak_nv_index, 67890);
     assert_eq!(config.log_file_path, "/path/to/event/log");
-    assert_eq!(config.pcr_selection.hash_algo, "sha256");
+    assert_eq!(config.pcr_selection.hash_alg, "sha256");
     assert_eq!(config.pcr_selection.banks, vec![0, 1, 2, 3]);
     assert!(config.quote_signature_scheme.is_none());
 }
@@ -51,13 +51,13 @@ fn test_config_with_signature_scheme() {
         "ak_nv_index": 67890,
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
-            "hash_algo": "sha256"
+            "hash_alg": "sha256"
         },
         "log_file_path": "/path/to/event/log",
         "tcti_config": "device:/dev/tpmrm0",
         "quote_signature_scheme": {
-            "signature_algo": "rsassa",
-            "hash_algo": "sha256"
+            "signature_alg": "rsassa",
+            "hash_alg": "sha256"
         }
     }"#;
     
@@ -73,42 +73,42 @@ fn test_config_with_signature_scheme() {
     
     // Verify signature scheme
     let signature_scheme = config.quote_signature_scheme.unwrap();
-    assert_eq!(signature_scheme.signature_algo, "rsassa");
-    assert_eq!(signature_scheme.hash_algo, "sha256");
+    assert_eq!(signature_scheme.signature_alg, "rsassa");
+    assert_eq!(signature_scheme.hash_alg, "sha256");
 }
 
 #[test]
 fn test_config_with_invalid_signature_scheme() {
-    // Missing hash_algo in signature scheme
+    // Missing hash_alg in signature scheme
     let config_json = r#"{
         "ak_handle": 12345,
         "ak_nv_index": 67890,
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
-            "hash_algo": "sha256"
+            "hash_alg": "sha256"
         },
         "log_file_path": "/path/to/event/log",
         "tcti_config": "device:/dev/tpmrm0",
         "quote_signature_scheme": {
-            "signature_algo": "rsassa"
+            "signature_alg": "rsassa"
         }
     }"#;
     
     let result = TpmPluginConfig::from_json("test_plugin".to_string(), config_json);
     assert!(result.is_err());
     
-    // Missing signature_algo in signature scheme
+    // Missing signature_alg in signature scheme
     let config_json = r#"{
         "ak_handle": 12345,
         "ak_nv_index": 67890,
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
-            "hash_algo": "sha256"
+            "hash_alg": "sha256"
         },
         "log_file_path": "/path/to/event/log",
         "tcti_config": "device:/dev/tpmrm0",
         "quote_signature_scheme": {
-            "hash_algo": "sha256"
+            "hash_alg": "sha256"
         }
     }"#;
     
@@ -121,7 +121,7 @@ fn test_config_with_invalid_signature_scheme() {
         "ak_nv_index": 67890,
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
-            "hash_algo": "sha256"
+            "hash_alg": "sha256"
         },
         "log_file_path": "/path/to/event/log",
         "tcti_config": "device:/dev/tpmrm0",
@@ -139,7 +139,7 @@ fn test_missing_ak_handle() {
         "ak_nv_index": 67890,
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
-            "hash_algo": "sha256"
+            "hash_alg": "sha256"
         },
         "event_log_path": "/path/to/event/log",
         "tcti_config": "device:/dev/tpmrm0"
@@ -156,7 +156,7 @@ fn test_missing_ak_nv_index() {
         "ak_handle": 12345,
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
-            "hash_algo": "sha256"
+            "hash_alg": "sha256"
         },
         "event_log_path": "/path/to/event/log",
         "tcti_config": "device:/dev/tpmrm0"
@@ -188,7 +188,7 @@ fn test_missing_log_path() {
         "ak_nv_index": 67890,
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
-            "hash_algo": "sha256"
+            "hash_alg": "sha256"
         },
         "tcti_config": "device:/dev/tpmrm0"
     }"#;
@@ -205,7 +205,7 @@ fn test_missing_tcti_config() {
         "ak_nv_index": 67890,
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
-            "hash_algo": "sha256"
+            "hash_alg": "sha256"
         },
         "log_file_path": "/path/to/event/log"
     }"#;

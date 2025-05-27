@@ -341,9 +341,17 @@ Finally, import the baseline
 
 ## agent_config.yaml file configuration
 
-The agent can configure its own IP address and port in the agent_config.yaml, and the port cannot be occupied by other processes.
+1. The agent can configure its own IP address and port in the agent_config.yaml, and the port cannot be occupied by other processes.
 
-For example, in the following agent_config.yaml file, port 8088 is configured by the agent, because the 8088 port is already occupied by the server.
+For example, in the following agent_config.yaml file, port 8088 is configured by the agent, because the 8080 port is already occupied by the server.
+
+2. Quote signing algorithm configuration:
+
+(1) If the ak_handle is created without specifying a signing algorithm, the signature_alg in quote_signature_scheme of agent_config.yaml must be specified. The signing algorithms supported depend on the TPM chip.
+
+(2) If the ak_handle is created with specifying signing algorithm, the signature_alg in quote_signature_scheme of agent_config.yaml must match the signing algorithm of the ak_handle.
+
+For example, in the following agent_config.yaml file, the ak_handle with the value 0x81010020 was created using the rsapss signing algorithm, so the signature_alg in quote_signature_scheme needs to be set to rsapss.
 
 ```sh
 agent:
@@ -358,6 +366,24 @@ server:
   cert_path: "/path/to/cert.pem"
   key_path: "/path/to/key.pem"
   ca_path: "/path/to/key.pem"
+
+plugins:
+  - name: "tpm_boot"
+    path: "/usr/lib64/libtpm_boot_attester.so"
+    policy_id: []
+    enabled: true
+    params:
+      attester_type: "tpm_boot"
+      tcti_config: "device" # options: device, mssim, swtpm, tabrmd, libtpm
+      ak_handle: 0x81010020
+      ak_nv_index: 0x150001b
+      pcr_selections: 
+        banks: [0, 1, 2, 3, 4, 5, 6, 7] # options: 0-23
+        hash_alg: "sha256" # options: sha1, sha256, sha384, sha512, sm3
+      quote_signature_scheme: # optional
+        signature_alg: "rsapss" # options: rsapss, rsassa, ecdsa; The value needs to be consistent with the signing algorithm of the ak_handle.
+        hash_alg: "sha256" # options: sha1, sha256, sha384, sha512, sm3
+      log_file_path: "/sys/kernel/security/tpm0/binary_bios_measurements"
 ```
 
 ## Test Method Example
