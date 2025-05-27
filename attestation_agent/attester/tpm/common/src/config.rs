@@ -24,7 +24,7 @@ pub struct PcrSelection {
 
 #[derive(Debug)]
 pub struct QuoteSignatureScheme {
-    pub signature_algo: String,
+    pub signature_alg: String,
     pub hash_alg: String,
 }
 
@@ -79,7 +79,7 @@ impl TpmPluginConfig {
             Some(scheme_value) => {
                 match scheme_value.as_object() {
                     Some(scheme_obj) => {
-                        let signature_algo = scheme_obj.get("signature_algo")
+                        let signature_alg = scheme_obj.get("signature_alg")
                             .and_then(|v| v.as_str())
                             .map(String::from)
                             .ok_or_else(|| PluginError::InternalError("Quote signature algorithm not found".to_string()))?;
@@ -89,7 +89,7 @@ impl TpmPluginConfig {
                             .map(String::from)
                             .ok_or_else(|| PluginError::InternalError("Quote hash algorithm not found".to_string()))?;
                         
-                        Some(QuoteSignatureScheme { signature_algo, hash_alg })
+                        Some(QuoteSignatureScheme { signature_alg, hash_alg })
                     },
                     None => return Err(PluginError::InternalError("Quote signature scheme is not an object".to_string()))
                 }

@@ -409,7 +409,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         let signature_scheme = match &self.config().quote_signature_scheme {
             Some(quote_signature_scheme) => {
                 let hash_alg = &quote_signature_scheme.hash_alg;
-                let signature_algo = &quote_signature_scheme.signature_algo;
+                let signature_alg = &quote_signature_scheme.signature_alg;
                 
                 let hash_scheme = match hash_alg.as_str() {
                     "sha1" => HashScheme::new(HashingAlgorithm::Sha1),
@@ -420,12 +420,12 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
                     _ => return Err(PluginError::InternalError(format!("Unsupported hash algorithm: {}", hash_alg))),
                 };
                 
-                match signature_algo.as_str() {
+                match signature_alg.as_str() {
                     "rsassa" => SignatureScheme::RsaSsa {hash_scheme},
                     "rsapss" => SignatureScheme::RsaPss {hash_scheme},
                     "ecdsa" => SignatureScheme::EcDsa {hash_scheme},
                     "sm2" => SignatureScheme::Sm2 {hash_scheme},
-                    _ => return Err(PluginError::InternalError(format!("Unsupported signature algorithm: {}", signature_algo))),
+                    _ => return Err(PluginError::InternalError(format!("Unsupported signature algorithm: {}", signature_alg))),
                 }
             },
             None => {

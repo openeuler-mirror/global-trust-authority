@@ -22,7 +22,7 @@ fn mock_ima_configuration(_plugin_type: String) -> Option<String> {
         "ak_handle": 0x81010020_i64,
         "ak_nv_index": 0x01800001_i64,
         "pcr_selections": {"banks": [10], "hash_alg": "sha256"},
-        "quote_signature_scheme": {"hash_alg": "sha256", "signature_algo": "rsassa"},
+        "quote_signature_scheme": {"hash_alg": "sha256", "signature_alg": "rsassa"},
         "log_file_path": "/sys/kernel/security/ima/ascii_runtime_measurements",
         "template_name": "ima-ng",
         "ascii_runtime_measurements": true,

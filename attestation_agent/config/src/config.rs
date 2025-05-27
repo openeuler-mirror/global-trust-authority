@@ -36,7 +36,7 @@ pub struct TpmBaseConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct QuoteSignatureScheme {
-    pub signature_algo: String,
+    pub signature_alg: String,
     pub hash_alg: String,
 }
 
@@ -295,10 +295,10 @@ impl Config {
         if let Some(scheme) = &tpm_base.quote_signature_scheme {
             // Validate signature algorithm
             let valid_sig = ["rsapss", "rsassa", "ecdsa"];
-            if !valid_sig.contains(&scheme.signature_algo.as_str()) {
+            if !valid_sig.contains(&scheme.signature_alg.as_str()) {
                 return Err(format!(
                     "Plugin #{} '{}' has invalid signature algorithm: {}. Valid values: {:?}",
-                    idx, plugin_name, scheme.signature_algo, valid_sig
+                    idx, plugin_name, scheme.signature_alg, valid_sig
                 ));
             }
 

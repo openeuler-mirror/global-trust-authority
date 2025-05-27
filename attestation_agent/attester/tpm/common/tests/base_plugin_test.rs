@@ -27,7 +27,7 @@ impl MockTpmPlugin {
             "ak_nv_index": 67890,
             "pcr_selections": {
                 "banks": [0, 1, 2, 3],
-                "hash_algo": "sha256"
+                "hash_alg": "sha256"
             },
             "log_file_path": "/path/to/event/log",
             "tcti_config": "mssim:host=localhost,port=2321"
@@ -64,7 +64,7 @@ impl TpmPluginBase for MockTpmPlugin {
     
     fn collect_pcrs(&self) -> Result<Pcrs, PluginError> {
         Ok(Pcrs {
-            hash_algo: "sha256".to_string(),
+            hash_alg: "sha256".to_string(),
             pcr_values: vec![
                 PcrValue {
                     pcr_index: 0,
@@ -108,7 +108,7 @@ fn test_collect_evidence_impl() {
     assert_eq!(evidence_json["ak_cert"], "mock_ak_cert");
     assert_eq!(evidence_json["quote"]["quote_data"], "mock_quote_data");
     assert_eq!(evidence_json["quote"]["signature"], "mock_signature");
-    assert_eq!(evidence_json["pcrs"]["hash_algo"], "sha256");
+    assert_eq!(evidence_json["pcrs"]["hash_alg"], "sha256");
     assert_eq!(evidence_json["pcrs"]["pcr_values"].as_array().unwrap().len(), 2);
     assert_eq!(evidence_json["log"].as_array().unwrap().len(), 1);
     assert_eq!(evidence_json["log"][0]["log_type"], "TcgEventLog");

@@ -95,7 +95,7 @@ Configuration of agent ip, server url, log file and plugins information on agent
 | plugins | params.ak_nv_index | Attestation Key NV index | string | "0x150001b" |
 | plugins | params.pcr_selections.banks | PCR banks to use | array | [0,1,2,3,4,5,6,7] for tpm_boot, [10] for tpm_ima |
 | plugins | params.pcr_selections.hash_alg | Hash algorithm to use | string | "sha256" (options: sha1, sha256, sha384, sha512, sm3) |
-| plugins | params.quote_signature_scheme.signature_algo | Signature algorithm for quotes | string | "rsassa" (options: rsapss, rsassa, ecdsa) |
+| plugins | params.quote_signature_scheme.signature_alg | Signature algorithm for quotes | string | "rsassa" (options: rsapss, rsassa, ecdsa) |
 | plugins | params.quote_signature_scheme.hash_alg | Hash algorithm for quotes | string | "sha256" (options: sha1, sha256, sha384, sha512, sm3) |
 | plugins | params.log_file_path | Measurement log file path | string | "/sys/kernel/security/tpm0/binary_bios_measurements" for tpm_boot, "/sys/kernel/security/ima/ascii_runtime_measurements" for tpm_ima |
 | schedulers | name |  Scheduler task name | string | "challenge", "config_sync" |
