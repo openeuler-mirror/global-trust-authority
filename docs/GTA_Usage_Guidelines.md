@@ -164,7 +164,7 @@ docker stop CONTAINER ID
 
 ### Uploading TLS certificates with key_manager and install librdkafka
 
-Create the certs folder in the /etc/attestation_server/certs directory and place the a_client_key.pem, ra_client_cert.pem and km_cert.pem certificates into the specified directory.
+Create the certs folder in the /etc/attestation_server/certs directory and place the ra_client_key.pem, ra_client_cert.pem and km_cert.pem certificates into the specified directory.
 
 ```
 /etc/attestation_server/certs
