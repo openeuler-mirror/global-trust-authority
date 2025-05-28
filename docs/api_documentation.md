@@ -241,10 +241,10 @@
 **Request Method**: `GET /global-trust-authority/v1/service/ref_value`
 
 ##### Request Parameters
-| Field | Sub-field | Type | Required | parameter constraint | Description |
-|-------|-----------|------|----------|-------------|-------------|
-| type | | string | Yes | tpm_ima | Query baseline for specified purpose |
-| ids | | Array[string] | Yes | Length 1-32 characters | Baseline name, if empty, input 10 |
+| Field         | Sub-field | Type | Required | parameter constraint | Description |
+|---------------|-----------|------|----------|-------------|-------------|
+| attester_type | | string | Yes | tpm_ima | Query baseline for specified purpose |
+| ids           | | Array[string] | Yes | Length 1-32 characters | Baseline name, if empty, input 10 |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
@@ -445,10 +445,10 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 ##### Request Parameters
 Note: To query revoked certificates, type must specify crl.
 
-| Field | Sub-field | Type | Required | parameter constraint | Description |
-|-------|-----------|------|----------|-------------|-------------|
-| type | | string | No | refvalue/policy/tpm_boot/tpm_ima/crl | Query certificate for specified purpose |
-| ids | | Array[string] | No |  | Certificate ID, maximum 10 |
+| Field     | Sub-field | Type | Required | parameter constraint | Description |
+|-----------|-----------|------|----------|-------------|-------------|
+| cert_type | | string | No | refvalue/policy/tpm_boot/tpm_ima/crl | Query certificate for specified purpose |
+| ids       | | Array[string] | No |  | Certificate ID, maximum 10 |
 
 ##### Response Parameters
 | Field      | Sub-field           | Type | Required | Description |
@@ -813,10 +813,10 @@ When content_type is jwt, jwt content:
 **Request Method**: `GET /global-trust-authority/v1/service/policy`
 
 ##### Request Parameters
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| ids | List of String | No | Policy IDs maximum 10, error if exceeding maximum message limit |
-| type | string | No | Policy type |
+| Field         | Type | Required | Description |
+|---------------|------|----------|-------------|
+| ids           | List of String | No | Policy IDs maximum 10, error if exceeding maximum message limit |
+| attester_type | string | No | Policy type |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
