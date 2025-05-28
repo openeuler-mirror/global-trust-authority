@@ -23,6 +23,14 @@ use openssl::sign::{Verifier, RsaPssSaltlen};
 use plugin_manager::PluginError;
 use crate::structure::AlgorithmId;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SignatureType {
+    Rsa,
+    RsaPss,
+    Ecdsa,
+    Sm2,
+}
+
 pub struct CryptoVerifier;
 
 impl CryptoVerifier {
@@ -52,87 +60,32 @@ impl CryptoVerifier {
         }
     }
 
-    pub fn verify_rsa_signature(
-        data: &[u8],
-        signature: &[u8], 
-        hash_alg: MessageDigest,
-        public_key: &PKey<Public>
-    ) -> Result<(), PluginError> {
-        let mut verifier = Verifier::new(hash_alg, public_key)
-            .map_err(|e| PluginError::InternalError(
-                format!("Failed to create verifier: {}", e)
-            ))?;
-        
-        verifier.update(data)
-            .map_err(|e| PluginError::InternalError(
-                format!("Failed to update verifier: {}", e)
-            ))?;
-        
-        let result = verifier.verify(signature)
-            .map_err(|e| PluginError::InternalError(
-                format!("RSA signature verification failed with error: {}", e)
-            ))?;
-            
-        if !result {
-            return Err(PluginError::InputError(
-                "RSA signature verification failed - signature does not match data".to_string()
-            ));
-        }
-        
-        Ok(())
-    }
-
-    pub fn verify_rsapss_signature(
+    /// Generic signature verification method
+    pub fn verify_signature(
         data: &[u8],
         signature: &[u8],
         hash_alg: MessageDigest,
-        public_key: &PKey<Public>
+        public_key: &PKey<Public>,
+        sig_type: SignatureType,
     ) -> Result<(), PluginError> {
         let mut verifier = Verifier::new(hash_alg, public_key)
             .map_err(|e| PluginError::InternalError(
                 format!("Failed to create verifier: {}", e)
             ))?;
         
-        verifier.set_rsa_padding(Padding::PKCS1_PSS)
-            .map_err(|e| PluginError::InternalError(
-                format!("Failed to set PSS padding: {}", e)
-            ))?;
-        
-        verifier.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
-            .map_err(|e| PluginError::InternalError(
-                format!("Failed to set salt length: {}", e)
-            ))?;
-        
-        verifier.update(data)
-            .map_err(|e| PluginError::InternalError(
-                format!("Failed to update verifier: {}", e)
-            ))?;
-        
-        let result = verifier.verify(signature)
-            .map_err(|e| PluginError::InternalError(
-                format!("RSA-PSS signature verification failed: {}", e)
-            ))?;
+        // Set specific parameters based on signature type
+        if sig_type == SignatureType::RsaPss {
+            verifier.set_rsa_padding(Padding::PKCS1_PSS)
+                .map_err(|e| PluginError::InternalError(
+                    format!("Failed to set PSS padding: {}", e)
+                ))?;
             
-        if !result {
-            return Err(PluginError::InputError(
-                "RSA-PSS signature verification failed - signature does not match data".to_string()
-            ));
+            verifier.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
+                .map_err(|e| PluginError::InternalError(
+                    format!("Failed to set salt length: {}", e)
+                ))?;
         }
         
-        Ok(())
-    }
-
-    pub fn verify_ecdsa_signature(
-        data: &[u8],
-        signature: &[u8],
-        hash_alg: MessageDigest,
-        public_key: &PKey<Public>
-    ) -> Result<(), PluginError> {
-        let mut verifier = Verifier::new(hash_alg, public_key)
-            .map_err(|e| PluginError::InternalError(
-                format!("Failed to create verifier: {}", e)
-            ))?;
-        
         verifier.update(data)
             .map_err(|e| PluginError::InternalError(
                 format!("Failed to update verifier: {}", e)
@@ -140,12 +93,12 @@ impl CryptoVerifier {
         
         let result = verifier.verify(signature)
             .map_err(|e| PluginError::InternalError(
-                format!("ECDSA signature verification failed with error: {}", e)
+                format!("{:?} signature verification failed with error: {}", sig_type, e)
             ))?;
             
         if !result {
             return Err(PluginError::InputError(
-                "ECDSA signature verification failed - signature does not match data".to_string()
+                format!("{:?} signature verification failed - signature does not match data", sig_type)
             ));
         }
         

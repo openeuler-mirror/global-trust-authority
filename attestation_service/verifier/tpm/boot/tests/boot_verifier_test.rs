@@ -41,7 +41,7 @@ fn create_host_functions_with_cert_validation(validation_result: bool) -> Servic
 fn update_log_data(evidence_json: &mut Value, log_data: &str) -> Result<(), String> {
     if let Some(logs) = evidence_json["evidence"]["logs"].as_array_mut() {
         if let Some(log) = logs.get_mut(0) {
-            log["log_type"] = serde_json::Value::String("tpm_boot".to_string());
+            log["log_type"] = serde_json::Value::String("TcgEventLog".to_string());
             log["log_data"] = serde_json::Value::String(log_data.to_string());
             return Ok(());
         }
@@ -82,7 +82,7 @@ async fn test_tpm_boot_plugin_with_valid_evidence() {
 
     if let Some(logs) = evidence_json["evidence"]["logs"].as_array_mut() {
         if let Some(log) = logs.get_mut(0) {
-            log["log_type"] = serde_json::Value::String("tpm_boot".to_string());
+            log["log_type"] = serde_json::Value::String("TcgEventLog".to_string());
             log["log_data"] = serde_json::Value::String(base64_content);
         }
     }
