@@ -241,10 +241,10 @@
 **Request Method**: `GET /global-trust-authority/v1/service/ref_value`
 
 ##### Request Parameters
-| Field | Sub-field | Type | Required | parameter constraint | Description |
-|-------|-----------|------|----------|-------------|-------------|
-| type | | string | Yes | tpm_ima | Query baseline for specified purpose |
-| ids | | Array[string] | Yes | Length 1-32 characters | Baseline name, if empty, input 10 |
+| Field         | Sub-field | Type | Required | parameter constraint | Description |
+|---------------|-----------|------|----------|-------------|-------------|
+| attester_type | | string | Yes | tpm_ima | Query baseline for specified purpose |
+| ids           | | Array[string] | Yes | Length 1-32 characters | Baseline name, if empty, input 10 |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
@@ -813,10 +813,10 @@ When content_type is jwt, jwt content:
 **Request Method**: `GET /global-trust-authority/v1/service/policy`
 
 ##### Request Parameters
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| ids | List of String | No | Policy IDs maximum 10, error if exceeding maximum message limit |
-| type | string | No | Policy type |
+| Field         | Type | Required | Description |
+|---------------|------|----------|-------------|
+| ids           | List of String | No | Policy IDs maximum 10, error if exceeding maximum message limit |
+| attester_type | string | No | Policy type |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
