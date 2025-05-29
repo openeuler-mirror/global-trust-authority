@@ -20,7 +20,7 @@ use openssl::ecdsa::EcdsaSig;
 use openssl::bn::BigNum;
 use plugin_manager::PluginError;
 use crate::structure::{TpmsAttest, TpmtSignature, SignatureData, Tpm2SignatureAlgID, AlgorithmId};
-use crate::crypto_utils::CryptoVerifier;
+use crate::crypto_utils::{CryptoVerifier, SignatureType};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QuoteVerifier {
@@ -88,40 +88,45 @@ impl QuoteVerifier {
     }
 
     pub fn verify_signature(&self, quote_data: &Vec<u8>, public_ak: &PKey<Public>) -> Result<(), PluginError> {
-        // Choose appropriate verification method according to signature algorithm
-        match &self.signature.signature {
+        // 1. Get signature type
+        let sig_type = self.get_signature_type()?;
+
+        // 2. Get hash algorithm and signature data based on signature data type
+        let (hash_alg, signature_data) = match &self.signature.signature {
             SignatureData::RsaSignature(rsa) => {
-                let hash_alg = match CryptoVerifier::algorithm_to_message_digest(&rsa.hash) {
-                    Ok(h) => h,
-                    Err(e) => return Err(PluginError::InputError(format!("Unsupported hash algorithm: {}", e))),
-                };
-                
-                match self.signature.sig_alg {
-                    Tpm2SignatureAlgID::Rsa | Tpm2SignatureAlgID::RsaSsa => {
-                        CryptoVerifier::verify_rsa_signature(quote_data, &rsa.signature, hash_alg, public_ak)?;
-                    },
-                    Tpm2SignatureAlgID::RsaPss => {
-                        CryptoVerifier::verify_rsapss_signature(quote_data, &rsa.signature, hash_alg, public_ak)?;
-                    },
-                    _ => return Err(PluginError::InputError(format!("Unsupported RSA signature algorithm: {:?}",
-                        self.signature.sig_alg))),
-                }
+                let hash_alg = self.get_hash_algorithm_from_signature(&rsa.hash)?;
+                (hash_alg, rsa.signature.clone())
             },
             SignatureData::EccSignature(ecc) => {
-                let hash_alg = match CryptoVerifier::algorithm_to_message_digest(&ecc.hash) {
-                    Ok(h) => h,
-                    Err(e) => return Err(PluginError::InputError(format!("Unsupported hash algorithm: {}", e))),
-                };
-                
+                let hash_alg = self.get_hash_algorithm_from_signature(&ecc.hash)?;
                 let der_signature = self.convert_ecdsa_to_der(&ecc.signature_r, &ecc.signature_s)
-                    .map_err(|e| PluginError::InputError(format!("Failed to convert ECDSA signature to DER format: {}",
-                        e)))?;
-                
-                CryptoVerifier::verify_ecdsa_signature(quote_data, &der_signature, hash_alg, public_ak)
-                    .map_err(|e| PluginError::InputError(format!("ECDSA signature verification failed: {}", e)))?;
+                    .map_err(|e| PluginError::InputError(format!("Failed to convert ECDSA signature to DER format: {}", e)))?;
+                (hash_alg, der_signature)
             }
-        }
+        };
+
+        // 3. Execute signature verification
+        CryptoVerifier::verify_signature(quote_data, &signature_data, hash_alg, public_ak, sig_type)
+            .map_err(|e| PluginError::InputError(format!("{:?} signature verification failed: {}", sig_type, e)))?;
+
         Ok(())
+    }
+
+    /// Get corresponding SignatureType from signature algorithm ID
+    fn get_signature_type(&self) -> Result<SignatureType, PluginError> {
+        match self.signature.sig_alg {
+            Tpm2SignatureAlgID::Rsa | Tpm2SignatureAlgID::RsaSsa => Ok(SignatureType::Rsa),
+            Tpm2SignatureAlgID::RsaPss => Ok(SignatureType::RsaPss),
+            Tpm2SignatureAlgID::Ecdsa | Tpm2SignatureAlgID::Ecdaa => Ok(SignatureType::Ecdsa),
+            Tpm2SignatureAlgID::Sm2 => Ok(SignatureType::Sm2),
+            _ => Err(PluginError::InputError(format!("Unsupported signature algorithm: {:?}", self.signature.sig_alg))),
+        }
+    }
+
+    /// Get OpenSSL MessageDigest from algorithm ID
+    fn get_hash_algorithm_from_signature(&self, alg: &AlgorithmId) -> Result<openssl::hash::MessageDigest, PluginError> {
+        CryptoVerifier::algorithm_to_message_digest(alg)
+            .map_err(|e| PluginError::InputError(format!("Unsupported hash algorithm: {}", e)))
     }
 
     fn convert_ecdsa_to_der(&self, r: &[u8], s: &[u8]) -> Result<Vec<u8>, &'static str> {

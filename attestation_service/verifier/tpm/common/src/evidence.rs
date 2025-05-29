@@ -179,7 +179,7 @@ impl Evidence {
         }
     }
 
-    fn parse_certificate(&self) -> Result<X509, PluginError> {
+    fn parse_ak_certificate(&self) -> Result<X509, PluginError> {
         // 1. Try standard PEM format
         if let Ok(cert) = X509::from_pem(self.ak_cert.as_bytes()) {
             return Ok(cert);
@@ -308,7 +308,7 @@ impl Evidence {
         }
 
         // Parse AK certificate
-        let ak_cert = self.parse_certificate()?;
+        let ak_cert = self.parse_ak_certificate()?;
 
         // Check if node_id exists
         if let Some(node_id) = node_id {

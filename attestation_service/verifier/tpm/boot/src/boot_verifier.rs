@@ -107,10 +107,12 @@ impl GenerateEvidence for TpmBootPlugin {
     ) -> Result<Value, PluginError> {
         // Check if logs is empty or has more than one log. Just support one log for now.
         if logs.is_empty() || logs.len() > 1 {
-            return Err(PluginError::InputError("No logs found".to_string()));
+            return Err(PluginError::InputError(
+                format!("Expected exactly one log, but found {}", logs.len())
+            ));
         }
 
-        let pcr_digest_algorithm: String = pcr_values.get_pcr_digest_algorithm();
+        let pcr_digest_algorithm: &str = pcr_values.get_pcr_digest_algorithm();
         let log_data: &Logs = logs
             .first()
             .ok_or_else(|| PluginError::InputError("Failed to get log data".to_string()))?;
@@ -124,7 +126,7 @@ impl GenerateEvidence for TpmBootPlugin {
         // Parse event log
         let mut event_data = EventLog::new(&log_data.log_data);
         if let Err(e) = event_data
-            .with_algorithm(pcr_digest_algorithm.as_str())
+            .with_algorithm(pcr_digest_algorithm)
             .with_pcr_values(pcr_values_mutex.clone())
             .parse_event_log() {
             return Err(PluginError::InputError(format!("Failed to parse event log: {}", e)));

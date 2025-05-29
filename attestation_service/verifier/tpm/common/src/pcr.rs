@@ -27,15 +27,8 @@ pub struct PcrValueEntry {
     pub is_matched: Option<bool>,  // Verification result
 }
 
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub struct PcrBank {
-//     pub hash_alg: String,
-//     pub pcr_values: Vec<PcrValueEntry>, 
-// }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PcrValues {
-    // #[serde(rename = "pcrs")]
     pub hash_alg: String,
     pub pcr_values: Vec<PcrValueEntry>, 
 }
@@ -149,12 +142,6 @@ impl PcrValues {
         // Check if the hash algorithm used for verification is consistent
         let quote_alg = quote_verifier.get_hash_algorithm().to_string();
 
-        if self.hash_alg.to_lowercase() != quote_alg.to_lowercase() {
-            return Err(PluginError::InputError(
-                format!("PCR value algorithm {} does not match Quote algorithm {}", self.hash_alg, quote_alg)
-            ));
-        }
-
         // Calculate PCR digest
         let calculated_digest = self.calculate_bank_digest()?;
 
@@ -168,24 +155,23 @@ impl PcrValues {
         }
     }
 
-    fn update_pcr_entry<F>(&mut self, index: u32, updater: F)
-        where F: FnOnce(&mut PcrValueEntry)
-    {
+    /// Update the replay value for a specific PCR index
+    ///
+    /// # Arguments
+    /// * `index` - PCR index to update
+    /// * `value` - New replay value to set
+    pub fn update_replay_value(&mut self, index: u32, value: String) {
         if let Some(entry) = self.pcr_values.iter_mut().find(|e| e.pcr_index == index) {
-            updater(entry);
+            entry.replay_value = Some(value);
         }
     }
 
-    pub fn update_replay_value(&mut self, index: u32, value: String) {
-        self.update_pcr_entry(index, |entry| entry.replay_value = Some(value));
-    }
-
-    pub fn update_is_matched(&mut self, index: u32, value: bool) {
-        self.update_pcr_entry(index, |entry| entry.is_matched = Some(value));
-    }
-
-    pub fn get_pcr_digest_algorithm(&self) -> String {
-        self.hash_alg.clone()
+    /// Get the PCR digest algorithm used by this PCR bank
+    ///
+    /// # Returns
+    /// * `&str` - Hash algorithm name (e.g., "sha256", "sm3")
+    pub fn get_pcr_digest_algorithm(&self) -> &str {
+        &self.hash_alg
     }
 
     pub fn get_pcr_digest(&self, index: u32) -> Result<String, PluginError> {
