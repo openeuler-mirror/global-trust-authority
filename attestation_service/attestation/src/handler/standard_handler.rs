@@ -180,38 +180,27 @@ impl StandardHandler {
         policy_ids: Option<&Vec<String>>,
         attester_type: &str,
     ) -> Result<(Vec<bool>, Vec<PolicyInfo>), AttestationError> {
-        let mut verify_results = Vec::new();
-        let mut evaluate_results = Vec::new();
-
+        let mut policy_id_list: Vec<String> = Vec::new();
         if let Some(ids) = policy_ids {
-            info!("Start evaluating custom policies, policy_ids: {:?}", ids);
-            let (custom_verify_results, custom_evaluate_results) =
-                Self::evaluate_custom_policies(verify_evidence, ids).await?;
-            verify_results.extend(custom_verify_results);
-            evaluate_results = custom_evaluate_results;
+            policy_id_list = ids.clone();
         } else {
-            // If no policy_ids provided, use default policies
             info!("No policy_ids provided, using default policies for attester_type: {}", attester_type);
             let db_connection = get_connection().await.unwrap();
             match query_policy::get_default_policies_by_type(&db_connection, attester_type.to_string()).await {
                 Ok(default_policies) => {
                     if !default_policies.is_empty() {
-                        let default_policy_ids: Vec<String> = default_policies.iter().map(|p| p.id.clone()).collect();
-                        info!("Found default policies for attester_type {}, policy_ids: {:?}", attester_type, default_policy_ids);
-                        let (custom_verify_results, custom_evaluate_results) =
-                            Self::evaluate_custom_policies(verify_evidence, &default_policy_ids).await?;
-                        verify_results.extend(custom_verify_results);
-                        evaluate_results = custom_evaluate_results;
+                        policy_id_list = default_policies.iter().map(|p| p.id.clone()).collect();
                     } else {
                         info!("No default policies found for attester_type: {}", attester_type);
                     }
                 },
                 Err(e) => {
                     error!("Failed to get default policies for attester_type {}: {}", attester_type, e);
+                    return Err(AttestationError::DatabaseError(e.to_string()))
                 }
             }
         }
-
+        let (verify_results, evaluate_results) = Self::evaluate_custom_policies(verify_evidence, &policy_id_list).await?;
         Ok((verify_results, evaluate_results))
     }
 
