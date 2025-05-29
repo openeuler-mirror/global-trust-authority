@@ -19,4 +19,4 @@ plugin_manager = { path = "../../plugin_manager" }
 tpm_common_attester = { path = "../attester/tpm/common" }
 tpm_boot_attester = { path = "../attester/tpm/boot" }
 tpm_ima_attester = { path = "../attester/tpm/ima" }
-agent_utils = { path = "../utils" }
+agent_utils = { path = "../utils", features = ["client"] }

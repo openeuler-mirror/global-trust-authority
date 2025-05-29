@@ -58,15 +58,17 @@ plugins:
 schedulers:
   - name: "challenge"
     retry_enabled: true
-    cron_expression: "*/10 * * * * *"
+    intervals: 10
     initial_delay:
       min_seconds: 1
       max_seconds: 60
     max_retries: 1
+    enabled: true
 
   - name: "config_sync"
     retry_enabled: false
-    cron_expression: "0 */5 * * * *"
+    intervals: 5
+    enabled: false
 logging:
   level: "info"
   file: "/home/log/agent.log"

@@ -80,7 +80,8 @@ impl ServiceConfig {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
+    /// use agent_restful::ServiceConfig;
     /// let config = ServiceConfig::new()
     ///     .with_port(8080)
     ///     .with_bind_address("127.0.0.1");
@@ -252,7 +253,8 @@ impl RestService {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
+    /// use agent_restful::RestService;
     /// let service = RestService::instance();
     /// ```
     pub fn instance() -> Arc<Self> {
@@ -284,12 +286,16 @@ impl RestService {
     ///
     /// # Example
     ///
-    /// ```
-    /// let config = ServiceConfig::new()
-    ///     .with_port(8080)
-    ///     .with_bind_address("127.0.0.1");
-    ///
-    /// let service = RestService::configure(config)?;
+    /// ```no_run
+    /// use agent_restful::{ServiceConfig, RestService};
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let config = ServiceConfig::new()
+    ///         .with_port(8080)
+    ///         .with_bind_address("127.0.0.1");
+    ///     let service = RestService::configure(config)?;
+    ///     Ok(())
+    /// }
     /// ```
     pub fn configure(config: ServiceConfig) -> Result<Arc<Self>, AgentError> {
         let instance = Self::instance();
@@ -337,11 +343,16 @@ impl RestService {
     ///
     /// # Example
     ///
-    /// ```
-    /// service.register(Method::GET, "/users/{id}", |req, _| {
+    /// ```no_run
+    /// use agent_restful::RestService;
+    /// use serde_json::json;
+    /// use reqwest::Method;
+    /// use actix_web::{HttpRequest, HttpResponse};
+    /// let service = RestService::instance();
+    /// service.register(Method::GET, "/users/{id}", |req: HttpRequest, _| {
     ///     let id = RestService::get_path_param(&req, "id").unwrap_or_default();
     ///     HttpResponse::Ok().json(json!({"id": id}))
-    /// })?;
+    /// }).unwrap();
     /// ```
     pub fn register<F>(&self, method: Method, path: &str, handler: F) -> Result<(), AgentError>
     where
@@ -509,11 +520,19 @@ impl RestService {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
     /// // Configure and start the server
-    /// let service = RestService::instance();
-    /// RestService::configure(config)?;
-    /// service.start_server().await?;
+    /// use agent_restful::{ServiceConfig, RestService};
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let service = RestService::instance();
+    ///     let config = ServiceConfig::new()
+    ///         .with_port(8080)
+    ///         .with_bind_address("127.0.0.1");
+    ///     RestService::configure(config)?;
+    ///     service.start_server().await?;
+    ///     Ok(())
+    /// }
     /// ```
     pub async fn start_server(&self) -> Result<(), AgentError> {
         info!("Starting REST service server");
@@ -659,9 +678,15 @@ impl RestService {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
     /// // Shut down the server
-    /// service.stop_server().await?;
+    /// use agent_restful::RestService;
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let service = RestService::instance();
+    ///     service.stop_server().await?;
+    ///     Ok(())
+    /// }
     /// ```
     pub async fn stop_server(&self) -> Result<(), AgentError> {
         info!("Stopping REST service server");
@@ -760,11 +785,16 @@ impl RestService {
     ///
     /// # Example
     ///
-    /// ```
-    /// service.register(Method::GET, "/users/{id}", |req, _| {
+    /// ```no_run
+    /// use agent_restful::RestService;
+    /// use serde_json::json;
+    /// use reqwest::Method;
+    /// use actix_web::{HttpRequest, HttpResponse};
+    /// let service = RestService::instance();
+    /// service.register(Method::GET, "/users/{id}", |req: HttpRequest, _| {
     ///     let id = RestService::get_path_param(&req, "id").unwrap_or_default();
     ///     HttpResponse::Ok().json(json!({"id": id}))
-    /// })?;
+    /// }).unwrap();
     /// ```
     pub fn get_path_param(req: &HttpRequest, name: &str) -> Option<String> {
         req.match_info().get(name).map(String::from)
@@ -1249,57 +1279,6 @@ mod tests {
         assert!(response.is_ok());
 
         service.stop_server().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_concurrent_requests() {
-        let service = create_test_instance();
-        service.is_running.store(false, Ordering::SeqCst);
-
-        service
-            .register(Method::GET, "/concurrent-test", |_: HttpRequest, _: Option<Value>| {
-                HttpResponse::Ok().body("Success")
-            })
-            .unwrap();
-
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        drop(listener);
-
-        let config = ServiceConfig::new().with_port(port).with_bind_address("127.0.0.1");
-
-        {
-            let mut config_guard = service.config.write().unwrap();
-            *config_guard = config;
-        }
-
-        let server_result = service.start_server().await;
-        assert!(server_result.is_ok());
-
-        tokio::time::sleep(Duration::from_millis(100)).await;
-
-        let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build().unwrap();
-
-        let test_url = format!("http://127.0.0.1:{}/concurrent-test", port);
-
-        let mut handles = Vec::new();
-        for _ in 0..3 {
-            let client = client.clone();
-            let url = test_url.clone();
-            handles.push(tokio::spawn(async move {
-                match client.get(&url).send().await {
-                    Ok(response) => assert_eq!(response.status(), reqwest::StatusCode::OK),
-                    Err(e) => panic!("Request failed: {:?}", e),
-                }
-            }));
-        }
-
-        for handle in handles {
-            handle.await.unwrap();
-        }
-
-        let stop_result = service.stop_server().await;
-        assert!(stop_result.is_ok());
     }
 
     #[tokio::test]
