@@ -11,7 +11,7 @@
  */
 
 // Re-export all modules
-mod plugin;
+mod attester;
 
 // Public exports
-pub use plugin::TpmImaPlugin;
+pub use attester::TpmImaPlugin;

@@ -11,11 +11,11 @@
  */
 
 // Re-export all modules
-mod base_plugin;
+mod base_attester;
 mod config;
 mod entity;
 
 // Public exports
-pub use base_plugin::TpmPluginBase;
+pub use base_attester::TpmPluginBase;
 pub use config::TpmPluginConfig;
 pub use entity::{Log, Evidence, Quote, Pcrs, PcrValue};
