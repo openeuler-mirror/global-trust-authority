@@ -110,8 +110,8 @@ fn test_collect_evidence_impl() {
     assert_eq!(evidence_json["quote"]["signature"], "mock_signature");
     assert_eq!(evidence_json["pcrs"]["hash_alg"], "sha256");
     assert_eq!(evidence_json["pcrs"]["pcr_values"].as_array().unwrap().len(), 2);
-    assert_eq!(evidence_json["log"].as_array().unwrap().len(), 1);
-    assert_eq!(evidence_json["log"][0]["log_type"], "TcgEventLog");
+    assert_eq!(evidence_json["logs"].as_array().unwrap().len(), 1);
+    assert_eq!(evidence_json["logs"][0]["log_type"], "TcgEventLog");
     
     // Test with missing node_id
     let result = plugin.collect_evidence(None, Some("123456".as_bytes()));

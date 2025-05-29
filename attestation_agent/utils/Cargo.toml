@@ -17,6 +17,6 @@ plugin_manager = { path = "../../plugin_manager" }
 
 [features]
 default = ["errors"]
-errors = []
+errors = ["log"]
 validate = ["errors", "validator", "regex"]
-client = ["log", "reqwest", "errors", "validate", "once_cell", "serde_json", "openssl"]
+client = ["reqwest", "errors", "validate", "once_cell", "serde_json", "openssl"]

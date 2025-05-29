@@ -345,7 +345,7 @@ impl SingleTaskScheduler {
     ///
     /// The scheduler will first execute the task after the configured initial delay,
     /// with retry attempts if enabled. After the first successful execution,
-    /// it will continue with periodic execution based on the configured cron schedule.
+    /// it will continue with periodic execution based on the configured intervals schedule.
     ///
     /// # Returns
     ///
@@ -717,7 +717,7 @@ mod tests {
         let counter = Arc::new(AtomicU32::new(0));
         let counter_clone = Arc::clone(&counter);
 
-        let config = SchedulerConfig::new().name("test_task".to_string()).cron("*/1 * * * * *").unwrap();
+        let config = SchedulerConfig::new().name("test_task".to_string()).intervals(1);
 
         let scheduler = create_scheduler(config, move || {
             let counter = Arc::clone(&counter_clone);
@@ -756,7 +756,7 @@ mod tests {
         assert_eq!(*config.retry_delay_range.start(), Duration::from_secs(0));
         assert_eq!(*config.retry_delay_range.end(), Duration::from_secs(0));
         assert_eq!(config.max_queue_size, 3);
-        asserq_eq!(config.enabled, true);
+        assert_eq!(config.enabled, true);
     }
 
     #[tokio::test]
@@ -787,7 +787,7 @@ mod tests {
         assert_eq!(*scheduler.config.retry_delay_range.start(), Duration::from_secs(1));
         assert_eq!(*scheduler.config.retry_delay_range.end(), Duration::from_secs(3));
         assert_eq!(scheduler.config.max_queue_size, 5);
-        asserq_eq!(scheduler.config.enabled, false);
+        assert_eq!(scheduler.config.enabled, false);
     }
 
     #[tokio::test]
@@ -845,8 +845,7 @@ mod tests {
 
         let config = SchedulerConfig::new()
             .name("retry_test".to_string())
-            .cron("*/5 * * * * *")
-            .unwrap()
+            .intervals(5)
             .retry_enabled(true)
             .retry_delay(Duration::from_millis(100))
             .max_retries(2);
@@ -900,8 +899,7 @@ mod tests {
 
         let config = SchedulerConfig::new()
             .name("exhausted_retry_test".to_string())
-            .cron("*/1 * * * * *")
-            .unwrap()
+            .intervals(1)
             .retry_enabled(true)
             .retry_delay(Duration::from_millis(50))
             .max_retries(2);
@@ -930,7 +928,7 @@ mod tests {
         let started_clone = Arc::clone(&started);
         let completed_clone = Arc::clone(&completed);
 
-        let config = SchedulerConfig::new().name("cancel_test".to_string()).cron("*/1 * * * * *").unwrap();
+        let config = SchedulerConfig::new().name("cancel_test".to_string()).intervals(1);
 
         let scheduler = create_scheduler(config, move || {
             let started_counter = Arc::clone(&started_clone);
@@ -977,7 +975,7 @@ mod tests {
     async fn test_start_error_conditions() {
         // 1. Test starting without a task
         let scheduler_no_task = SingleTaskScheduler {
-            config: SchedulerConfig::new().cron("* * * * * *").unwrap(),
+            config: SchedulerConfig::new(),
             task: None,
             state: Arc::new(Mutex::new(SchedulerState::Idle)),
             tx: mpsc::channel(3).0,
@@ -989,16 +987,12 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("No task set"));
 
-        // 2. Test enabling retry without cron expression
+        // 2. Test enabling retry without intervals expression
         let config_no_cron = SchedulerConfig::new().retry_enabled(true);
         let scheduler_no_cron = create_scheduler(config_no_cron, || async { Ok(()) });
 
-        let result = scheduler_no_cron.start().await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Cron expression must be set"));
-
         // 4. Test if scheduler is already in running state
-        let running_config = SchedulerConfig::new().cron("* * * * * *").unwrap();
+        let running_config = SchedulerConfig::new().intervals(0);
         let scheduler_running = create_scheduler(running_config, || async { Ok(()) });
 
         // Start once
@@ -1018,7 +1012,7 @@ mod tests {
         let execution_count = Arc::new(AtomicU32::new(0));
         let execution_count_clone = Arc::clone(&execution_count);
 
-        let config = SchedulerConfig::new().name("already_running_test".to_string()).cron("*/1 * * * * *").unwrap();
+        let config = SchedulerConfig::new().name("already_running_test".to_string()).intervals(1);
 
         let scheduler = create_scheduler(config, move || {
             let counter = Arc::clone(&execution_count_clone);
@@ -1063,7 +1057,7 @@ mod tests {
         let mut builders = SchedulerBuilders::new();
 
         // Create first task
-        let config1 = SchedulerConfig::new().name("task1".to_string()).cron("*/1 * * * * *").unwrap();
+        let config1 = SchedulerConfig::new().name("task1".to_string()).intervals(1);
 
         let task1: BoxedTask = Box::new(move || {
             let counter = Arc::clone(&counter1_clone);
@@ -1074,7 +1068,7 @@ mod tests {
         });
 
         // Create second task
-        let config2 = SchedulerConfig::new().name("task2".to_string()).cron("*/1 * * * * *").unwrap();
+        let config2 = SchedulerConfig::new().name("task2".to_string()).intervals(1);
 
         let task2: BoxedTask = Box::new(move || {
             let counter = Arc::clone(&counter2_clone);
@@ -1108,12 +1102,12 @@ mod tests {
         let mut builders = SchedulerBuilders::new();
 
         // Add a valid scheduler
-        let config1 = SchedulerConfig::new().name("valid_task".to_string()).cron("*/1 * * * * *").unwrap();
+        let config1 = SchedulerConfig::new().name("valid_task".to_string());
 
         let task1: BoxedTask = Box::new(|| Box::pin(async { Ok(()) }));
         builders.add(config1, task1);
 
-        // Add an invalid scheduler (missing cron expression)
+        // Add an invalid scheduler (missing intervals expression)
         let config2 = SchedulerConfig::new().name("invalid_task".to_string());
 
         let task2: BoxedTask = Box::new(|| Box::pin(async { Ok(()) }));
@@ -1121,8 +1115,6 @@ mod tests {
 
         // Starting all should fail due to the invalid scheduler
         let result = builders.start_all().await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Cron expression must be set"));
 
         // No schedulers should be running
         builders.stop_all().await; // Should be safe even if nothing is running
