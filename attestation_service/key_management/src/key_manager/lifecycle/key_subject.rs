@@ -142,8 +142,6 @@ impl KeyLifecycle for KeySubject {
                 panic!("The key data version is incorrect, and the service failed to start");
             }
             let key_store = KeyStore::global();
-            let latest_version = key_store.get_latest_version("TSK").unwrap();
-            println!("KeySubject: latest_version: {}", latest_version);
             // Get distributed locks
             self.lock.acquire()?;
             info!("KeySubject: Acquired key rotation lock");
