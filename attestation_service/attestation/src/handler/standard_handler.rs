@@ -18,7 +18,7 @@ use config_manager::types::context::CONFIG;
 use common_log::{error, info};
 use nonce::nonce_interface::{validate_nonce, Nonce, ValidateNonceParams};
 use plugin_manager::{PluginManager, PluginManagerInstance, ServiceHostFunctions, ServicePlugin};
-use policy::policy_api::{get_export_policy::get_export_policy, get_policy_by_ids};
+use policy::policy_api::{get_export_policy::get_export_policy, get_policy_by_ids, query_policy};
 use policy_engine::evaluate_policy;
 use rdb::get_connection;
 use token_management::token_manager::TokenManager;
@@ -173,6 +173,38 @@ impl StandardHandler {
                 Err(AttestationError::PolicyVerificationError(e.to_string()))
             },
         }
+    }
+
+    pub async fn evaluate_policies(
+        verify_evidence: &serde_json::Value,
+        policy_ids: Option<&Vec<String>>,
+        attester_type: &str,
+    ) -> Result<(Vec<bool>, Vec<PolicyInfo>), AttestationError> {
+        let mut policy_id_list: Vec<String> = Vec::new();
+        if let Some(ids) = policy_ids {
+            policy_id_list = ids.clone();
+        } else {
+            info!("No policy_ids provided, using default policies for attester_type: {}", attester_type);
+            let db_connection = get_connection().await.map_err(|e| {
+                error!("Failed to get database connection: {}", e);
+                AttestationError::DatabaseError(e.to_string())
+            })?;
+            match query_policy::get_default_policies_by_type(&db_connection, attester_type.to_string()).await {
+                Ok(default_policies) => {
+                    if !default_policies.is_empty() {
+                        policy_id_list = default_policies.iter().map(|p| p.id.clone()).collect();
+                    } else {
+                        info!("No default policies found for attester_type: {}", attester_type);
+                    }
+                },
+                Err(e) => {
+                    error!("Failed to get default policies for attester_type {}: {}", attester_type, e);
+                    return Err(AttestationError::DatabaseError(e.to_string()))
+                }
+            }
+        }
+        let (verify_results, evaluate_results) = Self::evaluate_custom_policies(verify_evidence, &policy_id_list).await?;
+        Ok((verify_results, evaluate_results))
     }
 
     pub async fn evaluate_custom_policies(

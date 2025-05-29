@@ -15,8 +15,7 @@ use crate::error::ref_value_error::RefValueError;
 use cache::client::RedisClient;
 use redis;
 use redis::AsyncCommands;
-use std::collections::{HashMap, HashSet};
-use log::info;
+use std::collections::HashMap;
 
 pub struct RvRedisRepo {}
 
@@ -28,9 +27,8 @@ impl RvRedisRepo {
 
         for model in models {
             let key = model.user_id.clone() + ":" + &model.attester_type + ":" + &model.sha256;
-            // 存储主数据
             pipe.hset_multiple(
-                key,
+                key.clone(),
                 &[
                     ("file_name", &model.file_name),
                     ("user_id", &model.user_id),
@@ -39,10 +37,9 @@ impl RvRedisRepo {
                     ("sha256", &model.sha256),
                 ],
             )
-                // 建立索引
-                .sadd(format!("idx:user:{}", model.user_id), &model.sha256)
-                .sadd(format!("idx:type:{}", model.attester_type), &model.sha256)
-                .sadd(format!("idx:rv:{}", model.rv_id), &model.sha256);
+                .sadd(format!("idx:user:{}", model.user_id), &key)
+                .sadd(format!("idx:type:{}", model.attester_type), &key)
+                .sadd(format!("idx:rv:{}", model.rv_id), &key);
         }
         pipe.query_async(&mut conn).await.map_err(|e| RefValueError::DbError(e.to_string()))?;
 
@@ -59,15 +56,13 @@ impl RvRedisRepo {
         let mut pipe = redis::pipe();
 
 
-        // 1. 构建批量查询管道
         for key in &sha256_list {
             let act_key = user_id.to_string() + ":" + &attester_type + ":" + key;
             pipe.hget(act_key, "sha256");
         }
         let values: Vec<Option<String>> = pipe.query_async(&mut conn).await
             .map_err(|e| RefValueError::DbError(e.to_string()))?;
-        
-        // 3. 反序列化结果
+
         let mut result = Vec::new();
         
         for value in values {
@@ -81,7 +76,6 @@ impl RvRedisRepo {
 
     pub async fn batch_delete_by_rv_id(rv_ids: Vec<String>) -> Result<(), RefValueError> {
         for rv_id in rv_ids {
-            // 1. 获取所有关联 ID（通过反向索引）
             Self::delete_by_index(format!("idx:rv:{}", rv_id)).await?;
         }
 
@@ -118,7 +112,6 @@ impl RvRedisRepo {
             return Ok(());
         }
 
-        // 获取所有文件的关联索引信息
         let mut indices = Vec::new();
         for meas in rvs {
             let (user_id, attester_type, rv_id): (Option<String>, Option<String>, Option<String>) =
@@ -135,13 +128,10 @@ impl RvRedisRepo {
             }
         }
 
-        // 批量删除操作
         let mut pipe = redis::pipe();
-        // 删除主数据
         for key in rvs {
             pipe.del(key);
         }
-        // 清理所有索引
         for (uid, t, r) in &indices {
             pipe.srem(format!("idx:user:{}", uid), rvs);
             pipe.srem(format!("idx:type:{}", t), rvs);

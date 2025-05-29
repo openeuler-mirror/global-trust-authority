@@ -66,19 +66,15 @@ impl AttestationService {
                 info!("Evidence verification completed");
                 // Evaluate export policy
                 let raw_evidence = StandardHandler::evaluate_export_policy(&verify_evidence, attester_type)?;
-                let mut verify_results = Vec::new();
-                let mut evaluate_results = Vec::new();
                 // Evaluate custom policies
-                if let Some(policy_ids) = &evidence.policy_ids {
-                    info!("Start evaluating custom policies, policy_ids: {:?}", policy_ids);
-                    let (custom_verify_results, custom_evaluate_results) =
-                        StandardHandler::evaluate_custom_policies(&verify_evidence, policy_ids).await?;
-                    verify_results.extend(custom_verify_results);
-                    evaluate_results = custom_evaluate_results;
-                }
+                let (custom_verify_results, custom_evaluate_results) = StandardHandler::evaluate_policies(
+                    &verify_evidence,
+                    evidence.policy_ids.as_ref(),
+                    &attester_type
+                ).await?;
                 // Create evidence response
                 let evidence_token_response =
-                    StandardHandler::create_evidence_response(verify_results, raw_evidence, evaluate_results);
+                    StandardHandler::create_evidence_response(custom_verify_results, raw_evidence, custom_evaluate_results);
                 evidence_token_responses.insert(attester_type.to_string(), evidence_token_response);
             }
             // Create attestation response
