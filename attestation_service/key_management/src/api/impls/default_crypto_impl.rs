@@ -1,27 +1,24 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
  * Global Trust Authority is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
+ * You can use this software according to the terms and conditions of the
+ * Mulan PSL v2. You may obtain a copy of Mulan PSL v2 at:
  *     http://license.coscl.org.cn/MulanPSL2
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
- * PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY
+ * KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+ * NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
 
 use common_log::info;
+
 use crate::api::crypto_operations::CryptoOperations;
-use crate::api::model::KeyInfoResp;
-use crate::api::model::SignResponse;
-use crate::api::model::VerifyAndUpdateResponse;
-use crate::api::model::VerifyAndUpdateResponseBuilder;
+use crate::api::model::{KeyInfoResp, SignResponse, VerifyAndUpdateResponse, VerifyAndUpdateResponseBuilder};
 use crate::config::{ConfigLoader, YamlConfigLoader};
 use crate::key_manager::algorithm::factory::algorithm_factory::create_algorithm;
 use crate::key_manager::cache::store::KeyStore;
 use crate::key_manager::error::KeyManagerError;
-use crate::key_manager::model::VerifyAndUpdateParam;
-use crate::key_manager::model::Version;
+use crate::key_manager::model::{VerifyAndUpdateParam, Version};
 
 #[derive(Debug)]
 pub struct DefaultCryptoImpl;
@@ -40,16 +37,14 @@ impl CryptoOperations for DefaultCryptoImpl {
 
     async fn sign(&self, data: &Vec<u8>, key_type: &str) -> Result<SignResponse, KeyManagerError> {
         let key_store = KeyStore::global();
-        let version = key_store.get_latest_version().unwrap();
+        let version = key_store.get_latest_version(key_type).unwrap();
         let key_pair = match key_store.get(key_type, version) {
             Some(key_pair) => key_pair,
             None => return Err(KeyManagerError::new(format!("No key found, version: {}", &version))),
         };
         let algorithm = create_algorithm(key_pair.algorithm.as_str()).unwrap();
 
-        let result = algorithm
-            .sign(&key_pair.private_key(), data.clone())
-            .unwrap();
+        let result = algorithm.sign(&key_pair.private_key(), data.clone()).unwrap();
         Ok(SignResponse::new(result, version.to_string()))
     }
 
@@ -59,86 +54,55 @@ impl CryptoOperations for DefaultCryptoImpl {
     ) -> Result<VerifyAndUpdateResponse, KeyManagerError> {
         let version = param.key_version.as_str();
         let key_store = KeyStore::global();
-        let max_version = key_store.get_latest_version().unwrap();
-        let verification_result = Self::verify(
-            self,
-            param.key_type.as_str(),
-            Some(version),
-            param.data.clone(),
-            param.signature.clone(),
-        )
-        .await;
+        let max_version = key_store.get_latest_version("FSK").unwrap();
+        let verification_result =
+            Self::verify(self, param.key_type.as_str(), Some(version), param.data.clone(), param.signature.clone())
+                .await;
         let is_verification_success = match verification_result {
             Ok(true) => true,
             Ok(false) => false,
             Err(e) => return Err(KeyManagerError::new(e.to_string())),
         };
         if !is_verification_success {
-            return Err(KeyManagerError::new(&format!(
-                "verify failed, version: {}",
-                &version
-            )));
+            return Err(KeyManagerError::new(&format!("verify failed, version: {}", &version)));
         }
         let need_update = Version::new(version) < Version::new(max_version);
         if need_update {
             let signature_resp = Self::sign(self, &param.data, param.key_type.as_str())
                 .await
-                .map_err(|e| {
-                    KeyManagerError::new(&format!(
-                        "sign failed, versoin: {}, err info: {}",
-                        &version, &e
-                    ))
-                })?;
-            return Ok(
-                VerifyAndUpdateResponseBuilder::new(is_verification_success, need_update)
-                    .key_version(max_version.to_string())
-                    .signature(signature_resp.signature)
-                    .build(),
-            );
+                .map_err(|e| KeyManagerError::new(&format!("sign failed, versoin: {}, err info: {}", &version, &e)))?;
+            return Ok(VerifyAndUpdateResponseBuilder::new(is_verification_success, need_update)
+                .key_version(max_version.to_string())
+                .signature(signature_resp.signature)
+                .build());
         }
         Ok(VerifyAndUpdateResponseBuilder::new(is_verification_success, need_update).build())
     }
 
-    async fn get_public_key(
-        &self,
-        key_type: &str,
-        version: Option<&str>,
-    ) -> Result<KeyInfoResp, KeyManagerError> {
+    async fn get_public_key(&self, key_type: &str, version: Option<&str>) -> Result<KeyInfoResp, KeyManagerError> {
         let key_store = KeyStore::global();
         // Bind temporary values to variables to extend their lifespan
-        let latest_version = key_store.get_latest_version().unwrap();
+        let latest_version = key_store.get_latest_version(key_type).unwrap();
         let version = version.unwrap_or(&latest_version);
         let key_pair = match key_store.get(key_type, version) {
             Some(key_pair) => key_pair,
             None => return Err(KeyManagerError::new(format!("No key found, version: {}", &version))),
         };
         let public_key = key_pair.public_key().public_key_to_pem().unwrap();
-        Ok(KeyInfoResp::new(
-            public_key.clone(),
-            version.to_string(),
-            key_pair.algorithm.clone(),
-        ))
+        Ok(KeyInfoResp::new(public_key.clone(), version.to_string(), key_pair.algorithm.clone()))
     }
 
-    async fn get_private_key(
-        &self,
-        key_type: &str,
-        version: Option<&str>,
-    ) -> Result<KeyInfoResp, KeyManagerError> {
+    async fn get_private_key(&self, key_type: &str, version: Option<&str>) -> Result<KeyInfoResp, KeyManagerError> {
         let key_store = KeyStore::global();
         // Bind temporary values to variables to extend their lifespan
-        let latest_version = key_store.get_latest_version().unwrap();
+        let latest_version = key_store.get_latest_version(key_type).unwrap();
         let version = version.unwrap_or(&latest_version);
         let key_pair = match key_store.get(key_type, version) {
             Some(key_pair) => key_pair,
             None => return Err(KeyManagerError::new(format!("No key found, version: {}", &version))),
         };
         let private_key = key_pair.private_key().private_key_to_pem_pkcs8().unwrap();
-        Ok(KeyInfoResp::new(
-            private_key.clone(),
-            version.to_string(),
-            key_pair.algorithm.clone(),
-        ))
+        Ok(KeyInfoResp::new(private_key.clone(), version.to_string(), key_pair.algorithm.clone()))
     }
 
     async fn verify(
@@ -149,7 +113,7 @@ impl CryptoOperations for DefaultCryptoImpl {
         signature: Vec<u8>,
     ) -> Result<bool, KeyManagerError> {
         let key_store = KeyStore::global();
-        let max_version = key_store.get_latest_version().unwrap();
+        let max_version = key_store.get_latest_version(key_type).unwrap();
         let key_version = key_version.unwrap_or(max_version);
         let key_pair = match key_store.get(key_type, key_version) {
             Some(key_pair) => key_pair,
@@ -165,12 +129,13 @@ impl CryptoOperations for DefaultCryptoImpl {
 #[allow(warnings)]
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::key_manager::cache::entity::key_pair::KeyPair;
     use once_cell::sync::OnceCell;
     use openssl::rsa::Rsa;
     use serial_test::serial;
     use tokio::io::AsyncWriteExt;
+
+    use super::*;
+    use crate::key_manager::cache::entity::key_pair::KeyPair;
 
     // Helper function to generate test key pairs
     fn generate_key_pair(algorithm: &str) -> KeyPair {
@@ -194,7 +159,7 @@ mod tests {
 
         unsafe {
             let store_ptr = store as *const KeyStore as *mut KeyStore;
-            (*store_ptr).latest_version.take();
+            (*store_ptr).latest_versions.take(0);
         }
     }
 
@@ -205,17 +170,11 @@ mod tests {
         let store = KeyStore::global();
 
         // Insert versions in random order
-        store
-            .insert("TSK", "v3", generate_key_pair("rsa 3072 pss"))
-            .unwrap();
-        store
-            .insert("TSK", "v1", generate_key_pair("rsa 3072 pss"))
-            .unwrap();
-        store
-            .insert("TSK", "v2", generate_key_pair("rsa 3072 pss"))
-            .unwrap();
+        store.insert("TSK", "v3", generate_key_pair("rsa 3072 pss")).unwrap();
+        store.insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
+        store.insert("TSK", "v2", generate_key_pair("rsa 3072 pss")).unwrap();
 
-        assert_eq!(store.get_latest_version().unwrap(), "v3");
+        assert_eq!(store.get_latest_version("TSK").unwrap(), "v3");
         init_test_store();
     }
 
@@ -229,9 +188,7 @@ mod tests {
         let data = b"test_data".to_vec();
 
         // Insert key
-        KeyStore::global()
-            .insert("TSK", "v1", generate_key_pair("rsa 3072 pss"))
-            .unwrap();
+        KeyStore::global().insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
 
         // Normal signature
         let resp = crypto.sign(&data, "TSK").await.unwrap();
@@ -247,12 +204,8 @@ mod tests {
         let crypto = DefaultCryptoImpl;
 
         // Prepare multi-version environment
-        KeyStore::global()
-            .insert("TSK", "v1", generate_key_pair("rsa 3072 pss"))
-            .unwrap();
-        KeyStore::global()
-            .insert("TSK", "v2", generate_key_pair("rsa 3072 pss"))
-            .unwrap();
+        KeyStore::global().insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
+        KeyStore::global().insert("TSK", "v2", generate_key_pair("rsa 3072 pss")).unwrap();
 
         // Sign with v2
         let data = b"important".to_vec();
@@ -267,11 +220,9 @@ mod tests {
         };
         unsafe {
             let store_ptr = KeyStore::global() as *const KeyStore as *mut KeyStore;
-            (*store_ptr).latest_version.take();
+            (*store_ptr).latest_versions.take(0);
         }
-        KeyStore::global()
-            .insert("TSK", "v3", generate_key_pair("rsa 3072 pss"))
-            .unwrap();
+        KeyStore::global().insert("TSK", "v3", generate_key_pair("rsa 3072 pss")).unwrap();
 
         // Verify and update
         let resp = crypto.verify_and_update(&param).await.unwrap();
@@ -280,10 +231,7 @@ mod tests {
         assert_eq!(resp.key_version.unwrap(), "v3");
 
         // Verify new signature validity
-        let verify = crypto
-            .verify("TSK", Some("v3"), data, resp.signature.unwrap())
-            .await
-            .unwrap();
+        let verify = crypto.verify("TSK", Some("v3"), data, resp.signature.unwrap()).await.unwrap();
         assert!(verify);
         init_test_store();
     }
@@ -295,9 +243,7 @@ mod tests {
         let crypto = DefaultCryptoImpl;
 
         // Insert test key
-        KeyStore::global()
-            .insert("TSK", "v1", generate_key_pair("rsa 3072 pss"))
-            .unwrap();
+        KeyStore::global().insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
 
         // Verify public key format
         let pub_resp = crypto.get_public_key("TSK", Some("v1")).await.unwrap();
