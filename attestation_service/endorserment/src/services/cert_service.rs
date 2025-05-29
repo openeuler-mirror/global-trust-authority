@@ -1203,27 +1203,27 @@ impl CertService {
             CertVerifyError::DbError(e.to_string())
         })?;
         let db = db.as_ref();
-        let mut service_cert = parse_cert_content(&cert).map_err(|e| {
+        let mut agent_cert = parse_cert_content(&cert).map_err(|e| {
             error!("Failed to parse cert to X509: {}", e);
             CertVerifyError::VerifyError(e.to_string())
         })?;
-        info!("Begin verify certificate chain {:?}", service_cert.subject_name());
-        if !CertService::verify_cert_time(&service_cert) {
+        info!("Begin verify certificate chain {:?}", agent_cert.subject_name());
+        if !CertService::verify_cert_time(&agent_cert) {
             error!("The certificate has expired");
             return Err(CertVerifyError::VerifyError("The certificate has expired".to_string()))
         }
-        while get_cert_issuer_name(&service_cert) != get_cert_subject_name(&service_cert) {
+        while get_cert_issuer_name(&agent_cert) != get_cert_subject_name(&agent_cert) {
             let certs: Vec<cert_info::Model> = match CertRepository::find_parent_cert_by_type_and_user(
                 db,
                 user_id,
                 cert_type,
-                &get_cert_issuer_name(&service_cert),
+                &get_cert_issuer_name(&agent_cert),
             )
             .await
             {
                 Ok(certs) => {
                     if certs.is_empty() {
-                        error!("The certificate {:?} parent certificates is empty", service_cert.subject_name(),);
+                        error!("The certificate {:?} parent certificates is empty", agent_cert.subject_name(),);
                         return Ok(false);
                     }
                     let tx = db.begin().await.map_err(|e| {
@@ -1245,7 +1245,7 @@ impl CertService {
             if certs.is_empty() {
                 error!(
                     "All parent certificates of this certificate {:?} have been revoked or tampered with",
-                    service_cert.subject_name(),
+                    agent_cert.subject_name(),
                 );
                 return Ok(false);
             }
@@ -1256,7 +1256,7 @@ impl CertService {
                     Ok(parent_cert) => {
                         info!(
                             "Begin verify certificate chain {} {}",
-                            get_cert_serial_number(&service_cert),
+                            get_cert_serial_number(&agent_cert),
                             get_cert_serial_number(&parent_cert)
                         );
                         if !CertService::verify_cert_time(&parent_cert) {
@@ -1264,13 +1264,13 @@ impl CertService {
                             continue;
                         }
                         let parent_pub_key = parent_cert.public_key().unwrap();
-                        is_success = match service_cert.verify(&parent_pub_key) {
+                        is_success = match agent_cert.verify(&parent_pub_key) {
                             Ok(is_success) => {
                                 if !is_success {
                                     error!("Verify chain failed");
                                 } else {
                                     info!("Verify chain success");
-                                    service_cert = parent_cert;
+                                    agent_cert = parent_cert;
                                 }
                                 is_success
                             },
@@ -1287,7 +1287,7 @@ impl CertService {
                 }
             }
             if !is_success {
-                error!("Not find the certificate {} parent certificate", get_cert_serial_number(&service_cert));
+                error!("Not find the certificate {} parent certificate", get_cert_serial_number(&agent_cert));
                 return Ok(false);
             }
         }
