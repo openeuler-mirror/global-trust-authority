@@ -94,12 +94,15 @@ impl CertRepository {
         db: &DatabaseConnection,
         name: Option<String>,
         id: Option<String>,
+        user_id: &str,
     ) -> Result<bool, DbErr> {
         let mut query = CertInfo::find();
         if let Some(id) = id {
             query = query.filter(cert_info::Column::Id.ne(id));
         }
-        let count = query.filter(cert_info::Column::Name.is_in(name.clone())).count(db).await;
+        let count = query.filter(cert_info::Column::Name.is_in(name.clone()))
+            .filter(cert_info::Column::UserId.eq(user_id))
+            .count(db).await;
         Ok(count? > 0)
     }
 
@@ -407,6 +410,7 @@ impl CertRepository {
                 &sql,
                 vec![
                     name.clone().into(),
+                    user_id.clone().into(),
                     id.clone().into(),
                     user_id.clone().into(),
                     id.clone().into(),
@@ -445,7 +449,7 @@ impl CertRepository {
                 WITH cert_checks AS (
                     SELECT
                         COUNT(*) as cert_count,
-                        EXISTS(SELECT 1 FROM t_cert_info WHERE name = ? or id = ?) as cert_exists
+                        EXISTS(SELECT 1 FROM t_cert_info WHERE (name = ? and user_id = ?) or id = ?) as cert_exists
                     FROM t_cert_info
                     WHERE user_id = ?
                 )
@@ -462,7 +466,7 @@ impl CertRepository {
                 WITH cert_checks AS (
                     SELECT
                         COUNT(*) as cert_count,
-                        EXISTS(SELECT 1 FROM t_cert_info WHERE name = ? or id = ?) as cert_exists
+                        EXISTS(SELECT 1 FROM t_cert_info WHERE (name = ? and user_id = ?) or id = ?) as cert_exists
                     FROM t_cert_info
                     WHERE user_id = ?
                 )

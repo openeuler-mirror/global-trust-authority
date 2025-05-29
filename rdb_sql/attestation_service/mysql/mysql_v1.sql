@@ -49,9 +49,7 @@ create table IF NOT EXISTS t_cert_info
     signature   varbinary(512)         null comment 'Signature for integrity verification',
     key_version varchar(36)            null comment 'Version of the key used for signing',
     key_id      varchar(128)           null comment 'ID of the key used for signing',
-    valid_code  int                    null comment '0-Normal, 1-Signature verification failed, 2-Revoked, this field is not within the integrity verification scope, only for backend storage/viewing, all logic needs to recheck certificate status',
-    constraint NAME
-        unique (NAME)
+    valid_code  int                    null comment '0-Normal, 1-Signature verification failed, 2-Revoked, this field is not within the integrity verification scope, only for backend storage/viewing, all logic needs to recheck certificate status'
 );
 
 create table IF NOT EXISTS t_cert_revoked_list
