@@ -70,16 +70,14 @@ impl TokenManager {
         let token_eat_profile = token_management.eat_profile;
 
         // fill body value
+        let now_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
         if let Value::Object(ref mut map) = json_body {
-            map.insert("iat".to_string(), json!(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()));
-            map.insert(
-                "exp".to_string(),
-                json!(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() + token_exist_time),
-            );
+            map.insert("iat".to_string(), json!(now_time));
+            map.insert("exp".to_string(), json!(now_time + token_exist_time));
             map.insert("iss".to_string(), json!(token_iss));
             map.insert("jti".to_string(), json!(Uuid::new_v4().to_string()));
             map.insert("ver".to_string(), json!("1.0"));
-            map.insert("nbf".to_string(), json!(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()));
+            map.insert("nbf".to_string(), json!(now_time));
             map.insert("eat_profile".to_string(), json!(token_eat_profile));
         }
         debug!("json_body: {:?}", json_body);
