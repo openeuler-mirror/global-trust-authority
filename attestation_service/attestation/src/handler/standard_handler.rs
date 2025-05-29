@@ -18,7 +18,7 @@ use config_manager::types::context::CONFIG;
 use common_log::{error, info};
 use nonce::nonce_interface::{validate_nonce, Nonce, ValidateNonceParams};
 use plugin_manager::{PluginManager, PluginManagerInstance, ServiceHostFunctions, ServicePlugin};
-use policy::policy_api::{get_export_policy::get_export_policy, get_policy_by_ids};
+use policy::policy_api::{get_export_policy::get_export_policy, get_policy_by_ids, query_policy};
 use policy_engine::evaluate_policy;
 use rdb::get_connection;
 use token_management::token_manager::TokenManager;
@@ -173,6 +173,46 @@ impl StandardHandler {
                 Err(AttestationError::PolicyVerificationError(e.to_string()))
             },
         }
+    }
+
+    pub async fn evaluate_policies(
+        verify_evidence: &serde_json::Value,
+        policy_ids: Option<&Vec<String>>,
+        attester_type: &str,
+    ) -> Result<(Vec<bool>, Vec<PolicyInfo>), AttestationError> {
+        let mut verify_results = Vec::new();
+        let mut evaluate_results = Vec::new();
+
+        if let Some(ids) = policy_ids {
+            info!("Start evaluating custom policies, policy_ids: {:?}", ids);
+            let (custom_verify_results, custom_evaluate_results) =
+                Self::evaluate_custom_policies(verify_evidence, ids).await?;
+            verify_results.extend(custom_verify_results);
+            evaluate_results = custom_evaluate_results;
+        } else {
+            // If no policy_ids provided, use default policies
+            info!("No policy_ids provided, using default policies for attester_type: {}", attester_type);
+            let db_connection = get_connection().await.unwrap();
+            match query_policy::get_default_policies_by_type(&db_connection, attester_type.to_string()).await {
+                Ok(default_policies) => {
+                    if !default_policies.is_empty() {
+                        let default_policy_ids: Vec<String> = default_policies.iter().map(|p| p.id.clone()).collect();
+                        info!("Found default policies for attester_type {}, policy_ids: {:?}", attester_type, default_policy_ids);
+                        let (custom_verify_results, custom_evaluate_results) =
+                            Self::evaluate_custom_policies(verify_evidence, &default_policy_ids).await?;
+                        verify_results.extend(custom_verify_results);
+                        evaluate_results = custom_evaluate_results;
+                    } else {
+                        info!("No default policies found for attester_type: {}", attester_type);
+                    }
+                },
+                Err(e) => {
+                    error!("Failed to get default policies for attester_type {}: {}", attester_type, e);
+                }
+            }
+        }
+
+        Ok((verify_results, evaluate_results))
     }
 
     pub async fn evaluate_custom_policies(
