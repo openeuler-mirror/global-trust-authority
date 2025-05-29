@@ -68,6 +68,7 @@ install -pm 644 export_policy/tpm_boot                                          
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/logging.yaml
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/.env.rpm
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/mysql_v1.sql
+%dir %attr(0750, root, root) %{_sysconfdir}/attestation_server/
 %dir %attr(0750, root, root) %{_sysconfdir}/attestation_server/export_policy/
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_ima
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_boot
