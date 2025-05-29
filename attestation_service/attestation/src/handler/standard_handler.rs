@@ -185,7 +185,10 @@ impl StandardHandler {
             policy_id_list = ids.clone();
         } else {
             info!("No policy_ids provided, using default policies for attester_type: {}", attester_type);
-            let db_connection = get_connection().await.unwrap();
+            let db_connection = get_connection().await.map_err(|e| {
+                error!("Failed to get database connection: {}", e);
+                AttestationError::DatabaseError(e.to_string())
+            })?;
             match query_policy::get_default_policies_by_type(&db_connection, attester_type.to_string()).await {
                 Ok(default_policies) => {
                     if !default_policies.is_empty() {
