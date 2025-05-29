@@ -806,7 +806,7 @@ impl CertService {
             return Ok(HttpResponse::BadRequest().body(e.to_string()));
         }
         if request.name.is_some() {
-            match CertRepository::verify_name_is_duplicated(&db, request.name.clone(), Some(request.id.clone())).await {
+            match CertRepository::verify_name_is_duplicated(&db, request.name.clone(), Some(request.id.clone()), &user_id.clone()).await {
                 Ok(is_exist) => {
                     if is_exist {
                         error!("Name is duplicated");
@@ -1208,6 +1208,10 @@ impl CertService {
             CertVerifyError::VerifyError(e.to_string())
         })?;
         info!("Begin verify certificate chain {:?}", service_cert.subject_name());
+        if !CertService::verify_cert_time(&service_cert) {
+            error!("The certificate has expired");
+            return Err(CertVerifyError::VerifyError("The certificate has expired".to_string()))
+        }
         while get_cert_issuer_name(&service_cert) != get_cert_subject_name(&service_cert) {
             let certs: Vec<cert_info::Model> = match CertRepository::find_parent_cert_by_type_and_user(
                 db,

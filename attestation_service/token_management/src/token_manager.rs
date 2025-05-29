@@ -19,12 +19,14 @@ use key_management::key_manager::error::KeyManagerError;
 use key_management::key_manager::key_initialization::is_initialized;
 use log::{debug, error, info};
 use mq::send_message;
+use openssl::pkey::PKey;
 use serde_json::{json, Value};
 use std::time::{SystemTime, UNIX_EPOCH};
-use openssl::pkey::PKey;
 use uuid::Uuid;
 
 /// token manager
+const MAX_SIZE: usize = 5 * 1024 * 1024;
+
 pub struct TokenManager;
 
 impl TokenManager {
@@ -40,7 +42,8 @@ impl TokenManager {
             error!("get_private_key error: {}", e.to_string());
             GenerateTokenError::GenerateTokenError(e.to_string())
         })?;
-        let pkey = PKey::private_key_from_pem(&key_info_resp.key).map_err(|e| GenerateTokenError::GenerateTokenError(e.to_string()))?;
+        let pkey = PKey::private_key_from_pem(&key_info_resp.key)
+            .map_err(|e| GenerateTokenError::GenerateTokenError(e.to_string()))?;
         let rsa = pkey.rsa().map_err(|e| GenerateTokenError::GenerateTokenError(e.to_string()))?;
         let der = rsa.private_key_to_der().unwrap();
         let private_key = EncodingKey::from_rsa_der(&der);
@@ -85,6 +88,10 @@ impl TokenManager {
         match encode(&header, &json_body, &private_key) {
             Ok(token) => {
                 info!("Generated token success");
+                if token.len() > MAX_SIZE {
+                    error!("Generated token size exceeds 5M");
+                    return Err(GenerateTokenError::GenerateTokenError("Generated token size exceeds 5M".to_string()));
+                }
                 if token_management.mq_enabled {
                     let token_clone = token.clone();
                     tokio::spawn(async move {
@@ -107,7 +114,8 @@ impl TokenManager {
             error!("get_public_key error: {}", e.to_string());
             VerifyTokenError::VerifyTokenError(e.to_string())
         })?;
-        let pkey = PKey::public_key_from_pem(&key_info_resp.key).map_err(|e| VerifyTokenError::VerifyTokenError(e.to_string()))?;
+        let pkey = PKey::public_key_from_pem(&key_info_resp.key)
+            .map_err(|e| VerifyTokenError::VerifyTokenError(e.to_string()))?;
         let rsa = pkey.rsa().map_err(|e| VerifyTokenError::VerifyTokenError(e.to_string()))?;
         let der = rsa.public_key_to_der_pkcs1().unwrap();
         let public_key = DecodingKey::from_rsa_der(&der);
