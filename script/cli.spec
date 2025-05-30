@@ -43,18 +43,18 @@ CARGO_BUILD_JOBS=4 cargo build -p attestation_cli -p tpm_boot_attester -p tpm_im
 rm -rf %{buildroot}
 install -d %{buildroot}%{_bindir}
 install -d %{buildroot}%{_libdir}
-install -d %{buildroot}%{_sysconfdir}/attestation_cli
+install -d %{buildroot}%{_sysconfdir}/attestation_agent
 
-install -pm 755 %{cli_output_dir}/attestation_cli %{buildroot}%{_bindir}
-install -pm 644 config/agent_config.yaml %{buildroot}%{_sysconfdir}/attestation_cli/agent_config.yaml
+install -pm 750 %{cli_output_dir}/attestation_cli %{buildroot}%{_bindir}
+install -pm 640 config/agent_config.yaml %{buildroot}%{_sysconfdir}/attestation_agent/agent_config.yaml
 
-install -pm 644 %{cli_output_dir}/libtpm_boot_attester.so   %{buildroot}%{_libdir}
-install -pm 644 %{cli_output_dir}/libtpm_ima_attester.so    %{buildroot}%{_libdir}
+install -pm 640 %{cli_output_dir}/libtpm_boot_attester.so   %{buildroot}%{_libdir}
+install -pm 640 %{cli_output_dir}/libtpm_ima_attester.so    %{buildroot}%{_libdir}
 
 %files
-%{_bindir}/attestation_cli
-%config %attr(0644, root, root) %{_sysconfdir}/attestation_cli/agent_config.yaml
+%config %attr(0640, root, root) %{_sysconfdir}/attestation_agent/agent_config.yaml
 
+%{_bindir}/attestation_cli
 %{_libdir}/libtpm_boot_attester.so
 %{_libdir}/libtpm_ima_attester.so
 

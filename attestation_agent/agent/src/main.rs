@@ -35,6 +35,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 use tokio::pin;
 use tokio::time::Duration;
+use std::fs;
+use std::os::unix::fs::PermissionsExt;
 
 const MAX_QUEUE_SIZE: usize = 3;
 
@@ -64,6 +66,11 @@ async fn main() -> Result<(), AgentError> {
         .encoder(Box::new(PatternEncoder::new("{d(%Y-%m-%d %H:%M:%S:%3f)} {l} [{M}:{L}] - {m}{n}")))
         .build(&config.logging.file)
         .map_err(|e| AgentError::IoError(format!("Failed to build log file appender: {}", e)))?;
+
+    // Set log file permissions to 640
+    if let Err(e) = fs::set_permissions(&config.logging.file, PermissionsExt::from_mode(0o640)) {
+        error!("Failed to set log file permissions: {}", e);
+    }
 
     let log_level = match config.logging.level.to_lowercase().as_str() {
         "debug" => LevelFilter::Debug,
