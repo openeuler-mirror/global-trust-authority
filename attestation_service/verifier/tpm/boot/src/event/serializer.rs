@@ -27,7 +27,7 @@ use serde::{
     ser::SerializeStruct,
 };
 use hex;
-use crate::event_type::{
+use crate::event::model::{
     EventType, TpmEventLog,
     EfiSpecIdEvent, EvNoActionEvent,
     SCrtmVersionEvent,
