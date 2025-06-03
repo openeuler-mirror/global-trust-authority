@@ -103,7 +103,7 @@ pub trait RefValueTrait {
 
         info!("Ref value added successfully");
         Ok(HttpResponse::Ok().json(serde_json::json!({
-            "refvalue": {
+            "ref_value": {
                 "id": rv_model.id,
                 "version": "1",
                 "name": add_rv_body.name
@@ -137,7 +137,7 @@ pub trait RefValueTrait {
 
         info!("Reference Value updated successfully");
         Ok(HttpResponse::Ok().json(serde_json::json!({
-            "refvalue": {
+            "ref_value": {
                 "id": update_rv_body.id,
                 "version": version,
                 "name": name

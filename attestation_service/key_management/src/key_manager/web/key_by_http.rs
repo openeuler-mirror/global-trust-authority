@@ -50,9 +50,6 @@ impl KeyProvider for DefaultKeyProvider {
         async move {
             let config = config_loader.load_config().unwrap();
             let vault_get_key_url = config.vault_get_key_url();
-            info!("Vault get key url: {}", &vault_get_key_url);
-
-            info!("Vault get key client: ");
             let response = key_api_client.get_keys(&vault_get_key_url).await?;
             Ok(response)
         }
