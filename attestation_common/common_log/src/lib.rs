@@ -13,9 +13,9 @@
 pub mod config;
 pub mod logger;
 
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::OnceLock};
 
-static mut LOGGER: Option<logger::Logger> = None;
+static LOGGER: OnceLock<logger::Logger> = OnceLock::new();
 
 /// Initialize logging system using default configuration file path "logging.yaml"
 ///
@@ -74,8 +74,8 @@ pub fn init_rpm() -> Result<(), Box<dyn std::error::Error>> {
 /// ```
 pub fn init_with_config(config_path: impl Into<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
     let logger = logger::Logger::new(config_path)?;
-    unsafe {
-        LOGGER = Some(logger);
+    if LOGGER.set(logger).is_err() {
+        return Err("Logger already initialized".into());
     }
     Ok(())
 }
