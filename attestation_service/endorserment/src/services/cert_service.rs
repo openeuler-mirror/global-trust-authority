@@ -10,6 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
+ #![allow(unused_imports)]
 use crate::entities::cert_error::CertVerifyError;
 use crate::entities::{cert_info, cert_revoked_list, crl_info};
 use crate::repositories::cert_repository::CertRepository;
@@ -1296,19 +1297,12 @@ impl CertService {
 }
 
 // test begin
-#[allow(unused_imports)]
 use crate::entities::crl_info::Model;
-#[allow(unused_imports)]
 use openssl::asn1::Asn1Integer;
-#[allow(unused_imports)]
 use openssl::asn1::Asn1String;
-#[allow(unused_imports)]
 use openssl::bn::BigNum;
-#[allow(unused_imports)]
 use openssl::x509::X509Builder;
-#[allow(unused_imports)]
 use openssl::x509::{X509Name, X509NameBuilder};
-#[allow(unused_imports)]
 
 #[test]
 fn test_get_cert_subject_name_when_result_not_empty_then_success() {

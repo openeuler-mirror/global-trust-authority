@@ -20,6 +20,7 @@ use std::sync::Arc;
 use tokio::sync::OnceCell;
 use dotenv::dotenv;
 use log::{info, error};
+#[allow(unused_imports)]
 use env_config_parse::find_file;
 use crate::config::DbConfig;
 use crate::DbError;
