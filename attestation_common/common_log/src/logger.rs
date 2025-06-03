@@ -27,6 +27,7 @@ use std::fs::Permissions;
 use std::os::unix::fs::PermissionsExt;
 use crate::config::{LogConfig, LoggerConfig};
 
+#[allow(dead_code)]
 pub struct Logger {
     handle: Handle,
 }

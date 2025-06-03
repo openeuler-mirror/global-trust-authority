@@ -27,11 +27,10 @@ use openssl::nid::Nid;
 use openssl::sign::Verifier;
 use openssl::x509::{ReasonCode, X509Crl, X509};
 use rdb::get_connection;
-use sea_orm::{query, ActiveValue, DatabaseConnection, DatabaseTransaction, DbErr, TransactionTrait};
+use sea_orm::{ActiveValue, DatabaseConnection, DatabaseTransaction, TransactionTrait};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::BTreeMap;
-use std::fmt::format;
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
@@ -1297,13 +1296,19 @@ impl CertService {
 }
 
 // test begin
+#[allow(unused_imports)]
 use crate::entities::crl_info::Model;
-use crate::entities::prelude::CrlInfo;
+#[allow(unused_imports)]
 use openssl::asn1::Asn1Integer;
+#[allow(unused_imports)]
 use openssl::asn1::Asn1String;
+#[allow(unused_imports)]
 use openssl::bn::BigNum;
+#[allow(unused_imports)]
 use openssl::x509::X509Builder;
+#[allow(unused_imports)]
 use openssl::x509::{X509Name, X509NameBuilder};
+#[allow(unused_imports)]
 
 #[test]
 fn test_get_cert_subject_name_when_result_not_empty_then_success() {

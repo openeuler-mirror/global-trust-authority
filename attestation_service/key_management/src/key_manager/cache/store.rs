@@ -11,7 +11,6 @@
  */
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::hash::Hash;
 use std::sync::Arc;
 
 use once_cell::sync::OnceCell;
@@ -51,7 +50,7 @@ impl KeyStore {
     }
 
     pub fn insert(&self, key_type: &str, version: &str, key_pair: KeyPair) -> Result<(), KeyManagerError> {
-        let mut versions = self.inner.get(key_type).ok_or(KeyManagerError::new("Key type not found"))?;
+        let versions = self.inner.get(key_type).ok_or(KeyManagerError::new("Key type not found"))?;
 
         if versions.borrow().contains_key(version) {
             return Err(KeyManagerError::new("Version already exists"));

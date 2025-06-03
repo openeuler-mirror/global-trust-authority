@@ -14,9 +14,7 @@ use crate::entities::prelude::{CertInfo, CertRevokedList, CrlInfo};
 use crate::entities::{cert_info, cert_revoked_list, crl_info};
 use crate::services::cert_service;
 use crate::services::cert_service::DeleteType;
-use actix_web::web::Data;
-use actix_web::HttpResponse;
-use common_log::{error, info};
+use common_log::info;
 use config_manager::types::CONFIG;
 use sea_orm::sea_query::Expr;
 use sea_orm::{
@@ -24,7 +22,6 @@ use sea_orm::{
     DatabaseTransaction, DbErr, DeleteResult, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
     Statement, TransactionTrait, UpdateResult,
 };
-use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct CertRepository;
@@ -565,9 +562,6 @@ impl CertRepository {
         cert_revoked.update(db).await
     }
 }
-
-// test begin
-use sea_orm::{MockDatabase};
 
 #[test]
 fn test_generate_add_cert_sql_mysql() {

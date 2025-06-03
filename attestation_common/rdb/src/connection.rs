@@ -13,7 +13,6 @@
 //! Database Connection Management Module
 //! Provides unified database connection pool management functionality
 
-use std::env;
 use std::error::Error;
 use std::path::PathBuf;
 use sea_orm::{ConnectionTrait, DatabaseBackend, DatabaseConnection, Statement, TransactionTrait};

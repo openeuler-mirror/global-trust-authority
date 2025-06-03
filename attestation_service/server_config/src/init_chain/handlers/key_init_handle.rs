@@ -13,9 +13,7 @@
 use key_management::key_manager::key_initialization::init_keys;
 use std::future::Future;
 use std::pin::Pin;
-// key_management.rs
 use crate::init_chain::traits::{InitContext, InitHandler};
-use config_manager::types::context::ServerConfig;
 use common_log::info;
 
 #[derive(Debug)]

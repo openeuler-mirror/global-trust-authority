@@ -10,6 +10,4 @@
  * See the Mulan PSL v2 for more details.
  */
 
-pub mod redis_client;
-pub mod logging;
 pub mod mq;
