@@ -151,17 +151,12 @@ impl Logger {
             error!("Failed to set log directory permissions: {}", e);
         }
 
-        // Get current local time
-        let now: DateTime<Local> = Local::now();
-        let formatted_time = now.format("%Y%m%d%H%M%S%3f").to_string();
-
         // Configure log file path
         let log_file = std::path::Path::new(&relative_log_directory).join(&config.log_file_name).to_string_lossy().to_string();
         let archived_log_pattern = format!(
-            "{}/{}-{{}}-{}.zip",
-            relative_log_directory, config.log_file_name, formatted_time
+            "{}/{}-{{}}.zip",
+            relative_log_directory, config.log_file_name
         );
-        
 
         // Configure rolling policy
         let size_trigger = SizeBasedTriggerPolicy::new(config.max_file_size);
