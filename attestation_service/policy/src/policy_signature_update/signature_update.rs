@@ -28,9 +28,6 @@ pub(crate) type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>
 #[derive(Debug)]
 pub struct PolicyManager;
 
-unsafe impl Send for PolicyManager{}
-unsafe impl Sync for PolicyManager{}
-
 impl  KeyLifecycleObserver for PolicyManager {
     fn signature_update(
         &self,

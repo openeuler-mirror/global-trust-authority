@@ -29,9 +29,6 @@ pub(crate) type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>
 #[derive(Debug)]
 pub struct CertManager;
 
-unsafe impl Send for CertManager {}
-unsafe impl Sync for CertManager {}
-
 impl KeyLifecycleObserver for CertManager {
     fn signature_update(
         &self,

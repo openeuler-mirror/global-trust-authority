@@ -30,9 +30,6 @@ pub(crate) type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>
 #[derive(Debug)]
 pub struct RvSigUpdate;
 
-unsafe impl Send for RvSigUpdate {}
-unsafe impl Sync for RvSigUpdate {}
-
 impl KeyLifecycleObserver for RvSigUpdate {
     fn signature_update(
         &self,
