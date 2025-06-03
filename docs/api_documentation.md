@@ -245,7 +245,7 @@
 | Field         | Sub-field | Type | Required | parameter constraint | Description |
 |---------------|-----------|------|----------|-------------|-------------|
 | attester_type | | string | Yes | tpm_ima | Query baseline for specified purpose |
-| ids           | | Array[string] | Yes | Length 1-32 characters | Baseline name, if empty, input 10 |
+| ids           | | List of String | Yes | Length 1-32 characters | Baseline name, if empty, input 10 |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
