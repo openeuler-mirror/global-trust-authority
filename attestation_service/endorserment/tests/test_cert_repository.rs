@@ -10,15 +10,15 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use std::path::{Path, PathBuf};
 use cert_info::ActiveModel;
+use config_manager::types::CONFIG;
 use endorserment::entities::cert_revoked_list::Model as CertRevokedListModel;
 use endorserment::entities::{cert_info, cert_revoked_list};
 use endorserment::repositories::cert_repository::CertRepository;
 use endorserment::services::cert_service::DeleteType;
 use sea_orm::{ActiveValue, DatabaseBackend, DbErr, MockDatabase, MockExecResult, TransactionTrait};
 use serde_json::json;
-use config_manager::types::CONFIG;
+use std::path::{Path, PathBuf};
 
 #[tokio::test]
 async fn test_update_cert_info_when_one_row_affected_then_success() {
@@ -38,7 +38,6 @@ async fn test_update_cert_info_when_one_row_affected_then_success() {
 
     // Execute update operation
     let result = CertRepository::update_cert_info(&db, &"test_id".to_string(), 1, cert_info).await;
-
 
     assert!(result.is_ok());
     let update_result = result.unwrap();
@@ -242,7 +241,7 @@ async fn test_find_parent_cert_by_type_and_user_found() {
     let cert = cert_info::Model {
         id: "test_cert".to_string(),
         user_id: Some("test_user".to_string()),
-        cert_type: Some("policy".to_string()),
+        cert_type: Some(json!(vec!["policy"])),
         owner: Some("test_issuer".to_string()),
         ..Default::default()
     };
@@ -260,7 +259,6 @@ async fn test_find_parent_cert_by_type_and_user_found() {
 
     // Execute test
     let result = CertRepository::find_parent_cert_by_type_and_user(&db, "test_user", "policy", "test_issuer").await;
-
 
     assert!(result.is_ok());
     let cert_result = result.unwrap();
@@ -283,7 +281,6 @@ async fn test_find_parent_cert_by_type_and_user_when_db_error_then_error() {
     // Execute test
     let result = CertRepository::find_parent_cert_by_type_and_user(&db, "test_user", "policy", "test_issuer").await;
 
-
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().to_string(), "Custom Error: Database error");
 }
@@ -303,6 +300,7 @@ async fn test_insert_cert_revoked_success() {
             key_id: Some("test_key_id".to_string()),
             valid_code: Some(0),
             cert_revoked_reason: Some("test reason".to_string()),
+            crl_id: "1".to_string(),
         }]])
         .into_connection();
     let tx = db.begin().await.unwrap();
@@ -318,6 +316,7 @@ async fn test_insert_cert_revoked_success() {
         key_id: ActiveValue::Set(Option::from("test_key_id".to_string())),
         valid_code: ActiveValue::Set(Option::from(0)),
         cert_revoked_reason: ActiveValue::Set(Option::from("test reason".to_string())),
+        crl_id: ActiveValue::Set("1".to_string()),
     };
 
     // Execute test
@@ -343,7 +342,6 @@ async fn test_find_certs_by_type_and_user_when_db_error_then_error() {
         _ => panic!("Expected Custom database error"),
     }
 }
-
 
 #[tokio::test]
 async fn test_batch_get_revoke_certs_with_data_success() {
@@ -413,7 +411,6 @@ async fn test_batch_get_revoke_certs_when_db_error_then_error() {
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().to_string(), "Custom Error: Database error");
 }
-
 
 #[tokio::test]
 async fn test_batch_get_all_revoke_certs_total_pages_when_db_error_then_error() {
@@ -526,8 +523,13 @@ async fn test_verify_name_is_duplicated_when_db_error_then_error() {
         .append_query_errors(vec![DbErr::Custom("Database error".to_string())])
         .into_connection();
 
-    let result =
-        CertRepository::verify_name_is_duplicated(&db, Some("test_cert".to_string()), Some("cert1".to_string())).await;
+    let result = CertRepository::verify_name_is_duplicated(
+        &db,
+        Some("test_cert".to_string()),
+        Some("cert1".to_string()),
+        "user_id",
+    )
+    .await;
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().to_string(), "Custom Error: Database error");
@@ -557,7 +559,7 @@ async fn test_verify_name_when_db_error_then_error() {
         .into_connection();
 
     let result =
-        CertRepository::verify_name_is_duplicated(&db, Some("test_cert".to_string()), Some("existing_id".to_string()))
+        CertRepository::verify_name_is_duplicated(&db, Some("test_cert".to_string()), Some("existing_id".to_string()),"user_id")
             .await;
 
     assert!(result.is_err());
@@ -587,12 +589,12 @@ async fn test_delete_certs_by_id_success() {
 
     let result = CertRepository::delete_certs(
         &db,
-        DeleteType::Id,
+        Some(DeleteType::Id),
         Some(vec!["cert1".to_string(), "cert2".to_string()]),
         None,
         "user1",
     )
-        .await;
+    .await;
 
     assert!(result.is_ok());
     assert_eq!(result.unwrap().rows_affected, 2);
@@ -607,13 +609,11 @@ async fn test_delete_certs_all_success() {
         ])
         .into_connection();
 
-    let result = CertRepository::delete_certs(&db, DeleteType::All, None, None, "user1").await;
+    let result = CertRepository::delete_certs(&db, Some(DeleteType::All), None, None, "user1").await;
 
     assert!(result.is_ok());
     assert_eq!(result.unwrap().rows_affected, 5);
 }
-
-
 
 #[tokio::test]
 async fn test_insert_cert_info_success() {
@@ -779,6 +779,7 @@ async fn test_update_revoke_cert_info_success() {
         key_id: ActiveValue::Set(Some("test_key_id".to_string())),
         valid_code: ActiveValue::Set(Some(0)),
         cert_revoked_reason: ActiveValue::Set(Some("test reason".to_string())),
+        crl_id: ActiveValue::Set("1".to_string()),
     };
 
     // Execute test
@@ -804,6 +805,7 @@ async fn test_update_cert_revoked_valid_code_success() {
             key_id: Some("test_key_id".to_string()),
             valid_code: Some(1),
             cert_revoked_reason: Some("test reason".to_string()),
+            crl_id: "1".to_string(),
         }]])
         .into_connection();
 
@@ -841,7 +843,6 @@ async fn test_update_cert_revoked_when_valid_code_not_found_then_error() {
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), DbErr::RecordNotFound(_)));
 }
-
 
 #[tokio::test]
 async fn test_update_cert_revoked_valid_code_when_db_error_then_error() {

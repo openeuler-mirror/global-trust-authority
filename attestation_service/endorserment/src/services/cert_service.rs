@@ -1021,16 +1021,18 @@ impl CertService {
         key_version_opt: Option<String>,
     ) -> bool {
         let crypto_operations = CertService::get_crypto_operations();
+        if crypto_operations.is_require_sign().await.unwrap_or(false) {
+            return true
+        }
         if let (Some(signature), Some(key_version)) = (signature_opt, key_version_opt) {
             let data = serde_json::to_string(info).unwrap_or("".to_string());
             debug!("verify_signature:{}", data);
-            crypto_operations
+            return crypto_operations
                 .verify("FSK", Some(key_version.as_str()), data.into_bytes(), signature)
                 .await
                 .unwrap_or_else(|_| false)
-        } else {
-            !crypto_operations.is_require_sign().await.unwrap_or(false)
         }
+        false
     }
 
     pub async fn verify_cert_complete(db: &DatabaseTransaction, cert: &cert_info::Model) -> bool {
