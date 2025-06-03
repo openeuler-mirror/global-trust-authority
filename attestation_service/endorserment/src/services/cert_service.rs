@@ -1021,7 +1021,7 @@ impl CertService {
         key_version_opt: Option<String>,
     ) -> bool {
         let crypto_operations = CertService::get_crypto_operations();
-        if crypto_operations.is_require_sign().await.unwrap_or(false) {
+        if !crypto_operations.is_require_sign().await.unwrap_or(false) {
             return true
         }
         if let (Some(signature), Some(key_version)) = (signature_opt, key_version_opt) {
