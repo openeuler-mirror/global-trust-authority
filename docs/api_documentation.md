@@ -152,7 +152,7 @@
 |-------|-----------|------|----------|-------------|
 | message | | string | No | Error message |
 | refvalue | | object | Yes | Baseline information |
-| | id | string | No | Baseline ID |
+| | id | string | Yes | Baseline ID |
 | | name | string | Yes | Baseline name |
 | | version | string | Yes | Baseline version number |
 
@@ -198,6 +198,7 @@
 | description | | string | No | Length 0-512 characters | Baseline description |
 | content | | string | No | Maximum length 10M | Baseline content |
 | is_default | | boolean | No | true or false | Whether it's default baseline, defaults to false |
+| attester_type | | string | No | only support tpm_ima | Applicable challenge plugin type |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
@@ -244,18 +245,19 @@
 | Field         | Sub-field | Type | Required | parameter constraint | Description |
 |---------------|-----------|------|----------|-------------|-------------|
 | attester_type | | string | Yes | tpm_ima | Query baseline for specified purpose |
-| ids           | | Array[string] | Yes | Length 1-32 characters | Baseline name, if empty, input 10 |
+| ids           | | List of String | Yes | Length 1-32 characters | Baseline name, if empty, input 10 |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
 |-------|-----------|------|----------|-------------|
 | message | | string | No | Error message |
-| refvalue | | list of objects | Yes | Baseline information |
+| ref_values | | list of objects | Yes | Baseline information |
 | | id | string | Yes | Baseline ID |
-| | name | string | Yes | Baseline name |
+| | name | string | No | Baseline name |
+| | uid | string | Yes | User ID |
 | | description | string | No | Baseline description |
 | | content | string | No | Baseline content |
-| | attester_type | string | No | Applicable challenge plugin type |
+| | attester_type | string | Yes | Applicable challenge plugin type |
 | | is_default | boolean | No | Whether it's default baseline, defaults to false |
 | | version | int | No | Baseline version |
 | | create_time | Long | Yes | Creation time |
@@ -305,9 +307,7 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 | delete_type | | string | Yes | id, type, all | Delete Type |
 
 ##### Response Parameters
-| Field | Sub-field | Type | Required | Description |
-|-------|-----------|------|----------|-------------|
-| message | | string | Yes | Error message |
+无
 
 ### 3.2 Certificate Management
 
@@ -321,22 +321,21 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 |-------|-----------|------|----------|-------------|-------------|
 | name | | string | Yes      | Length 1-255 characters | Certificate name |
 | description | | string | No       | Length 0-512 characters | Description |
-| type | | string | Yes      | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, supported enums: refvalue/policy/tpm_boot/tpm_ima/crl |
+| type | | List of String | Yes      | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, supported enums: refvalue/policy/tpm_boot/tpm_ima/crl |
 | content | | string | No       |  | Certificate content |
 | is_default | | boolean | No       | true false | Whether it's default certificate, defaults to false |
-| cert_revoked_list | | string | No       |  | Certificate revocation list |
+| crl_content | | string | No       |  | Certificate revocation list |
 
 ##### Response Parameters
 | Field | Sub-field           | Type | Required | Description                      |
 |------|---------------------|------|----------|----------------------------------|
-| message |                     | string | No | Error message                    |
-| cert |                     | object | No | Certificate                      |
-| | cert_id             | string | No | Certificate ID                   |
-| | cert_name           | string | No | Certificate name                 |
-| | version             | string | No | Certificate version number       |
-| crl |                     | object | |                                  |
-| | crl_id              | string | No | Certificate revocation list id   |
-| | crl_name   | string | No | Certificate revocation list name |
+| cert |                     | object | No       | Certificate                      |
+| | cert_id             | string | YES       | Certificate ID                   |
+| | cert_name           | string | YES       | Certificate name                 |
+| | version             | string | YES       | Certificate version number       |
+| crl |                     | object |          |                                  |
+| | crl_id              | string | YES       | Certificate revocation list id   |
+| | crl_name   | string | YES      | Certificate revocation list name |
 
 ##### Example of request
 
@@ -398,16 +397,15 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 | id | string | Yes      | Length 1-32 characters | Certificate ID |
 | name | string | No       | Length 1-255 characters | Certificate name |
 | description | string | No       | Length 0-512 characters | Description |
-| type | string | No       | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, range: {attester_type}, "policy", "refvalue" |
+| type | List of String | No       | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, range: {attester_type}, "policy", "refvalue" |
 | is_default | boolean | No       | true or false | Whether it's default certificate, defaults to false |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
 |-------|-----------|------|----------|-------------|
-| message | | string | No | Error message |
 | cert | | object | Yes | |
-| | id | string | Yes | Certificate ID |
-| | name | string | Yes | Certificate name |
+| | cert_id | string | Yes | Certificate ID |
+| | cert_name | string | Yes | Certificate name |
 | | version | string | Yes | Certificate update version number |
 
 ##### Example of request
@@ -445,32 +443,31 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 ##### Request Parameters
 Note: To query revoked certificates, type must specify crl.
 
-| Field     | Sub-field | Type | Required | parameter constraint | Description |
-|-----------|-----------|------|----------|-------------|-------------|
+| Field     | Sub-field | Type | Required | parameter constraint | Description                             |
+|-----------|-----------|------|----------|-------------|-----------------------------------------|
 | cert_type | | string | No | refvalue/policy/tpm_boot/tpm_ima/crl | Query certificate for specified purpose |
-| ids       | | Array[string] | No |  | Certificate ID, maximum 10 |
+| ids       | | List of String | No |  | Certificate ID, maximum 100             |
 
 ##### Response Parameters
-| Field      | Sub-field           | Type | Required | Description |
-|------------|---------------------|------|----------|-------------|
-| message    |                     | string | No | Error message |
-| certs      |                     | Array[object] | No | Certificate information |
-|            | cert_id             | string | Yes | Certificate ID |
-|            | cert_name           | string | Yes | Certificate name |
-|            | description         | string | No | Certificate description |
-|            | content             | string | No | Certificate content |
-|            | type                | string | No | Certificate purpose |
-|            | is_default          | boolean | No | Whether it's default certificate |
-|            | version             | string | Yes | Certificate version |
-|            | create_time         | long | No | Creation timestamp |
-|            | update_time         | long | No | Update timestamp |
-|            | valid_code          | int | No | 0-Normal; 1-Signature verification failed; 2-Revoked |
-|            | cert_revoked_date   | long | No | Certificate revocation time, optional when type is crl |
-|            | cert_revoked_reason | string | No | Certificate revocation reason, optional when type is crl |
-| crls       |                     | Array[object] | No | Certificate revocation list information |
-|            | crl_id              | string | Yes | Certificate revocation list ID |
-|            | crl_name            | string | Yes | Certificate revocation list name |
-|            | crl_content         | string | Yes | Certificate revocation list content |
+| Field      | Sub-field           | Type           | Required | Description |
+|------------|---------------------|----------------|----------|-------------|
+| certs      |                     | List of Object | No | Certificate information |
+|            | cert_id             | string         | Yes | Certificate ID |
+|            | cert_name           | string         | Yes | Certificate name |
+|            | description         | string         | No | Certificate description |
+|            | content             | string         | No | Certificate content |
+|            | cert_type           | List of String | No | Certificate purpose |
+|            | is_default          | boolean        | No | Whether it's default certificate |
+|            | version             | int            | Yes | Certificate version |
+|            | create_time         | long           | No | Creation timestamp |
+|            | update_time         | long           | No | Update timestamp |
+|            | valid_code          | int            | No | 0-Normal; 1-Signature verification failed; 2-Revoked |
+|            | cert_revoked_date   | long           | No | Certificate revocation time, optional when type is crl |
+|            | cert_revoked_reason | string         | No | Certificate revocation reason, optional when type is crl |
+| crls       |                     | List of Object | No | Certificate revocation list information |
+|            | crl_id              | string         | Yes | Certificate revocation list ID |
+|            | crl_name            | string         | Yes | Certificate revocation list name |
+|            | crl_content         | string         | Yes | Certificate revocation list content |
 
 
 
@@ -536,13 +533,11 @@ Note: To delete revoked certificates, type must specify crl.
 | Field | Sub-field | Type | Required | parameter constraint | Description                                            |
 |-------|-----------|------|----------|-------------|--------------------------------------------------------|
 | delete_type | | string | No       | "id""type""all" | Delete type "id""type""all", When the type is crl, there is no need to pass it                         |
-| ids | | Array[string] | No       | Maximum 10 ids | Certificate ID list                                    |
+| ids | | List of String | No       | Maximum 10 ids | Certificate ID list                                    |
 | type | | string | No       | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, refvalue/policy/tpm_boot/tpm_ima/crl |
 
 ##### Response Parameters
-| Field | Sub-field | Type | Required | Description |
-|-------|-----------|------|----------|-------------|
-| message | | string | No | Error message |
+无
 
 ###### delete cert request body
 

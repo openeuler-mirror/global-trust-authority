@@ -579,7 +579,7 @@ fn test_generate_add_cert_sql_mysql() {
     assert!(sql.contains("INSERT INTO t_cert_info"));
     assert!(sql.contains("WITH cert_checks AS"));
     assert!(sql.contains("COUNT(*) as cert_count"));
-    assert!(sql.contains("EXISTS(SELECT 1 FROM t_cert_info WHERE name = ? or id = ?) as cert_exists"));
+    assert!(sql.contains("EXISTS(SELECT 1 FROM t_cert_info WHERE (name = ? and user_id = ?) or id = ?) as cert_exists"));
     assert!(sql.contains("WHERE user_id = ?"));
     assert!(sql.contains("WHERE (SELECT cert_count FROM cert_checks) < ?"));
     assert!(sql.contains("AND (SELECT cert_exists FROM cert_checks) = false"));
@@ -595,7 +595,7 @@ fn test_generate_add_cert_sql_postgres() {
     assert!(sql.contains("INSERT INTO t_cert_info"));
     assert!(sql.contains("WITH cert_checks AS"));
     assert!(sql.contains("COUNT(*) as cert_count"));
-    assert!(sql.contains("EXISTS(SELECT 1 FROM t_cert_info WHERE name = ? or id = ?) as cert_exists"));
+    assert!(sql.contains("EXISTS(SELECT 1 FROM t_cert_info WHERE (name = ? and user_id = ?) or id = ?) as cert_exists"));
     assert!(sql.contains("WHERE user_id = ?"));
     assert!(sql.contains("WHERE (SELECT cert_count FROM cert_checks) < ?"));
     assert!(sql.contains("AND (SELECT cert_exists FROM cert_checks) = false"));

@@ -36,28 +36,28 @@ The .env file configures key configurations such as database, middleware, flow l
 
 Configuration of nonce, token, policy, certificate, baseline on server side
 
-|     Configuration Level     |          Field Name          |               Field Meaning                | Field Type |                                    Default/Example Values                                     |
-| :--------------: | :------------------------: |:------------------------------------------:| :------: |:---------------------------------------------------------------------------------------------:|
-|  key_management  |     vault_get_key_url      | Vault service URL for getting signing keys |  string  |                      "https://127.0.0.1:8082/v1/vault/get_signing_keys"                       |
-|  key_management  |      is_require_sign       |       Whether to request a signature       | boolean  |                                             true                                              |
-| token_management |            jku             |                JWK Set URL                 |  string  |                                             "jku"                                             |
-| token_management |            kid             |                   Key ID                   |  string  |                                             "kid"                                             |
-| token_management |         exist_time         |    Token Existence Time (milliseconds)     | integer  |                                            600000                                             |
-| token_management |            iss             |                   Issuer                   |  string  |                                             "iss"                                             |
-| token_management |        eat_profile         |                EAT profile                 |  string  |                                         "eat_profile"                                         |
-| token_management |         mq_enabled         |     Whether message queuing is enabled     | boolean  |                                             false                                             |
-| token_management |        token_topic         |             Token subject name             |  string  |                                       "gta_token_topic"                                       |
-|      policy      |  export_policy_file.name   |              Policy File Name              | string[] |                                    ["tpm_boot", "tpm_ima"]                                    |
-|      policy      |  export_policy_file.path   |              Policy File Path              | string[] | ["/var/test_docker/app/export_policy/tpm_boot", "/var/test_docker/app/export_policy/tpm_ima"] |
-|      policy      | is_verify_policy_signature |    Whether to verify policy signatures     | boolean  |                                             false                                             |
-|      policy      |  single_user_policy_limit  |     Limit number of policies per user      | integer  |                                              30                                               |
-|      policy      | policy_content_size_limit  |     Policy content size limit (bytes)      | integer  |                                              500                                              |
-|      policy      |  query_user_policy_limit   |          Query user policy limit           | integer  |                                              10                                               |
-|       cert       |   single_user_cert_limit   |  Limit number of single-user certificates  | integer  |                                              10                                               |
-|      nonce       |     nonce_valid_period     |      Nonce validity period (seconds)       | integer  |                                              120                                              |
-|      nonce       |        nonce_bytes         |             nonce byte length              | integer  |                                              64                                               |
-|     plugins      |            name            |                Plugin Name                 | string[] |                                    ["tpm_boot", "tpm_ima"]                                    |
-|     plugins      |            path            |          Plugin library file path          | string[] |      ["/usr/local/lib/libtpm_boot_verifier.so", "/usr/local/lib/libtpm_ima_verifier.so"]      |
+|     Configuration Level     |          Field Name          |                         Field Meaning                          | Field Type |                                    Default/Example Values                                     |
+| :--------------: | :------------------------: |:--------------------------------------------------------------:| :------: |:---------------------------------------------------------------------------------------------:|
+|  key_management  |     vault_get_key_url      |           Vault service URL for getting signing keys           |  string  |                      "https://127.0.0.1:8082/v1/vault/get_signing_keys"                       |
+|  key_management  |      is_require_sign       | Whether to request a signature, this setting cannot be changed | boolean  |                                             true                                              |
+| token_management |            jku             |                          JWK Set URL                           |  string  |                                             "jku"                                             |
+| token_management |            kid             |                             Key ID                             |  string  |                                             "kid"                                             |
+| token_management |         exist_time         |              Token Existence Time (milliseconds)               | integer  |                                            600000                                             |
+| token_management |            iss             |                             Issuer                             |  string  |                                             "iss"                                             |
+| token_management |        eat_profile         |                          EAT profile                           |  string  |                                         "eat_profile"                                         |
+| token_management |         mq_enabled         |               Whether message queuing is enabled               | boolean  |                                             false                                             |
+| token_management |        token_topic         |                       Token subject name                       |  string  |                                       "gta_token_topic"                                       |
+|      policy      |  export_policy_file.name   |                        Policy File Name                        | string[] |                                    ["tpm_boot", "tpm_ima"]                                    |
+|      policy      |  export_policy_file.path   |                        Policy File Path                        | string[] | ["/var/test_docker/app/export_policy/tpm_boot", "/var/test_docker/app/export_policy/tpm_ima"] |
+|      policy      | is_verify_policy_signature |              Whether to verify policy signatures               | boolean  |                                             false                                             |
+|      policy      |  single_user_policy_limit  |               Limit number of policies per user                | integer  |                                              30                                               |
+|      policy      | policy_content_size_limit  |               Policy content size limit (bytes)                | integer  |                                              500                                              |
+|      policy      |  query_user_policy_limit   |                    Query user policy limit                     | integer  |                                              10                                               |
+|       cert       |   single_user_cert_limit   |            Limit number of single-user certificates            | integer  |                                              10                                               |
+|      nonce       |     nonce_valid_period     |                Nonce validity period (seconds)                 | integer  |                                              120                                              |
+|      nonce       |        nonce_bytes         |                       nonce byte length                        | integer  |                                              64                                               |
+|     plugins      |            name            |                          Plugin Name                           | string[] |                                    ["tpm_boot", "tpm_ima"]                                    |
+|     plugins      |            path            |                    Plugin library file path                    | string[] |      ["/usr/local/lib/libtpm_boot_verifier.so", "/usr/local/lib/libtpm_ima_verifier.so"]      |
 
 #### attestation_service/attestation_service/Cargo.toml
 
