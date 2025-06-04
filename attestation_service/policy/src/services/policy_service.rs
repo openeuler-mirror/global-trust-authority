@@ -13,7 +13,7 @@
 use crate::{
     entities::policy_db_model::ActiveModel,
     handler::policy_handler::PolicyHandler,
-    policy_error::policy_error::PolicyError,
+    error::policy_error::PolicyError,
     repositories::policy_repository::PolicyRepository,
     util::parameter_filter::ParameterFilter,
     entities::policy_request::{PolicyAddRequest, PolicyUpdateRequest, PolicyDeleteRequest},

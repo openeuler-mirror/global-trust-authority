@@ -12,7 +12,7 @@
 
 use sea_orm::DatabaseConnection;
 
-use crate::{entities::policy::Policy, policy_error::policy_error::PolicyError, handler::query_policy_handler::QueryPolicyHandler};
+use crate::{entities::policy::Policy, error::policy_error::PolicyError, handler::query_policy_handler::QueryPolicyHandler};
 
 /// Get policies by their IDs
 /// 

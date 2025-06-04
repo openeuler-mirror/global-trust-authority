@@ -38,7 +38,7 @@ impl RvRedisRepo {
             )
                 .sadd(format!("idx:user:{}", model.user_id), &key)
                 .sadd(format!("idx:type:{}", model.attester_type), &key)
-                .sadd(format!("idx:rv:{}", model.rv_id), &key);
+                .sadd(format!("idx:refvalue:{}", model.rv_id), &key);
         }
         pipe.query_async::<_, ()>(&mut conn).await.map_err(|e| RefValueError::DbError(e.to_string()))?;
 
@@ -75,7 +75,7 @@ impl RvRedisRepo {
 
     pub async fn batch_delete_by_rv_id(rv_ids: Vec<String>) -> Result<(), RefValueError> {
         for rv_id in rv_ids {
-            Self::delete_by_index(format!("idx:rv:{}", rv_id)).await?;
+            Self::delete_by_index(format!("idx:refvalue:{}", rv_id)).await?;
         }
 
         Ok(())
@@ -134,7 +134,7 @@ impl RvRedisRepo {
         for (uid, t, r) in &indices {
             pipe.srem(format!("idx:user:{}", uid), rvs);
             pipe.srem(format!("idx:type:{}", t), rvs);
-            pipe.srem(format!("idx:rv:{}", r), rvs);
+            pipe.srem(format!("idx:refvalue:{}", r), rvs);
         }
         pipe.query_async::<_, ()>(conn).await.map_err(|e| RefValueError::DbError(e.to_string()))?;
 

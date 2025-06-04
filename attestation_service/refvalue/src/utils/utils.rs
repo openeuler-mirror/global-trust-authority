@@ -37,7 +37,7 @@ impl Utils {
         bytes.extend_from_slice(&[model.is_default as u8]);
         match DefaultCryptoImpl.sign(&bytes, "FSK").await {
             Ok(SignResponse {signature, key_version}) => {
-                info!("Signed the rv model successfully");
+                info!("Signed the refvalue model successfully");
                 Ok((signature, key_version))
             }
             Err(e) => {
@@ -51,7 +51,7 @@ impl Utils {
         let bytes = Self::encode_rv_db_model_to_bytes(model)?;
         match DefaultCryptoImpl.sign(&bytes, "FSK").await {
             Ok(SignResponse {signature, key_version}) => {
-                info!("Signed the rv db model successfully");
+                info!("Signed the refvalue db model successfully");
                 Ok((signature, key_version))
             }
             Err(e) => {

@@ -16,7 +16,7 @@ use std::fs;
 use tempfile::tempdir;
 
 use policy::{
-    policy_error::policy_error::PolicyError,
+    error::policy_error::PolicyError,
     handler::export_policy_handler::ExportPolicyHandler,
 };
 

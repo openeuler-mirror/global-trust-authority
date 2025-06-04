@@ -52,7 +52,7 @@ impl KeyLifecycleObserver for RvSigUpdate {
                 }
             }
 
-            info!("rv key signature rotation completed");
+            info!("refvalue key signature rotation completed");
             Ok(())
         })
     }
