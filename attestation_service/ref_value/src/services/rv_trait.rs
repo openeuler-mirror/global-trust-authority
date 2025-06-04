@@ -241,7 +241,7 @@ async fn verify_by_cert(user_id: &str, content: &str) -> Result<(), RefValueErro
     let signature = JwtParser::get_signature(content).map_err(|e| InvalidParameter(e.to_string()))?;
     let base_data = JwtParser::get_base_data(content);
     let verify_res =
-        match CertService::verify_by_cert("refvalue", &user_id, &signature, alg, &base_data.as_bytes()).await {
+        match CertService::verify_by_cert("ref_value", &user_id, &signature, alg, &base_data.as_bytes()).await {
             Ok(verify_res) => verify_res,
             Err(e) => {
                 error!("reference value verify failed: {:?}", e);

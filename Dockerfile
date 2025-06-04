@@ -43,7 +43,7 @@ COPY Cargo.lock .
 COPY attestation_service/attestation_service/Cargo.toml ./attestation_service/attestation_service/Cargo.toml
 COPY attestation_service/service_restful/Cargo.toml ./attestation_service/service_restful/Cargo.toml
 COPY attestation_service/policy/Cargo.toml ./attestation_service/policy/Cargo.toml
-COPY attestation_service/refvalue/Cargo.toml ./attestation_service/refvalue/Cargo.toml
+COPY attestation_service/ref_value/Cargo.toml ./attestation_service/ref_value/Cargo.toml
 COPY attestation_service/endorserment/Cargo.toml ./attestation_service/endorserment/Cargo.toml
 COPY attestation_service/nonce/Cargo.toml ./attestation_service/nonce/Cargo.toml
 COPY attestation_service/token_management/Cargo.toml ./attestation_service/token_management/Cargo.toml

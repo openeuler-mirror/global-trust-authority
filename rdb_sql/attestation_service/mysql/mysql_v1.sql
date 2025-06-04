@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS T_DB_VERSION (
 );
 
 CREATE TABLE IF NOT EXISTS key_manager_key_version (
-    key_version VARCHAR(32) NOT NULL,
+    key_version VARCHAR(36) NOT NULL,
     key_type VARCHAR(32) NOT NULL
 );
 
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS policy_information (
     attester_type       JSON           NOT NULL    COMMENT 'List of supported challenge plugin types',
     signature           VARBINARY(512) NULL        COMMENT 'Policy Signature',
     valid_code          INTEGER        NOT NULL    COMMENT 'Verification Status: 0-Normal, 1-Verification Failed',
-    key_version         VARCHAR(32)    NULL        COMMENT 'Signature Key Version',
+    key_version         VARCHAR(36)    NULL        COMMENT 'Signature Key Version',
     product_name        VARCHAR(128)   NULL        COMMENT 'Reserved field',
     product_type        VARCHAR(128)   NULL        COMMENT 'Reserved field',
     board_type          VARCHAR(128)   NULL        COMMENT 'Reserved field',
@@ -35,7 +35,7 @@ create table IF NOT EXISTS t_cert_info
     id          varchar(32) default '' not null comment 'Certificate ID, hash generated from certificate serial number, issuer, and user_id'
     primary key,
     serial_num  varchar(40)            null comment 'Certificate serial number',
-    user_id     varchar(64)            null comment 'User ID',
+    user_id     varchar(36)            null comment 'User ID',
     type        JSON                   null comment 'Certificate type',
     name        varchar(255)           null comment 'Certificate name',
     issuer      varchar(255)           null comment 'Certificate issuer',
@@ -58,7 +58,7 @@ create table IF NOT EXISTS t_cert_revoked_list
     primary key,
     issuer              varchar(255)           null comment 'Certificate issuer',
     serial_num          varchar(40)            null comment 'Certificate serial number',
-    user_id             varchar(64)            null comment 'User ID',
+    user_id             varchar(36)            null comment 'User ID',
     cert_revoked_date   bigint(1)              null comment 'Certificate revocation date',
     cert_revoked_reason varchar(32)            null comment 'Certificate revocation reason',
     crl_id              varchar(36)        not null comment 'Certificate revocation list id',
@@ -72,7 +72,7 @@ create table IF NOT EXISTS t_crl_info
 (
     crl_id          varchar(36)        not null comment 'Certificate revocation list id'
     primary key,
-    user_id         varchar(64)        not null comment 'User ID',
+    user_id         varchar(36)        not null comment 'User ID',
     name            varchar(255)       not null comment 'Certificate revocation list name',
     crl_content     blob               not null comment 'Certificate revocation list content'
 );
@@ -80,17 +80,17 @@ create table IF NOT EXISTS t_crl_info
 CREATE TABLE IF NOT EXISTS T_REF_VALUE
 (
     id                  VARCHAR(32)     PRIMARY KEY COMMENT 'Baseline ID, hash generated from name, attester_type, and uid',
-    uid                 VARCHAR(40)     NOT NULL    COMMENT 'User ID',
+    uid                 VARCHAR(36)     NOT NULL    COMMENT 'User ID',
     name                VARCHAR(255)    NOT NULL    COMMENT 'Baseline name',
     version             INT             NOT NULL    COMMENT 'Baseline version',
-    description         VARCHAR(1024)               COMMENT 'Baseline description',
+    description         VARCHAR(512)               COMMENT 'Baseline description',
     attester_type       VARCHAR(32)     NOT NULL    COMMENT 'Challenge plugin type',
     content             LONGTEXT        NOT NULL    COMMENT 'Baseline content',
     is_default          BOOL            NOT NULL    COMMENT 'Whether it is the default baseline',
     create_time         BIGINT          NOT NULL    COMMENT 'Creation time',
     update_time         BIGINT          NOT NULL    COMMENT 'Update time',
     signature           VARBINARY(512)              COMMENT 'Policy signature',
-    key_version         VARCHAR(32)                 COMMENT 'Signature version',
+    key_version         VARCHAR(36)                 COMMENT 'Signature version',
     valid_code          INT                         COMMENT '0-Normal, 1-Signature verification failed, this field is not within the integrity verification scope, only for backend storage/viewing, all logic needs to recheck certificate status',
     unique (NAME, uid)
 );
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS T_REF_VALUE
 CREATE TABLE IF NOT EXISTS T_REF_VALUE_DETAIL
 (
     id                  VARCHAR(32)     PRIMARY KEY COMMENT 'Generated from filename and ref_value_id',
-    uid                 VARCHAR(40)     NOT NULL    COMMENT 'User ID',
+    uid                 VARCHAR(36)     NOT NULL    COMMENT 'User ID',
     attester_type       VARCHAR(32)     NOT NULL    COMMENT 'Challenge plugin type',
     file_name           VARCHAR(255)    NOT NULL    COMMENT 'Measurement file name',
     sha256              VARCHAR(64)     NOT NULL    COMMENT 'Measurement value',
