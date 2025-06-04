@@ -13,10 +13,8 @@
 use std::error::Error;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
-use sea_orm::DatabaseConnection;
 use common_log::info;
-use rdb::{execute_sql_file, get_connection, DbError};
+use rdb::{execute_sql_file, get_connection};
 use crate::init_chain::traits::{InitContext, InitHandler};
 
 #[derive(Debug)]

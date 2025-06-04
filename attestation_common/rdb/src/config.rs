@@ -15,6 +15,7 @@
 
 use std::env;
 use log::{info, error};
+#[allow(unused_imports)]
 use env_config_parse::find_file;
 use crate::DbError;
 
@@ -38,7 +39,7 @@ impl DbConfig {
         #[cfg(debug_assertions)]
         {
             dotenv::dotenv().ok().map(|_| std::env::vars().for_each(|(k, _)| std::env::remove_var(&k)));
-            let file_path = find_file(".env.dev").map(|p| p.to_str().unwrap().to_string()).unwrap();
+            let file_path = env_config_parse::find_file(".env.dev").map(|p| p.to_str().unwrap().to_string()).unwrap();
             dotenv::from_filename(file_path).expect("Failed to load .env.dev");
         }
         let mut db_type = env::var("DB_TYPE").expect("DB_TYPE must be set");
