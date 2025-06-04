@@ -79,7 +79,7 @@ Securely store the unseal keys and root token displayed in the output.
 # The current unseal key comes from the above-mentioned console print content. Using three can unseal the current openbao
 bao operator unseal <unseal key>
 ```
-### RPM Installation
+### Deployment by rpm
 #### 1.Install dependencies
 ```shell
 sudo yum install -y gcc rpm-build openssl-devel
@@ -105,7 +105,7 @@ KEY_MANAGER_SECRET_ADDR=http://127.0.0.1:8200/
 ```shell
 /usr/local/key_manager/bin/key_managerd &
 ```
-### Docker Installation
+### Deployment by docker
 #### 1.Install Docker
 ```shell
 # Debian/Ubuntu
@@ -154,6 +154,7 @@ curl  --cert ra_client_cert.pem \
 | --algorithm  | Yes      | String  | `RSA_3072`        | Encryption algorithm for the key |
 | --encoding   | Yes      | String  | `PEM`             | Encoding format for the key      |
 | --key_file   | Yes      | String  | -                 | Path to key file                 |
+> **Note**: The current key algorithm format only supports RSA_3072.
 ### Example
 1. Generate the key file rsa_3072.key
 2. Execute the following command to import the key with the name "TSK", the encoding method "PEM" and the encryption algorithm "RSA 3072"
