@@ -297,6 +297,7 @@ Preparing...                          ################################# [100%]
 Updating / installing...
    1:ra-agent-0.0.1-1                 ################################# [100%]
 ```
+
 #### Deployment
 ##### start
 Execute the command to start the service
@@ -315,6 +316,43 @@ rpm -qa | grep ra-agent
 ```
 
 After executing the command, there is no output, proving that the agent service was uninstalled successfully
+
+### attestation_cli
+
+#### Build the rpm package
+
+Build the rpm package, run rpm_build.sh
+
+```
+sh script/rpm_build.sh -c
+```
+
+Take the x86 architecture as an example, after the build is complete, the rpm package is in /root/rpmbuild/RPMS/x86_64/ra-cli-0.0.1-1.x86_64.rpm
+
+#### Install the rpm package
+
+Install the rpm package
+
+```
+rpm -ivh --nodeps ra-cli-0.0.1-1.x86_64.rpm
+```
+
+The following message appears, proving that the rpm package was installed successfully
+
+```
+rpm: RPM should not be used directly install RPM packages, use Alien instead!
+rpm: However assuming you know what you are doing...
+Verifying...                          ################################# [100%]
+Preparing...                          ################################# [100%]
+Updating / installing...
+   1:ra-cli-0.0.1-1                   ################################# [100%]
+```
+#### Uninstall the rpm package
+```
+rpm -e ra-cli-0.0.1-1.x86_64
+rpm -qa | grep ra-cli
+```
+After executing the command, there is no output, proving that the cli tool was uninstalled successfully
 
 ## Interact with Rest API && environment preset data
 
