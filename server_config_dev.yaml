@@ -19,9 +19,9 @@ attestation_service:
   policy:
     export_policy_file:
       - name: "tpm_boot"
-        path: "/var/test_docker/app/export_policy/tpm_boot"
+        path: "/var/test_docker/app/export_policy/tpm_boot.rego"
       - name: "tpm_ima"
-        path: "/var/test_docker/app/export_policy/tpm_ima"
+        path: "/var/test_docker/app/export_policy/tpm_ima.rego"
     is_verify_policy_signature: false
     single_user_policy_limit: 30
     policy_content_size_limit: 500

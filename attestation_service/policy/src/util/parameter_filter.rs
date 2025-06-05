@@ -12,7 +12,7 @@
 
 use serde_json::Value;
 
-use crate::policy_error::policy_error::PolicyError;
+use crate::error::policy_error::PolicyError;
 
 pub struct ParameterFilter;
 

@@ -11,7 +11,7 @@
  */
 
 use crate::entities::db_model::rv_detail_db_model::{Column, Entity, Model};
-use crate::entities::inner_model::rv_content::{RefValueDetail, RefValueDetails};
+use crate::entities::inner_model::rv_content::RefValueDetail;
 use crate::entities::inner_model::rv_model::RefValueModel;
 use crate::error::ref_value_error::RefValueError;
 use crate::repositories::repo_ext::RepoExt;
@@ -92,7 +92,6 @@ impl RvDtlDbRepo {
 
     pub async fn query_by_ids(conn: &DatabaseConnection, rv_ids: Vec<&str>) -> Result<Vec<Model>, RefValueError> {
         let condition = Condition::all().add(Column::RefValueId.is_in(rv_ids));
-        let select_column = vec![Column::FileName, Column::Sha256, Column::RefValueId];
         RepoExt::query_all::<Entity, Column>(conn, vec![], condition, Column::Id)
             .await
             .map_err(|e| RefValueError::DbError(e.to_string()))

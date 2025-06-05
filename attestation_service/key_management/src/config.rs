@@ -12,9 +12,11 @@
 
 use mockall::automock;
 use serde::Deserialize;
+#[allow(unused_imports)]
 use std::env;
 use std::fmt::Debug;
 use std::sync::{Mutex, OnceLock};
+#[allow(unused_imports)]
 use env_config_parse::find_file;
 use config_manager::types::context::CONFIG;
 

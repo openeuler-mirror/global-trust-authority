@@ -10,6 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
+ #![allow(unused_imports)]
 use crate::entities::cert_error::CertVerifyError;
 use crate::entities::{cert_info, cert_revoked_list, crl_info};
 use crate::repositories::cert_repository::CertRepository;
@@ -27,11 +28,10 @@ use openssl::nid::Nid;
 use openssl::sign::Verifier;
 use openssl::x509::{ReasonCode, X509Crl, X509};
 use rdb::get_connection;
-use sea_orm::{query, ActiveValue, DatabaseConnection, DatabaseTransaction, DbErr, TransactionTrait};
+use sea_orm::{ActiveValue, DatabaseConnection, DatabaseTransaction, TransactionTrait};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::BTreeMap;
-use std::fmt::format;
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
@@ -1300,7 +1300,6 @@ impl CertService {
 
 // test begin
 use crate::entities::crl_info::Model;
-use crate::entities::prelude::CrlInfo;
 use openssl::asn1::Asn1Integer;
 use openssl::asn1::Asn1String;
 use openssl::bn::BigNum;

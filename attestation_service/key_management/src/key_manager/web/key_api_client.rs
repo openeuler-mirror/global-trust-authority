@@ -40,7 +40,7 @@ impl KeyApiClient {
         let client = self.client.clone();
         let url = url.to_string();
         Box::pin(async move {
-            let mut response = client
+            let response = client
                 .get(&url)
                 .send()
                 .await
@@ -57,7 +57,7 @@ impl KeyApiClient {
 fn get_https_client() -> Client {
     let current_dir = std::env::current_dir().unwrap();
     YamlConfigLoader.load_config();
-    let yml_config = CONFIG_CACHE.get().unwrap().clone();
+    let yml_config = CONFIG_CACHE.get().unwrap();
     let cert_path = current_dir.clone().join(yml_config.lock().unwrap().key_cli_cert_path.clone());
     let key_path = current_dir.clone().join(yml_config.lock().unwrap().key_cli_key_path.clone());
     let cert_path = Path::new(&cert_path);

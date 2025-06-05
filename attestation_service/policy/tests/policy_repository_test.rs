@@ -18,7 +18,7 @@ use sea_orm::{ActiveValue, DatabaseBackend, MockDatabase, MockExecResult, Transa
 use serde_json::json;
 use key_management::key_manager::error::KeyManagerError;
 use policy::handler::query_policy_handler::QueryPolicyHandler;
-use policy::policy_error::policy_error::PolicyError;
+use policy::error::policy_error::PolicyError;
 
 fn create_test_policy() -> ActiveModel {
     ActiveModel {

@@ -10,8 +10,13 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use cache::client::RedisClient;
+use serde::{Serialize, Deserialize};
 
-pub async fn get_redis_client() -> RedisClient {
-    RedisClient::get_instance().unwrap()
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RvRedisModel {
+    pub sha256: String,
+    pub user_id: String,
+    pub attester_type: String,
+    pub rv_id: String,
+    pub file_name: String,
 }

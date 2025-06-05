@@ -141,7 +141,6 @@ impl KeyLifecycle for KeySubject {
                 info!("db_version is large than max_version, db_version: {}, max_version: {}", db_version, max_version);
                 panic!("The key data version is incorrect, and the service failed to start");
             }
-            let key_store = KeyStore::global();
             // Get distributed locks
             self.lock.acquire()?;
             info!("KeySubject: Acquired key rotation lock");
