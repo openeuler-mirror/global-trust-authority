@@ -16,7 +16,7 @@ use sea_orm::DatabaseConnection;
 use key_management::api::{CryptoOperations, DefaultCryptoImpl};
 
 use crate::entities::{policy::Policy, signature_policy::SignaturePolicy};
-use crate::policy_error::policy_error::PolicyError;
+use crate::error::policy_error::PolicyError;
 use crate::repositories::policy_repository::PolicyRepository;
 use crate::constants::SIGNATURE_KEY_TYPE;
 use config_manager::types::CONFIG;

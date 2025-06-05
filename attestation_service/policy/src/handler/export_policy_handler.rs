@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::sync::RwLock;
 use common_log::{error, info};
-use crate::policy_error::policy_error::PolicyError;
+use crate::error::policy_error::PolicyError;
 use config_manager::types::context::CONFIG;
 
 pub struct ExportPolicyHandler;

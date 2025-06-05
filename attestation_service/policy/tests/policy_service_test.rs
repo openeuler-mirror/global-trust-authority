@@ -16,9 +16,9 @@ use sea_orm::{Database, DatabaseConnection, TransactionTrait, ConnectionTrait};
 use serde_json::json;
 
 use policy::{
-    policy_error::policy_error::PolicyError,
+    error::policy_error::PolicyError,
     services::policy_service::PolicyService,
-    policy_api::get_policy_by_ids,
+    api::get_policy_by_ids,
 };
 
 async fn setup_test_db() -> Result<web::Data<Arc<DatabaseConnection>>, PolicyError> {
