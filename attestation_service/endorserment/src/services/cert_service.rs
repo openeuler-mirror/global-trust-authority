@@ -851,6 +851,10 @@ impl CertService {
         }
     }
 
+    fn validate_cert_update_body(body: &UpdateCertRequest) -> bool {
+        body.cert_type.is_some() || body.name.is_some() || body.description.is_some() || body.is_default.is_some()
+    }
+
     /// Verify requests and update certificates
     ///
     /// Handles the request to update an existing certificate for a user.
@@ -872,6 +876,10 @@ impl CertService {
         if let Err(e) = request.validate() {
             error!("Request body is invalidate: {:?}", e);
             return Ok(HttpResponse::BadRequest().body(e.to_string()));
+        }
+        if !Self::validate_cert_update_body(&request){
+            error!("there is no field need to be updated");
+            return Ok(HttpResponse::BadRequest().body("there is no field need to be updated".to_string()));
         }
         if request.name.is_some() {
             match CertRepository::verify_name_is_duplicated(&db, request.name.clone(), Some(request.id.clone()), &user_id.clone()).await {
