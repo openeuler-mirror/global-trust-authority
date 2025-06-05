@@ -70,6 +70,21 @@ impl RvDbRepo {
         Ok((version, org_name, org_attester_type))
     }
 
+    /// Deletes all reference values and their details for a specific user
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `user_id` - ID of the user whose reference values should be deleted
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all reference values were successfully deleted
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to begin transaction
+    /// * Failed to delete reference values
+    /// * Failed to delete reference value details
+    /// * Failed to commit transaction
     pub async fn del_all(db: &DatabaseConnection, user_id: &str) -> Result<(), RefValueError> {
         let txn = db.begin().await.map_err(|e| RefValueError::DbError(e.to_string()))?;
         if let Err(e) = Entity::delete_many().filter(Column::Uid.eq(user_id)).exec(&txn).await {
@@ -82,6 +97,19 @@ impl RvDbRepo {
         Ok(())
     }
 
+    /// Deletes specific reference values by their IDs for a given user
+    ///
+    /// # Arguments
+    /// * `conn` - Database connection
+    /// * `user_id` - ID of the user who owns the reference values
+    /// * `ids` - Vector of reference value IDs to delete
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all specified reference values were successfully deleted
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to execute delete query
     pub async fn del_by_id<C>(
         conn: &C,
         user_id: &str,
@@ -97,6 +125,19 @@ impl RvDbRepo {
         Ok(())
     }
 
+    /// Deletes all reference values of a specific attester type for a given user
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `user_id` - ID of the user who owns the reference values
+    /// * `attester_type` - Type of attester whose reference values should be deleted
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all reference values of the specified type were successfully deleted
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to execute delete query
     pub async fn del_by_type(
         db: &DatabaseConnection,
         user_id: &str,
@@ -109,6 +150,18 @@ impl RvDbRepo {
         Ok(())
     }
 
+    /// Retrieves all reference values for a specific user
+    ///
+    /// # Arguments
+    /// * `conn` - Database connection
+    /// * `user_id` - ID of the user whose reference values should be retrieved
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Model>)` - List of all reference value models for the user
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to execute database query
     pub async fn query_all(
         conn: &DatabaseConnection,
         user_id: &str,
@@ -126,6 +179,19 @@ impl RvDbRepo {
         .map_err(|e| RefValueError::DbError(e.to_string()))
     }
 
+    /// Retrieves all reference values for a specific user and attester type
+    ///
+    /// # Arguments
+    /// * `conn` - Database connection
+    /// * `user_id` - ID of the user whose reference values should be retrieved
+    /// * `attester_type` - Type of attester to filter the reference values
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Model>)` - List of reference value models matching the criteria
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to execute database query
     pub async fn query_all_by_attester_type(
         conn: &DatabaseConnection,
         user_id: &str,
@@ -145,6 +211,21 @@ impl RvDbRepo {
         .map_err(|e| RefValueError::DbError(e.to_string()))
     }
 
+    /// Retrieves reference values by their IDs for a specific user, with optional signature verification
+    ///
+    /// # Arguments
+    /// * `conn` - Database connection
+    /// * `user_id` - ID of the user who owns the reference values
+    /// * `ids` - Vector of reference value IDs to retrieve
+    ///
+    /// # Returns
+    /// * `Ok(Vec<RefValueModel>)` - List of reference value models with verified signatures
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to execute database query
+    /// * Failed to encode reference value for signature verification
+    /// * Failed to verify signature
     pub async fn query_by_ids(
         conn: &DatabaseConnection,
         user_id: &str,
@@ -200,6 +281,20 @@ impl RvDbRepo {
         Ok(response)
     }
 
+    /// Counts the number of pages for reference values with a different key version
+    ///
+    /// # Arguments
+    /// * `db` - Database transaction
+    /// * `key_version` - Key version to compare against
+    /// * `page_size` - Number of items per page
+    ///
+    /// # Returns
+    /// * `Ok(u64)` - Number of pages
+    ///
+    /// # Errors
+    /// Returns `DbErr` when:
+    /// * Failed to execute database query
+    /// * Failed to count records
     pub async fn count_pages_by_key_version(
         db: &DatabaseTransaction,
         key_version: &str,
@@ -210,6 +305,20 @@ impl RvDbRepo {
         RepoExt::count_pages_with_condition::<Entity, Column>(db, page_size, condition, Column::Id).await
     }
 
+    /// Counts the number of pages for reference values by attester type and user ID
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `attester_type` - Type of attester to filter by
+    /// * `uid` - User ID to filter by
+    /// * `page_size` - Number of items per page
+    ///
+    /// # Returns
+    /// * `Ok(u64)` - Number of pages
+    ///
+    /// # Errors
+    /// Returns `DbErr` when:
+    /// * Failed to execute count query
     pub async fn count_pages_by_attester_type_and_uid(
         db: &DatabaseConnection,
         attester_type: &str,
@@ -221,6 +330,21 @@ impl RvDbRepo {
         RepoExt::count_pages_with_condition::<Entity, Column>(db, page_size, condition, Column::Id).await
     }
 
+    /// Queries a page of reference values filtered by attester type and user ID
+    ///
+    /// # Arguments
+    /// * `conn` - Database connection
+    /// * `attester_type` - Type of attester to filter by
+    /// * `uid` - User ID to filter by
+    /// * `page_num` - Page number to retrieve
+    /// * `page_size` - Number of items per page
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Model>)` - List of reference value models for the specified page
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to execute pagination query
     pub async fn query_page_by_attester_type_and_uid(
         conn: &DatabaseConnection,
         attester_type: &str,
@@ -243,6 +367,20 @@ impl RvDbRepo {
         .map_err(|e| RefValueError::DbError(e.to_string()))
     }
 
+    /// Queries a page of reference values with a different key version
+    ///
+    /// # Arguments
+    /// * `txn` - Database transaction
+    /// * `page_num` - Page number to retrieve
+    /// * `page_size` - Number of items per page
+    /// * `key_version` - Key version to compare against
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Model>)` - List of reference value models for the specified page
+    ///
+    /// # Errors
+    /// Returns `DbErr` when:
+    /// * Failed to execute pagination query
     pub async fn query_page_by_key_version(
         txn: &DatabaseTransaction,
         page_num: u64,
@@ -263,6 +401,21 @@ impl RvDbRepo {
         .await
     }
 
+    /// Updates a reference value by its ID and version number
+    ///
+    /// # Arguments
+    /// * `conn` - Database connection
+    /// * `model` - Updated reference value model
+    /// * `id` - ID of the reference value to update
+    /// * `cur_version` - Current version number of the reference value
+    ///
+    /// # Returns
+    /// * `Ok(())` - If the update was successful
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to execute update query
+    /// * Reference value has been modified by another request
     pub async fn update_by_id_and_version<C>(
         conn: &C,
         model: ActiveModel,
@@ -374,7 +527,10 @@ impl RvDbRepo {
             row.try_get("", "attester_type").map_err(|e| RefValueError::DbError(e.to_string()))?;
         let org_is_default: bool = row.try_get("", "is_default").map_err(|e| RefValueError::DbError(e.to_string()))?;
         let org_content: String = row.try_get("", "content").map_err(|e| RefValueError::DbError(e.to_string()))?;
-        db_model.set_version(Set(version + 1));
+        let new_version = version.checked_add(1).ok_or_else(|| 
+            RefValueError::DbError("Version number overflow".into())
+        )?;
+        db_model.set_version(Set(new_version));
         if db_model.name.is_not_set() {
             db_model.set_name(Unchanged(org_name.clone()));
         }

@@ -95,6 +95,9 @@ pub trait TcgDigestParse {
     ///
     /// # Returns
     /// * `Result<TcgDigestAlgorithm, PluginError>` - The parsed digest algorithm or an error
+    /// 
+    /// # Errors
+    /// * `PluginError::InputError` - If there's an error reading the digest data
     fn parse_digest(&self, cursor: &mut ByteReader) -> Result<TcgDigestAlgorithm, PluginError>;
 
     /// Determines if this is a TCG 2.0 version
@@ -461,6 +464,9 @@ impl ByteParseable for EfiLoadOption {
 /// - SBAT level
 /// - MOK list
 /// - Boot order and boot entries
+/// 
+/// # Errors
+/// * `PluginError::InputError` - If input data is invalid or cannot be parsed
 pub fn parse_uefi_variable_data_event(
     event_type: &EventType,
     parser: &mut ByteReader
@@ -660,6 +666,15 @@ impl ByteParseable for UefiImageLoadEvent {
 /// * `parser` - Byte reader
 /// * `wrapper` - Wrapper function to convert parsed event to TpmEventLog
 /// * `event_name` - Event type name, used for error messages
+/// 
+/// # Returns
+/// * `Result<TpmEventLog, PluginError>` - Parsed event or error
+/// 
+/// # Description
+/// This function parses an event of type T using the provided parser and wrapper function.
+/// 
+/// # Errors
+/// * `PluginError::InputError` - If input data is invalid or cannot be parsed
 pub fn parse_typed_event<T, F>(
     parser: &mut ByteReader,
     wrapper: F,

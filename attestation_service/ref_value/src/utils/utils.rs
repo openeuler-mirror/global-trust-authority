@@ -22,11 +22,34 @@ use crate::error::ref_value_error::RefValueError::{InvalidParameter, JsonParseEr
 pub struct Utils {}
 
 impl Utils {
+    /// Parses reference value details from JWT content
+    ///
+    /// # Arguments
+    /// * `content` - JWT formatted content string
+    ///
+    /// # Returns
+    /// * `Ok(RefValueDetails)` - Successfully parsed reference value details
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * JWT parsing fails
+    /// * JSON parsing fails
     pub fn parse_rv_detail_from_jwt_content(content: &str) -> Result<RefValueDetails, RefValueError> {
         let payload = JwtParser::get_payload(content).map_err(|e| InvalidParameter(e.to_string()))?;
         serde_json::from_str::<RefValueDetails>(&payload).map_err(|e| JsonParseError(e.to_string()))
     }
 
+    /// Signs a reference value model
+    ///
+    /// # Arguments
+    /// * `model` - Reference value model to be signed
+    ///
+    /// # Returns
+    /// * `Ok((Vec<u8>, String))` - Signature and key version
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Signing operation fails
     pub async fn sign_by_ref_value_model(model: &RefValueModel) -> Result<(Vec<u8>, String), RefValueError> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(model.id.as_bytes());
@@ -47,6 +70,18 @@ impl Utils {
         }
     }
 
+    /// Signs a database reference value model
+    ///
+    /// # Arguments
+    /// * `model` - Database reference value model to be signed
+    ///
+    /// # Returns
+    /// * `Ok((Vec<u8>, String))` - Signature and key version
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Model encoding fails
+    /// * Signing operation fails
     pub async fn sign_by_ref_value_db_model(model: ActiveModel) -> Result<(Vec<u8>, String), RefValueError> {
         let bytes = Self::encode_rv_db_model_to_bytes(model)?;
         match DefaultCryptoImpl.sign(&bytes, "FSK").await {
@@ -61,6 +96,17 @@ impl Utils {
         }
     }
     
+    /// Encodes a database reference value model into a byte sequence
+    ///
+    /// # Arguments
+    /// * `model` - Database reference value model to be encoded
+    ///
+    /// # Returns
+    /// * `Ok(Vec<u8>)` - Encoded byte sequence
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Model is missing required fields (id, uid, name, attester_type, content, is_default)
     pub fn encode_rv_db_model_to_bytes(model: ActiveModel) -> Result<Vec<u8>, RefValueError> {
         let mut bytes = Vec::new();
         if None == model.id.clone().into_value() {

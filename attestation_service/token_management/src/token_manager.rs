@@ -30,7 +30,23 @@ const MAX_SIZE: usize = 5 * 1024 * 1024;
 pub struct TokenManager;
 
 impl TokenManager {
-    /// generate token
+    /// Generates a new token based on the provided JSON body.
+    ///
+    /// This function retrieves the private key, configures the token header and claims,
+    /// and encodes the token. It also optionally sends the generated token to a message queue.
+    ///
+    /// # Arguments
+    /// * `json_body` - A mutable JSON Value containing the claims to be included in the token.
+    ///
+    /// # Returns
+    /// * `Result<String, GenerateTokenError>` - The generated token string if successful,
+    ///   or a `GenerateTokenError` if an error occurs during key retrieval, configuration,
+    ///   time calculation, or encoding.
+    ///
+    /// # Error
+    /// * `GenerateTokenError` - If the key is not initialized, fails to retrieve keys,
+    ///   invalid key algorithm, fails to get config, fails to get system time,
+    ///   token expiration time calculation overflowed, or fails to encode the token.
     pub async fn generate_token(json_body: &mut Value) -> Result<String, GenerateTokenError> {
         if !is_initialized() {
             error!("Attempted to generate token with uninitialized key.");
@@ -105,7 +121,22 @@ impl TokenManager {
         }
     }
 
-    /// verify token
+    /// Verifies the authenticity and validity of a given token.
+    ///
+    /// This function retrieves the public key, decodes and validates the token
+    /// using the specified algorithm.
+    ///
+    /// # Arguments
+    /// * `token` - The token string to verify.
+    ///
+    /// # Returns
+    /// * `Result<VerifyTokenResponse, VerifyTokenError>` - A `VerifyTokenResponse`
+    ///   indicating the verification result and containing the claims and header if successful,
+    ///   or a `VerifyTokenError` if an error occurs during key retrieval or verification.
+    ///
+    /// # Error
+    /// * `VerifyTokenError` - If fails to retrieve public key, invalid key algorithm,
+    ///   fails to decode or verify the token.
     pub async fn verify_token(token: &str) -> Result<VerifyTokenResponse, VerifyTokenError> {
         // get_public_key
         let key_info_resp = DefaultCryptoImpl.get_public_key("TSK", None).await.map_err(|e: KeyManagerError| {

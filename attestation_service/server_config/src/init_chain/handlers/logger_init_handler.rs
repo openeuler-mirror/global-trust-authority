@@ -25,6 +25,13 @@ impl LoggerInitHandler {
         LoggerInitHandler { next: None }
     }
 
+    /// Initializes the logger based on the build configuration.
+    /// 
+    /// # Panics
+    /// 
+    /// This function will panic if:
+    /// - In docker build: fails to initialize docker logger
+    /// - In rpm build: fails to initialize rpm logger
     pub fn init_logger(&self) {
         #[cfg(feature = "docker_build")]
         {

@@ -18,6 +18,18 @@ pub struct  InitChain {
 }
 
 impl InitChain {
+    /// Executes the initialization chain by running each handler in sequence
+    ///
+    /// # Arguments
+    /// * `context` - Mutable reference to the initialization context
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all handlers execute successfully
+    ///
+    /// # Errors
+    /// Returns `String` error when:
+    /// * Any handler in the chain fails to execute
+    /// * A handler returns an error during its execution
     pub async fn execute(&self, context: &mut InitContext) -> Result<(), String> {
         if let Some(handler) = &self.first_handler {
             handler.handle(context).await

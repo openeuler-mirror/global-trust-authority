@@ -461,6 +461,12 @@ impl EventLog {
     ///
     /// # Returns
     /// * `Result<&mut Self, PluginError>` - Self reference or error
+    ///
+    /// # Errors
+    /// * Returns `PluginError::InputError` if the selected digest algorithm is invalid,
+    ///   if PCR values are not set, if locking PCR values fails, if getting a digest
+    ///   value for an event fails, or if any error occurs during the replay calculation
+    ///   for an individual event.
     pub fn replay(&mut self) -> Result<&mut Self, PluginError> {
         let hash_alg: AlgorithmId = AlgorithmId::from_str(self.selected_digest_alg.as_str())
             .map_err(|e| PluginError::InputError(format!("Failed to parse hash algorithm: {}", e)))?;
@@ -561,6 +567,10 @@ impl EventLog {
     ///
     /// # Returns
     /// * `Result<bool, PluginError>` - True if verification succeeds, error otherwise
+    ///
+    /// # Errors
+    /// * Returns `PluginError::InputError` if `replay()` fails, if PCR values are not set,
+    ///   if locking PCR values fails, or if `check_is_matched()` fails (indicating PCR values do not match).
     pub fn verify(&mut self) -> Result<bool, PluginError> {
         self.replay()?;
         self.pcr_values
@@ -577,6 +587,10 @@ impl EventLog {
     ///
     /// # Returns
     /// * `Result<Value, PluginError>` - JSON value or error
+    ///
+    /// # Errors
+    /// * Returns `PluginError::InputError` if the `selected_digest_alg` is not found
+    ///   in a TCG 2.0 digest entry, or if serialization of an event fails.
     pub fn to_json_value(&self) -> Result<Value, PluginError> {
         let event_entries = self.event_log.iter().map(|entry| {
             let mut obj = serde_json::Map::new();

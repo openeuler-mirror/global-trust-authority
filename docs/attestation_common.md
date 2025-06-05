@@ -102,8 +102,6 @@ let limiter = RateLimiter::new(10, 5)?; // 10 req/s, burst 5
 ### 6.1 Unit Testing（tests/）
 #[cfg(test)]
 mod tests {
-use super::*;
-
     #[test]
     fn test_hash_generation() {
         // code implementation

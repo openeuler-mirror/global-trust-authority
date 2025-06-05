@@ -60,7 +60,7 @@ impl Nonce {
 // base64 encode
 fn generate_random_base64() -> String {
     let mut rng = create_secure_rng();
-    let config = CONFIG.get_instance().unwrap();
+    let config = CONFIG.get_instance().expect("Failed to get config instance");
     let nonce_bytes = config.attestation_service.nonce.nonce_bytes;
     let mut random_bytes = vec![0u8; nonce_bytes as usize];
     rng.fill_bytes(&mut random_bytes);
@@ -108,17 +108,23 @@ fn create_secure_rng() -> ChaCha20Rng {
     ChaCha20Rng::from_seed(seed)
 }
 
-// get system time
+/// Gets the current system time as seconds since the Unix epoch.
+///
+/// # Returns
+/// * `u64` - The current time in seconds since the Unix epoch.
+///
+/// # Panics
+/// Panics if the system time is before the Unix epoch (January 1, 1970).
 pub fn get_system_time() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .expect("System time is before UNIX epoch")
         .as_secs()
 }
 
 // verify signature
 async fn verify_signature(_nonce: Nonce) -> bool {
-    let iat_value = _nonce.iat.to_string() + &_nonce.value;
+    let iat_value = format!("{}{}", _nonce.iat, _nonce.value);
     let data = iat_value.as_bytes().to_vec();
     let signature_bytes = match general_purpose::STANDARD.decode(_nonce.signature) {
         Ok(bytes) => bytes,

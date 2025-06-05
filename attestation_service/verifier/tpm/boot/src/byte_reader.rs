@@ -125,17 +125,16 @@ impl<'a> ByteReader<'a> {
     pub fn remaining(&self) -> u64 {
         let total: u64 = self.cursor.get_ref().len() as u64;
         let current: u64 = self.cursor.position();
-        if current > total {
-            0
-        } else {
-            total - current
-        }
+        total.checked_sub(current).unwrap_or(0)
     }
 
     /// Read a u8 value
     ///
     /// # Returns
     /// * `Result<u8, PluginError>` - Returns the read u8 value on success, error on failure
+    /// 
+    /// # Errors
+    /// * Returns an error when the byte stream contains insufficient data
     pub fn read_u8(&mut self) -> Result<u8, PluginError> {
         self.cursor.read_u8()
             .map_err(|e| PluginError::InputError(format!("Failed to read u8: {}", e)))
@@ -145,6 +144,9 @@ impl<'a> ByteReader<'a> {
     ///
     /// # Returns
     /// * `Result<u16, PluginError>` - Returns the read u16 value on success, error on failure
+    /// 
+    /// # Errors
+    /// * Returns an error when the byte stream contains insufficient data
     pub fn read_u16(&mut self) -> Result<u16, PluginError> {
         self.cursor.read_u16::<LittleEndian>()
             .map_err(|e| PluginError::InputError(format!("Failed to read u16: {}", e)))
@@ -154,6 +156,9 @@ impl<'a> ByteReader<'a> {
     ///
     /// # Returns
     /// * `Result<u32, PluginError>` - Returns the read u32 value on success, error on failure
+    /// 
+    /// # Errors
+    /// * Returns an error when the byte stream contains insufficient data
     pub fn read_u32(&mut self) -> Result<u32, PluginError> {
         self.cursor.read_u32::<LittleEndian>()
             .map_err(|e| PluginError::InputError(format!("Failed to read u32: {}", e)))
@@ -163,6 +168,9 @@ impl<'a> ByteReader<'a> {
     ///
     /// # Returns
     /// * `Result<u64, PluginError>` - Returns the read u64 value on success, error on failure
+    /// 
+    /// # Errors
+    /// * Returns an error when the byte stream contains insufficient data
     pub fn read_u64(&mut self) -> Result<u64, PluginError> {
         self.cursor.read_u64::<LittleEndian>()
             .map_err(|e| PluginError::InputError(format!("Failed to read u64: {}", e)))
@@ -199,6 +207,9 @@ impl<'a> ByteReader<'a> {
     ///
     /// # Returns
     /// * `Result<String, PluginError>` - Returns the read UTF-8 string on success, error on failure
+    /// 
+    /// # Errors
+    /// * Returns an error when the byte stream contains invalid UTF-8 data
     pub fn read_string(&mut self, length: usize) -> Result<String, PluginError> {
         let bytes: Vec<u8> = self.read_bytes(length)?;
         String::from_utf8(bytes)
@@ -211,6 +222,9 @@ impl<'a> ByteReader<'a> {
     ///
     /// # Returns
     /// * `Result<String, PluginError>` - Returns the GUID string on success, error on failure
+    /// 
+    /// # Errors
+    /// * Returns an error when the byte stream contains invalid GUID data
     pub fn read_guid(&mut self) -> Result<String, PluginError> {
         // read guid
         let mut guid_bytes: [u8; UEFI_GUID_SIZE] = [0; UEFI_GUID_SIZE];
@@ -230,6 +244,9 @@ impl<'a> ByteReader<'a> {
     ///
     /// # Returns
     /// * `Result<String, PluginError>` - Returns the Unicode string on success, error on failure
+    /// 
+    /// # Errors
+    /// * Returns an error when the byte stream contains invalid Unicode data
     pub fn read_unicode_name(&mut self, length: usize) -> Result<String, PluginError> {
         let mut unicode_name: String = String::new();
         for _ in 0..length as usize {
@@ -255,6 +272,9 @@ impl<'a> ByteReader<'a> {
     ///
     /// # Returns
     /// * `Result<String, PluginError>` - Returns the UTF-8 string on success, error on failure
+    ///
+    /// # Errors
+    /// * Returns an error when the byte stream contains invalid UTF-8 data or if a position overflow occurs
     pub fn read_null_terminated_string(&mut self, max_length: usize) -> Result<String, PluginError> {
         let start_pos: u64 = self.position();
         let mut end_pos: u64 = start_pos;
@@ -290,6 +310,9 @@ impl<'a> ByteReader<'a> {
     ///
     /// # Returns
     /// * `Result<String, PluginError>` - Returns the Unicode string on success, error on failure
+    /// 
+    /// # Errors
+    /// * Returns an error when the byte stream contains invalid UCS-2 data
     pub fn read_ucs2_string(&mut self) -> Result<String, PluginError> {
         let mut unicode_str = String::new();
 

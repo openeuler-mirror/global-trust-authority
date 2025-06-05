@@ -49,6 +49,10 @@ impl PolicyHandler {
     /// * `Result<String, PolicyError>` - Decoded policy content if successful
     /// * `PolicyContentSizeLimitReached` - If the decoded content exceeds the size limit
     /// * `IncorrectFormatError` - If the content cannot be decoded or has invalid format
+    /// 
+    /// # Error
+    /// * `IncorrectFormatError` - If the content cannot be decoded or has invalid format
+    /// * `PolicyContentSizeLimitReached` - If the decoded content exceeds the size limit
     fn decode_policy_content(content: String, content_type: &str) -> Result<String, PolicyError> {
         let config = CONFIG.get_instance().unwrap();
         let check_content_size = |decoded_content: &str| {
@@ -153,6 +157,11 @@ impl PolicyHandler {
     /// * `IncorrectFormatError` - If the content cannot be decoded or has invalid format
     /// * `PolicyExistError` - If a policy with the same ID or name already exists
     /// * `DatabaseOperationError` - If there is an error during database operation
+    /// 
+    /// # Error
+    /// * `IncorrectFormatError` - If the content cannot be decoded or has invalid format
+    /// * `PolicyExistError` - If a policy with the same ID or name already exists
+    /// * `DatabaseOperationError` - If there is an error during database operation
     pub async fn create_policy(
         headers: &actix_web::http::header::HeaderMap,
         request_body: &Value,
@@ -205,6 +214,10 @@ impl PolicyHandler {
     /// * `Result<(), PolicyError>` - Ok if no policy exists with the given ID or name
     /// * `PolicyExistError` - If a policy with the same ID or name already exists
     /// * `DatabaseOperationError` - If there is an error during database operation
+    /// 
+    /// # Error
+    /// * `DatabaseOperationError` - If there is an error during database operation
+    /// * `PolicyLimitReached` - If the user has reached the maximum number of policies
     async fn check_policy_existence(
         db: &DatabaseConnection,
         user_id: &str,
@@ -294,6 +307,9 @@ impl PolicyHandler {
     /// * `IncorrectFormatError` - If the content cannot be decoded or has invalid format
     /// * `PolicyVersionOverflowError` - If the policy version has reached the maximum value
     /// * `DatabaseOperationError` - If there is an error during database operation
+    /// 
+    /// # Error
+    /// * `IncorrectFormatError` - If the content cannot be decoded or has invalid format
     pub async fn build_update_model(
         request_body: &Value,
         policy: &Model,
@@ -375,6 +391,11 @@ impl PolicyHandler {
     /// * `Result<ActiveModel, PolicyError>` - Signed policy model if successful
     /// * `PolicySignatureFailure` - If the existing policy signature verification fails
     /// * `DatabasePolicySignatureError` - If there is an error during signature verification
+    /// 
+    /// # Error
+    /// * `PolicySignatureFailure` - If the existing policy signature verification fails
+    /// * `DatabasePolicySignatureError` - If there is an error during signature verification
+    /// * `InternalError` - If there is an error during signature verification
     pub async fn verify_and_sign_policy(
         db: &DatabaseConnection,
         policy: &Model,
@@ -417,6 +438,10 @@ impl PolicyHandler {
     /// # Returns
     /// * `Result<ActiveModel, PolicyError>` - Signed policy model with signature and key version
     /// * `PolicySignatureFailure` - If the signing operation fails
+    /// 
+    /// # Error
+    /// * `PolicySignatureFailure` - If the signing operation fails
+    /// * `InternalError` - If there is an error during signing
     pub async fn sign_policy(mut policy_model: ActiveModel) -> Result<ActiveModel, PolicyError> {
         info!("Start to sign policy!");
         let policy_sign_model: SignaturePolicy = policy_model.clone().try_into_model().unwrap().into();
@@ -446,6 +471,11 @@ impl PolicyHandler {
     /// * `Result<Vec<Policy>, PolicyError>` - List of policies if successful
     /// * `DatabaseOperationError` - If there is an error during database operation
     /// * `DatabasePolicySignatureError` - If there is an error during signature verification
+    /// 
+    /// # Error
+    /// * `DatabaseOperationError` - If there is an error during database operation
+    /// *  `DatabasePolicySignatureError` - If there is an error during signature verification
+    /// * `InternalError` - If there is an error during signature verification
     pub async fn get_all_policies(
         db: &DatabaseConnection,
         user_id: String,
@@ -478,6 +508,13 @@ impl PolicyHandler {
     /// * `Result<Vec<Policy>, PolicyError>` - List of matching policies if successful
     /// * `DatabaseOperationError` - If there is an error during database operation
     /// * `DatabasePolicySignatureError` - If there is an error during signature verification
+    /// 
+    /// # Errors
+    /// * Returns `IncorrectFormatError` if the "ids" field in the request body is not a valid UTF-8 string 
+    /// * Returns `DatabaseOperationError` if there is an error during database operation        
+    /// 
+    /// # Panics
+    /// * Panics if the "ids" field in the request body is not a valid UTF-8 string
     pub async fn query_policies_by_ids(
         db: &DatabaseConnection,
         request_body: &Value,
@@ -525,6 +562,9 @@ impl PolicyHandler {
     /// * `IncorrectFormatError` - If the attester_type is not a string
     /// * `DatabaseOperationError` - If there is an error during database operation
     /// * `DatabasePolicySignatureError` - If there is an error during signature verification
+    /// 
+    /// # Errors
+    /// * Returns `IncorrectFormatError` if the "attester_type" field in the request body is not a valid UTF-8 string
     pub async fn query_policies_by_type(
         db: &DatabaseConnection,
         request_body: &Value,
@@ -640,6 +680,14 @@ impl PolicyHandler {
     /// * `Result<(), PolicyError>` - Ok if signature is valid or verification is not required
     /// * `IncorrectFormatError` - If the content has invalid format or text content type with verification enabled
     /// * `PolicySignatureVerificationError` - If the signature verification fails
+    /// 
+    /// # Errors
+    /// * Returns `IncorrectFormatError` if the "content" field in the request body is not a valid UTF-8 string
+    /// * Returns `PolicySignatureVerificationError` if the signature verification fails
+    /// * Returns `InternalError` if there is an error during certificate verification
+    /// 
+    /// # Panics
+    /// * Panics if the "content" field in the request body is not a valid UTF-8 string
     pub async fn verify_signature_by_cert(
         request_body: &Value,
         user_id: String,
@@ -682,6 +730,22 @@ impl PolicyHandler {
         }
     }
 
+    /// Verifies if the policy content is valid for the specified attester types.
+    ///
+    /// This function checks if the policy content can be successfully evaluated against
+    /// the sample output provided by the plugin for each attester type associated with the policy.
+    ///
+    /// # Arguments
+    /// * `policy_input` - The policy object to be validated. It can be any type that can be converted into a `Policy`.
+    ///
+    /// # Returns
+    /// * `Result<(), PolicyError>` - `Ok(())` if the policy content is valid for at least one attester type,
+    ///   otherwise returns a `PolicyError::PolicyMatchSyntaxError` indicating the reason for failure.
+    /// 
+    /// # Errors
+    /// * Returns `PolicyError::PolicyMatchSyntaxError` if the policy content is not valid for any attester type.
+    /// * Returns `PolicyError::PolicyMatchSyntaxError` if the plugin for the attester type is not found.
+    /// * Returns `PolicyError::PolicyMatchSyntaxError` if there is an error during policy evaluation.
     pub fn verify_policy_content_is_valid<T>(policy_input: T) -> Result<(), PolicyError>
     where
         T: Into<Policy>

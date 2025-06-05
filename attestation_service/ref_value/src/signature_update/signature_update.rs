@@ -59,6 +59,19 @@ impl KeyLifecycleObserver for RvSigUpdate {
 }
 
 impl RvSigUpdate {
+    /// Queries the total number of pages for a given key version
+    ///
+    /// # Arguments
+    /// * `tx` - Database transaction reference
+    /// * `key_version` - The version of the key to query
+    ///
+    /// # Returns
+    /// * `Ok(u64)` - The total number of pages
+    ///
+    /// # Errors
+    /// Returns `KeyManagerError` when:
+    /// * Database query fails
+    /// * Page count calculation fails
     pub async fn query_total_pages(
         tx: &DatabaseTransaction,
         key_version: &str,

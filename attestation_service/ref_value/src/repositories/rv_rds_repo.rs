@@ -45,6 +45,21 @@ impl RvRedisRepo {
         Ok(())
     }
 
+    /// Queries reference values by user ID and attester type for a list of SHA256 hashes
+    ///
+    /// # Arguments
+    /// * `sha256_list` - List of SHA256 hashes to query
+    /// * `user_id` - User ID to filter by
+    /// * `attester_type` - Attester type to filter by
+    ///
+    /// # Returns
+    /// * `Ok(Vec<String>)` - List of matching SHA256 hashes found in Redis
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * `DbError` - Failed to get Redis client instance
+    /// * `DbError` - Failed to establish Redis connection
+    /// * `DbError` - Failed to execute query operations
     pub async fn query_by_user_and_type(
         sha256_list: Vec<String>,
         user_id: &str,
@@ -56,7 +71,7 @@ impl RvRedisRepo {
 
 
         for key in &sha256_list {
-            let act_key = user_id.to_string() + ":" + &attester_type + ":" + key;
+            let act_key = format!("{}:{}:{}", user_id, attester_type, key);
             pipe.hget(act_key, "sha256");
         }
         let values: Vec<Option<String>> = pipe.query_async(&mut conn).await
@@ -73,6 +88,19 @@ impl RvRedisRepo {
         Ok(result)
     }
 
+    /// Deletes multiple reference values by their reference value IDs
+    ///
+    /// # Arguments
+    /// * `rv_ids` - Vector of reference value IDs to delete
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all reference values were successfully deleted
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * `DbError` - If there's an error connecting to Redis
+    /// * `DbError` - If there's an error retrieving associated indices
+    /// * `DbError` - If there's an error executing delete operations
     pub async fn batch_delete_by_rv_id(rv_ids: Vec<String>) -> Result<(), RefValueError> {
         for rv_id in rv_ids {
             Self::delete_by_index(format!("idx:rv:{}", rv_id)).await?;
@@ -81,10 +109,35 @@ impl RvRedisRepo {
         Ok(())
     }
 
+    /// Deletes all reference values associated with a specific user ID
+    ///
+    /// # Arguments
+    /// * `user_id` - The ID of the user whose reference values should be deleted
+    ///
+    /// # Returns
+    /// * `Ok(())` - If the deletion was successful
+    /// 
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * `DbError` - If there's an error connecting to Redis or executing the delete operations
     pub async fn delete_by_user_id(user_id: &str) -> Result<(), RefValueError> {
         Self::delete_by_index(format!("idx:user:{}", user_id)).await
     }
 
+    /// Deletes all reference values associated with a specific user ID and attester type
+    ///
+    /// # Arguments
+    /// * `user_id` - The ID of the user whose reference values should be deleted
+    /// * `attester_type` - The type of attester whose reference values should be deleted
+    ///
+    /// # Returns
+    /// * `Ok(())` - If the deletion was successful
+    /// 
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * `DbError` - If there's an error connecting to Redis
+    /// * `DbError` - If there's an error executing the intersection operation
+    /// * `DbError` - If there's an error executing the delete operations
     pub async fn delete_by_user_and_type(user_id: &str, attester_type: &str) -> Result<(), RefValueError> {
         let cli = RedisClient::get_instance().map_err(|e| RefValueError::DbError(e.to_string()))?;
         let mut conn = cli.get_async_connection().await.map_err(|e| RefValueError::DbError(e.to_string()))?;

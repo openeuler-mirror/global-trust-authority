@@ -110,8 +110,6 @@ log::error!("Error occurred: {:?}", error);
 ### 6.1 Unit Testing（tests/）
 #[cfg(test)]
 mod tests {
-use super::*;
-
     #[test]
     fn test_entity_validation() {
         // Test implementation

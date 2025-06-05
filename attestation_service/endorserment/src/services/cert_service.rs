@@ -187,6 +187,14 @@ pub fn parse_crl_content(crl_content: &str) -> Result<X509Crl, ErrorStack> {
     X509Crl::from_pem(crl_content.as_bytes())
 }
 
+/// Converts an OpenSSL `Asn1TimeRef` to a Unix timestamp (seconds).
+///
+/// # Arguments
+/// * `asn1_time` - A reference to the `Asn1TimeRef` to convert.
+///
+/// # Returns
+/// A `Result` containing the Unix timestamp as `i64` on success,
+/// or an `ErrorStack` on failure.
 pub fn asn1_time_to_timestamp(asn1_time: &Asn1TimeRef) -> Result<i64, Box<dyn std::error::Error>> {
     // Convert Asn1Time to a string
     let time_str = asn1_time.to_string();
@@ -302,6 +310,20 @@ impl CertService {
         }
     }
 
+    /// Retrieves all certificates for a given user, optionally filtered by IDs or type.
+    ///
+    /// This function handles querying certificates and CRLs, verifying signatures,
+    /// checking expiration and revocation status, and updating the database
+    /// if the validity code changes.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection pool.
+    /// * `ids` - Optional vector of certificate IDs to query.
+    /// * `cert_type` - Optional certificate type to filter by ("refvalue", "policy", "tpm_boot", "tpm_ima", "crl").
+    /// * `user_id` - The ID of the user whose certificates are being queried.
+    ///
+    /// # Returns
+    /// An `actix_web::Result<HttpResponse>` containing the query response or an error.
     pub async fn get_all_certs(
         db: Data<Arc<DatabaseConnection>>,
         ids: &Option<Vec<String>>,
@@ -410,6 +432,17 @@ impl CertService {
         }
     }
 
+    /// Converts a vector of certificate and revoked certificate models into a `QueryResponse`.
+    ///
+    /// This function maps the database models to the response structure, handling
+    /// optional fields and converting binary content to strings.
+    ///
+    /// # Arguments
+    /// * `certs` - A vector of tuples, where each tuple contains a `cert_info::Model`
+    ///             and an optional `cert_revoked_list::Model`.
+    ///
+    /// # Returns
+    /// A `QueryResponse` struct containing the formatted certificate information.
     pub fn convert_to_query_response(
         certs: Vec<(cert_info::Model, Option<cert_revoked_list::Model>)>,
     ) -> QueryResponse {
@@ -441,6 +474,17 @@ impl CertService {
         }
     }
 
+    /// Deletes certificates based on the provided delete request.
+    ///
+    /// Certificates can be deleted by ID, type, or all certificates for the user.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection pool.
+    /// * `delete_request` - The request containing deletion criteria (type, IDs, cert_type).
+    /// * `user_id` - The ID of the user whose certificates are being deleted.
+    ///
+    /// # Returns
+    /// An `actix_web::Result<HttpResponse>` indicating success or failure.
     pub async fn delete_certs(
         db: Data<Arc<DatabaseConnection>>,
         delete_request: DeleteRequest,
@@ -460,6 +504,18 @@ impl CertService {
     }
 
     /// Verify request and add certificate
+    ///
+    /// Handles the request to add a new certificate or CRL for a user.
+    /// Validates the request, parses the content, and inserts the information
+    /// into the database.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection pool.
+    /// * `request` - The request containing the certificate or CRL data.
+    /// * `user_id` - The ID of the user adding the certificate/CRL.
+    ///
+    /// # Returns
+    /// An `actix_web::Result<HttpResponse>` indicating success or failure.
     pub async fn add_cert(
         db: Data<Arc<DatabaseConnection>>,
         request: AddCertRequest,
@@ -796,6 +852,18 @@ impl CertService {
     }
 
     /// Verify requests and update certificates
+    ///
+    /// Handles the request to update an existing certificate for a user.
+    /// Validates the request, checks user permissions, updates the certificate
+    /// information in the database, and re-signs the updated certificate model.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection pool.
+    /// * `request` - The request containing the updated certificate data.
+    /// * `user_id` - The ID of the user updating the certificate.
+    ///
+    /// # Returns
+    /// An `actix_web::Result<HttpResponse>` indicating success or failure.
     pub async fn update_cert(
         db: Data<Arc<DatabaseConnection>>,
         request: UpdateCertRequest,
@@ -941,6 +1009,16 @@ impl CertService {
         }
     }
 
+    /// Verifies the validity of an X.509 certificate.
+    ///
+    /// This function checks the certificate's validity period and verifies
+    /// if its signature algorithm and key size/curve are supported.
+    ///
+    /// # Arguments
+    /// * `cert` - A reference to the `X509` certificate to verify.
+    ///
+    /// # Returns
+    /// `true` if the certificate is valid according to the checks, `false` otherwise.
     pub fn verify_cert(cert: &X509) -> bool {
         if !Self::verify_cert_time(cert) {
             return false;
@@ -982,6 +1060,19 @@ impl CertService {
         DefaultCryptoImpl {}
     }
 
+    /// Gets the signature for a given certificate model.
+    ///
+    /// This function prepares the certificate model by clearing existing signature
+    /// and key information before obtaining a new signature using the configured
+    /// crypto operations.
+    ///
+    /// # Arguments
+    /// * `cert` - A reference to the `cert_info::Model` to be signed.
+    ///
+    /// # Returns
+    /// A tuple containing an optional signature as a byte vector and an optional
+    /// key version string. Returns `(None, None)` if signing is not required
+    /// or fails.
     pub async fn get_cert_signature(cert: &cert_info::Model) -> (Option<Vec<u8>>, Option<String>) {
         let mut cert_sig = cert.clone();
         cert_sig.signature = None;
@@ -991,6 +1082,19 @@ impl CertService {
         CertService::get_signature(&cert_sig).await
     }
 
+    /// Gets the signature for a given revoked certificate model.
+    ///
+    /// This function prepares the revoked certificate model by clearing existing
+    /// signature and key information before obtaining a new signature using the
+    /// configured crypto operations.
+    ///
+    /// # Arguments
+    /// * `cert_revoked_model` - A reference to the `cert_revoked_list::Model` to be signed.
+    ///
+    /// # Returns
+    /// A tuple containing an optional signature as a byte vector and an optional
+    /// key version string. Returns `(None, None)` if signing is not required
+    /// or fails.
     pub async fn get_revoke_cert_signature(
         cert_revoked_model: &cert_revoked_list::Model,
     ) -> (Option<Vec<u8>>, Option<String>) {
@@ -1035,6 +1139,19 @@ impl CertService {
         false
     }
 
+    /// Verifies the signature of a certificate model and updates its status if verification fails.
+    ///
+    /// This function prepares the certificate model by clearing signature and key information
+    /// before verifying the signature against the stored signature and key version.
+    /// If the signature is invalid and the certificate's current status is `NORMAL`,
+    /// its status is updated to `VERIFICATION_FAILURE`.
+    ///
+    /// # Arguments
+    /// * `db` - A reference to the database transaction.
+    /// * `cert` - A reference to the `cert_info::Model` to verify.
+    ///
+    /// # Returns
+    /// `true` if the signature verification is successful, `false` otherwise.
     pub async fn verify_cert_complete(db: &DatabaseTransaction, cert: &cert_info::Model) -> bool {
         let mut cert_sig = cert.clone();
         cert_sig.signature = None;
@@ -1051,6 +1168,19 @@ impl CertService {
         is_complete
     }
 
+    /// Verifies the signature of a revoked certificate model and updates its status if verification fails.
+    ///
+    /// This function prepares the revoked certificate model by clearing signature and key information
+    /// before verifying the signature against the stored signature and key version.
+    /// If the signature is invalid and the revoked certificate's current status is `NORMAL`,
+    /// its status is updated to `VERIFICATION_FAILURE`.
+    ///
+    /// # Arguments
+    /// * `db` - A reference to the database transaction.
+    /// * `cert_revoked_model` - A reference to the `cert_revoked_list::Model` to verify.
+    ///
+    /// # Returns
+    /// `true` if the signature verification is successful, `false` otherwise.
     pub async fn verify_revoke_cert_complete(
         db: &DatabaseTransaction,
         cert_revoked_model: &cert_revoked_list::Model,
@@ -1109,6 +1239,24 @@ impl CertService {
             .await
     }
 
+    /// Verifies a signature against a user's certificate(s) of a specific type.
+    ///
+    /// This function retrieves valid certificates for the given user and type,
+    /// then attempts to verify the provided signature and data using the public
+    /// key from each valid certificate.
+    ///
+    /// # Arguments
+    /// * `cert_type` - The type of the certificate to use for verification.
+    /// * `user_id` - The ID of the user whose certificate is being used.
+    /// * `signature` - The signature to verify.
+    /// * `alg` - The message digest algorithm used for signing.
+    /// * `data` - The original data that was signed.
+    ///
+    /// # Returns
+    /// A `Result` indicating whether the signature was successfully verified
+    /// against any valid certificate (`Ok(true)`), if no valid certificate
+    /// was found or none verified the signature (`Ok(false)`), or if an
+    /// error occurred during the process (`Err(CertVerifyError)`).
     pub async fn verify_by_cert(
         cert_type: &str,
         user_id: &str,
@@ -1195,6 +1343,24 @@ impl CertService {
         Ok(false)
     }
 
+    /// Verifies the certificate chain for a given certificate.
+    ///
+    /// This function attempts to build and verify the certificate chain starting
+    /// from the provided certificate (`cert`). It retrieves parent certificates
+    /// from the database based on the issuer name, user ID, and certificate type,
+    /// and verifies the signature of each certificate against its issuer's public key.
+    /// It also checks the validity period and revocation status of each certificate
+    /// in the chain.
+    ///
+    /// # Arguments
+    /// * `cert_type` - The type of the certificate chain to verify.
+    /// * `user_id` - The ID of the user associated with the certificate chain.
+    /// * `cert` - The byte slice containing the certificate content (DER or PEM format).
+    ///
+    /// # Returns
+    /// A `Result` indicating whether the certificate chain is valid (`Ok(true)`),
+    /// invalid or incomplete (`Ok(false)`), or if an error occurred during the
+    /// verification process (`Err(CertVerifyError)`).
     pub async fn verify_cert_chain(cert_type: &str, user_id: &str, cert: &[u8]) -> Result<bool, CertVerifyError> {
         if cert_type.is_empty() && user_id.is_empty() {
             error!("The cert_type or user_id is empty");

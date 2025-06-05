@@ -17,6 +17,18 @@ use crate::error::policy_error::PolicyError;
 pub struct ParameterFilter;
 
 impl ParameterFilter {
+    /// Validates query parameters for policy operations
+    ///
+    /// # Arguments
+    /// * `query_params` - JSON value containing query parameters
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all parameters are valid
+    ///
+    /// # Errors
+    /// Returns `PolicyError` when:
+    /// * Input is not a JSON object
+    /// * Contains unsupported query parameters (only 'ids' and 'attester_type' are allowed)
     pub fn validate_query_params(query_params: &Value) -> Result<(), PolicyError> {
         if !query_params.is_object() {
             return Err(PolicyError::IncorrectFormatError("Query parameters must be an object".to_string()));

@@ -27,6 +27,19 @@ use uuid::Uuid;
 pub struct CertRepository;
 
 impl CertRepository {
+    /// Finds all certificates for a specific user, optionally filtered by IDs or certificate type.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `ids` - Optional vector of certificate IDs to filter by
+    /// * `cert_type` - Optional certificate type to filter by
+    /// * `user_id` - ID of the user whose certificates to retrieve
+    ///
+    /// # Returns
+    /// * `Result<Vec<(cert_info::Model, Option<cert_revoked_list::Model>)>, DbErr>` - A vector of certificate models and their associated revoked list models if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn find_all(
         db: &DatabaseConnection,
         ids: &Option<Vec<String>>,
@@ -87,6 +100,18 @@ impl CertRepository {
         }
     }
 
+    /// Verifies if a certificate name is duplicated for a given user, excluding a specific certificate ID.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `name` - Optional name of the certificate to check
+    /// * `id` - Optional ID of the certificate to exclude from the check
+    ///
+    /// # Returns
+    /// * `Result<bool, DbErr>` - True if the name is duplicated, false otherwise, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn verify_name_is_duplicated(
         db: &DatabaseConnection,
         name: Option<String>,
@@ -103,6 +128,18 @@ impl CertRepository {
         Ok(count? > 0)
     }
 
+    /// Retrieves the CRL ID for a specific user and CRL name, generating a new one if it doesn't exist.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `user_id` - ID of the user
+    /// * `name` - Name of the CRL
+    ///
+    /// # Returns
+    /// * `Result<String, DbErr>` - The CRL ID if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn get_user_crl_id(db: &DatabaseConnection, user_id: &str, name: String) -> Result<String, DbErr> {
         let query = CrlInfo::find();
         let crl_info =
@@ -114,11 +151,35 @@ impl CertRepository {
         Ok(crl_info.clone().crl_id)
     }
 
+    /// Retrieves the number of CRLs for a specific user, excluding a given CRL name.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `user_id` - ID of the user
+    /// * `name` - Name of the CRL to exclude from the count
+    ///
+    /// # Returns
+    /// * `Result<u64, DbErr>` - The number of CRLs if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn get_user_crl_num(db: &DatabaseConnection, user_id: &str, name: String) -> Result<u64, DbErr> {
         let query = CrlInfo::find();
         query.filter(crl_info::Column::UserId.eq(user_id)).filter(crl_info::Column::Name.ne(name)).count(db).await
     }
 
+    /// Deletes CRL information and associated revoked certificates for specific CRL IDs and user within a transaction.
+    ///
+    /// # Arguments
+    /// * `db` - Database transaction
+    /// * `crl_ids` - Vector of CRL IDs to delete
+    /// * `user_id` - ID of the user
+    ///
+    /// # Returns
+    /// * `Result<DeleteResult, DbErr>` - The result of the delete operation if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn delete_user_crl_by_ids(
         db: &DatabaseTransaction,
         crl_ids: Vec<String>,
@@ -137,17 +198,51 @@ impl CertRepository {
         Ok(delete_result)
     }
 
+    /// Deletes all CRL information and associated revoked certificates for a specific user within a transaction.
+    ///
+    /// # Arguments
+    /// * `db` - Database transaction
+    /// * `user_id` - ID of the user
+    ///
+    /// # Returns
+    /// * `Result<DeleteResult, DbErr>` - The result of the delete operation if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn delete_user_crl(db: &DatabaseTransaction, user_id: &str) -> Result<DeleteResult, DbErr> {
         let delete_result = CrlInfo::delete_many().filter(crl_info::Column::UserId.eq(user_id)).exec(db).await?;
         CertRevokedList::delete_many().filter(cert_revoked_list::Column::UserId.eq(user_id)).exec(db).await?;
         Ok(delete_result)
     }
 
+    /// Inserts new CRL information into the database within a transaction.
+    ///
+    /// # Arguments
+    /// * `db` - Database transaction
+    /// * `crl_info` - Active model containing the CRL information to insert
+    ///
+    /// # Returns
+    /// * `Result<(), DbErr>` - Ok if the insertion is successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn insert_crl_info(db: &DatabaseTransaction, crl_info: crl_info::ActiveModel) -> Result<(), DbErr> {
         crl_info.insert(db).await?;
         Ok(())
     }
 
+    /// Queries CRL information by their IDs for a specific user.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `crl_ids` - Vector of CRL IDs to query
+    /// * `user_id` - ID of the user
+    ///
+    /// # Returns
+    /// * `Result<Vec<crl_info::Model>, DbErr>` - A vector of matching CRL models if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn query_user_crl_info_by_ids(
         db: &DatabaseConnection,
         crl_ids: Vec<String>,
@@ -161,6 +256,17 @@ impl CertRepository {
             .await?)
     }
 
+    /// Queries all CRL information for a specific user.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `user_id` - ID of the user
+    ///
+    /// # Returns
+    /// * `Result<Vec<crl_info::Model>, DbErr>` - A vector of CRL models for the user if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn query_user_crl_info(db: &DatabaseConnection, user_id: &str) -> Result<Vec<crl_info::Model>, DbErr> {
         let query = CrlInfo::find();
         Ok(query
@@ -199,11 +305,38 @@ impl CertRepository {
         }
     }
 
+    /// Retrieves the number of revoked certificates for a specific user.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `user_id` - ID of the user
+    ///
+    /// # Returns
+    /// * `Result<u64, DbErr>` - The number of revoked certificates if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn get_user_revoke_cert_num(db: &DatabaseConnection, user_id: &str) -> Result<u64, DbErr> {
         let query = CertRevokedList::find();
         query.filter(cert_revoked_list::Column::UserId.eq(user_id)).count(db).await
     }
 
+    /// Calculates the total number of pages for a paginated query of certificates
+    /// that do not match a specific key version.
+    ///
+    /// This is typically used for batch processing or synchronization tasks
+    /// where certificates needing signature updates are retrieved in batches.
+    ///
+    /// # Arguments
+    /// * `db` - Database transaction
+    /// * `batch_size` - The number of items per page
+    /// * `key_version` - The key version to exclude from the query
+    ///
+    /// # Returns
+    /// * `Result<u64, DbErr>` - The total number of pages if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn batch_get_all_certs_total_pages(
         db: &DatabaseTransaction,
         batch_size: u64,
@@ -219,6 +352,22 @@ impl CertRepository {
             .await
     }
 
+    /// Retrieves a specific page of certificates that do not match a specific key version.
+    ///
+    /// This is used in conjunction with `batch_get_all_certs_total_pages` for
+    /// batch processing or synchronization tasks.
+    ///
+    /// # Arguments
+    /// * `db` - Database transaction
+    /// * `page` - The page number to retrieve (0-indexed)
+    /// * `batch_size` - The number of items per page
+    /// * `key_version` - The key version to exclude from the query
+    ///
+    /// # Returns
+    /// * `Result<Vec<cert_info::Model>, DbErr>` - A vector of certificate models for the requested page if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn batch_get_certs(
         db: &DatabaseTransaction,
         page: u64,
@@ -263,6 +412,21 @@ impl CertRepository {
             .await
     }
 
+    /// Finds certificates for a specific user filtered by certificate type.
+    ///
+    /// This query uses a custom expression to filter based on the JSON `type` column.
+    /// It also finds related revoked list entries.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `user_id` - ID of the user whose certificates to retrieve
+    /// * `cert_type` - The certificate type to filter by (e.g., "refvalue", "policy")
+    ///
+    /// # Returns
+    /// * `Result<Vec<(cert_info::Model, Option<cert_revoked_list::Model>)>, DbErr>` - A vector of matching certificate models and their associated revoked list models if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn find_certs_by_type_and_user(
         db: &DatabaseConnection,
         user_id: &str,
@@ -281,6 +445,23 @@ impl CertRepository {
             .await
     }
 
+    /// Finds parent certificates for a specific user filtered by certificate type and issuer.
+    ///
+    /// This query uses a custom expression to filter based on the JSON `type` column
+    /// and also filters by the `owner` column (representing the issuer).
+    /// It also finds related revoked list entries.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `user_id` - ID of the user whose certificates to retrieve
+    /// * `cert_type` - The certificate type to filter by (e.g., "refvalue", "policy")
+    /// * `issuer` - The issuer (owner) of the parent certificate to filter by
+    ///
+    /// # Returns
+    /// * `Result<Vec<(cert_info::Model, Option<cert_revoked_list::Model>)>, DbErr>` - A vector of matching certificate models and their associated revoked list models if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn find_parent_cert_by_type_and_user(
         db: &DatabaseConnection,
         user_id: &str,
@@ -301,10 +482,41 @@ impl CertRepository {
             .await
     }
 
+    /// Finds a certificate by its unique ID.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `id` - The unique ID of the certificate to find.
+    ///
+    /// # Returns
+    /// * `Result<Option<cert_info::Model>, DbErr>` - An optional certificate model if found,
+    ///   `None` if not found, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation.
     pub async fn find_cert_by_id(db: &DatabaseConnection, id: &String) -> Result<Option<cert_info::Model>, DbErr> {
         CertInfo::find_by_id(id.to_string()).one(db).await
     }
 
+    /// Deletes certificates for a specific user based on the specified deletion type.
+    ///
+    /// Supports deletion by a list of IDs, by certificate type, or deleting all certificates.
+    /// Includes checks for ID limits and valid certificate types.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection
+    /// * `delete_type` - The type of deletion to perform (`Id`, `Type`, or `All`).
+    /// * `ids` - Optional vector of certificate IDs to delete (used with `DeleteType::Id`).
+    /// * `cert_type` - Optional certificate type to delete (used with `DeleteType::Type`).
+    /// * `user_id` - ID of the user whose certificates are being deleted.
+    ///
+    /// # Returns
+    /// * `Result<DeleteResult, DbErr>` - The result of the delete operation if successful, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If `delete_type` is `None`, if IDs are required but not provided,
+    ///   if the number of IDs exceeds the limit, if `cert_type` is required but not provided,
+    ///   if `cert_type` is invalid, or if there is an error during the database operation.
     pub async fn delete_certs(
         db: &DatabaseConnection,
         delete_type: Option<DeleteType>,
@@ -377,6 +589,24 @@ impl CertRepository {
     }
 
     /// Insert certificate information
+    ///
+    /// Inserts a new certificate record into the database. This method uses a custom SQL
+    /// statement to handle database-specific logic, including checking for certificate
+    /// count limits and ensuring the certificate name and ID are not duplicated
+    /// before insertion.
+    ///
+    /// # Arguments
+    /// * `db` - Database connection.
+    /// * `cert_info` - The active model containing the certificate information to insert.
+    /// * `cert_limit` - The maximum number of certificates allowed for the user.
+    ///
+    /// # Returns
+    /// * `Result<u64, DbErr>` - The number of rows affected (should be 1 on success)
+    ///   if the insertion is successful and passes the checks, or a database error.
+    ///
+    /// # Error
+    /// * `DbErr` - If there is an error during the database operation, or if the
+    ///   certificate count limit is exceeded, or if the name or ID is duplicated.
     pub async fn insert_cert_info(
         db: &DatabaseConnection,
         cert_info: cert_info::ActiveModel,
