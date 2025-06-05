@@ -25,6 +25,27 @@ pub struct QueryPolicyHandler;
 
 
 impl QueryPolicyHandler {
+    
+    /// Retrieves policies by their IDs and verifies their signatures.
+    ///
+    /// This function fetches policies from the database based on the provided IDs,
+    /// checks if all requested policies were found, verifies their signatures
+    /// if signature verification is required by the configuration, and returns
+    /// the verified policies.
+    ///
+    /// # Arguments
+    /// * `db` - The database connection.
+    /// * `policy_ids` - A vector of policy IDs to retrieve.
+    ///
+    /// # Returns
+    /// * `Result<Vec<Policy>, PolicyError>` - A `Result` containing a vector of `Policy`
+    ///   objects if successful, or a `PolicyError` if an error occurs.
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` if a database operation fails.
+    /// Returns `PolicyError::PolicyNotFoundError` if one or more policies with the given IDs are not found.
+    /// Returns `PolicyError::InternalError` if the configuration instance cannot be obtained.
+    /// Returns `PolicyError::PolicySignatureVerificationError` if signature verification fails.
     pub async fn get_policies_by_ids(
         db: &DatabaseConnection,
         policy_ids: Vec<String>,
@@ -44,6 +65,25 @@ impl QueryPolicyHandler {
         Ok(verified_policies.into_iter().map(Policy::from).collect())
     }
 
+    /// Retrieves default policies for a specific attester type and verifies their signatures.
+    ///
+    /// This function fetches default policies from the database based on the provided
+    /// attester type, verifies their signatures if signature verification is required
+    /// by the configuration, and returns the verified policies.
+    ///
+    /// # Arguments
+    /// * `db` - The database connection.
+    /// * `attester_type` - The type of attester for which to retrieve default policies.
+    ///
+    /// # Returns
+    /// * `Result<Vec<Policy>, PolicyError>` - A `Result` containing a vector of `Policy`
+    ///   objects if successful, or a `PolicyError` if an error occurs. Returns an empty
+    ///   vector if no default policies are found for the given type.
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` if a database operation fails.
+    /// Returns `PolicyError::InternalError` if the configuration instance cannot be obtained.
+    /// Returns `PolicyError::PolicySignatureVerificationError` if signature verification fails.
     pub async fn get_default_policies_by_type(
         db: &DatabaseConnection,
         attester_type: String,

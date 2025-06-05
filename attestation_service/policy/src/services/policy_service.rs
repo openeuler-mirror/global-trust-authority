@@ -47,6 +47,11 @@ impl PolicyService {
     /// # Returns
     /// * `Ok(HttpResponse)` - Success response with policy ID, name, and version
     /// * `Err(PolicyError)` - Various error types including validation, database, or signing errors
+    /// 
+    /// # Error
+    /// * `PolicyError::IncorrectFormatError` - If the JSON body is not valid
+    /// * `PolicyError::PolicyLimitReached` - If the user has reached the policy limit
+    /// * `PolicyError::TooManyRequestsError` - If there's a database error
     pub async fn add_policy(
         req: HttpRequest,
         db: web::Data<Arc<DatabaseConnection>>,
@@ -119,6 +124,11 @@ impl PolicyService {
     /// # Returns
     /// * `Ok(HttpResponse)` - Success response with updated policy ID, name, and version
     /// * `Err(PolicyError)` - Various error types including not found, validation, database, or signing errors
+    /// 
+    /// # Error
+    /// * `PolicyError::IncorrectFormatError` - If the JSON body is not valid
+    /// * `PolicyError::PolicyNotFoundError` - If the policy is not found
+    /// * `PolicyError::TooManyRequestsError` - If there's a database error
     pub async fn update_policy(
         req: HttpRequest,
         db: web::Data<Arc<DatabaseConnection>>,
@@ -193,6 +203,11 @@ impl PolicyService {
     /// # Returns
     /// * `Ok(HttpResponse)` - Success response with empty body
     /// * `Err(PolicyError)` - Various error types including validation or database errors
+    /// 
+    /// # Error
+    /// * `PolicyError::IncorrectFormatError` - If the JSON body is not valid
+    /// * `PolicyError::DatabaseOperationError` - If there's a database error
+    /// * `PolicyError::PolicyNotFoundError` - If the policy is not found
     pub async fn delete_policy(
         req: HttpRequest,
         db: web::Data<Arc<DatabaseConnection>>,
@@ -258,6 +273,11 @@ impl PolicyService {
     ///   For other queries, basic policy information is returned
     ///   Results are limited by the user_policy_query_limit configuration
     /// * `Err(PolicyError)` - Various error types including validation or database errors
+    /// 
+    /// # Error
+    /// * `PolicyError::InternalError` - If there's an issue with the configuration
+    /// * `PolicyError::IncorrectFormatError` - If the query parameters are invalid
+    /// * `PolicyError::DatabaseOperationError` - If there's a database error
     pub async fn query_policy(
         req: HttpRequest,
         db: web::Data<Arc<DatabaseConnection>>,

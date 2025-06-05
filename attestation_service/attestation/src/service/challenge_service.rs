@@ -34,7 +34,11 @@ impl ChallengeService {
     ///
     /// # Returns
     /// * `Result<HttpResponse, AttestationError>` - On success, returns HTTP response with service version and nonce
-    ///                                            - On failure, returns appropriate error
+    ///
+    /// # Errors
+    /// Returns `AttestationError` when:
+    /// * `InvalidParameter` - If the challenge request fails validation
+    /// * `PluginNotFoundError` - If required plugins are not found for the specified attester types
     pub async fn generate_nonce(challenge_request: web::Json<ChallengeRequest>) -> Result<HttpResponse, AttestationError> {
         if let Err(err) = challenge_request.validate() {
             return Err(AttestationError::InvalidParameter(err.to_string()));

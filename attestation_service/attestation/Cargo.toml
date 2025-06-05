@@ -22,3 +22,4 @@ token_management.workspace = true
 common_log.workspace = true
 rdb.workspace = true
 config_manager.workspace = true
+tokio.workspace = true

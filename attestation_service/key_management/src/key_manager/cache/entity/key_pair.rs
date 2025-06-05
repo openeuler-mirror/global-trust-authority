@@ -28,6 +28,15 @@ pub struct KeyPair {
 
 impl KeyPair {
     /// The thread safely obtains the private key
+    ///
+    /// Retrieves the cached private key or initializes it from the stored bytes.
+    /// This method is thread-safe due to the use of `OnceCell`.
+    ///
+    /// # Returns
+    /// A reference to the `PKey<Private>` instance.
+    ///
+    /// # Panics
+    /// Panics if the stored private key bytes are not valid PEM format.
     pub fn private_key(&self) -> &PKey<Private> {
         self.cached_private.get_or_init(|| {
             PKey::private_key_from_pem(&self.private_bytes).expect("Invalid private key PEM")
@@ -35,6 +44,15 @@ impl KeyPair {
     }
 
     /// The thread safely obtains the public key
+    ///
+    /// Retrieves the cached public key or initializes it from the stored bytes.
+    /// This method is thread-safe due to the use of `OnceCell`.
+    ///
+    /// # Returns
+    /// A reference to the `PKey<Public>` instance.
+    ///
+    /// # Panics
+    /// Panics if the stored public key bytes are not valid PEM format.
     pub fn public_key(&self) -> &PKey<Public> {
         self.cached_public.get_or_init(|| {
             PKey::public_key_from_pem(&self.public_bytes).expect("Invalid public key PEM")

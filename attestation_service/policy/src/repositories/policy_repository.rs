@@ -36,6 +36,14 @@ impl PolicyRepository {
     /// * `PolicyNotFoundError` - If the policy with the given ID does not exist
     /// * `PolicyVersionOverflowError` - If the policy version has reached the maximum value
     /// * `DatabaseOperationError` - If there is an error during database operation
+    /// 
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Failed to execute database query
+    /// * Failed to retrieve policy data
+    ///
+    /// # Panics
+    /// Panics if the database connection cannot be obtained.
     pub async fn get_policy_version(policy_id: String) -> Result<i32, PolicyError> {
         let connect = get_connection().await.unwrap();
         let connection = connect.as_ref();
@@ -74,6 +82,11 @@ impl PolicyRepository {
     /// * `Result<(), PolicyError>` - Ok if successful, otherwise a PolicyError
     /// * `PolicyLimitReached` - If the user has reached their maximum number of policies
     /// * `DatabaseOperationError` - If there is an error during database operation
+    /// 
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Policy already exists
+    /// * Policy already exists
     pub async fn add_policy(
         db: &DatabaseConnection,
         policy: ActiveModel,
@@ -151,6 +164,11 @@ impl PolicyRepository {
     /// * `Result<(String, String, i32), PolicyError>` - Tuple of (policy_id, policy_name, policy_version) if successful
     /// * `TooManyRequestsError` - If the policy has been modified by another request
     /// * `DatabaseOperationError` - If there is an error during database operation
+    /// 
+    /// # Errors
+    /// Returns `PolicyError::TooManyRequestsError` if the policy has been modified by another request.
+    /// Returns `PolicyError::DatabaseOperationError` if there is an error during database operation.
+    /// Returns `PolicyError::InvalidParameter` if the policy version is at the minimum value, preventing decrement.
     pub async fn update_policy(
         db: &DatabaseConnection,
         policy: ActiveModel,
@@ -187,8 +205,12 @@ impl PolicyRepository {
     ///
     /// # Returns
     /// * `Result<Option<Model>, PolicyError>` - The policy if found, None if not found
+    ///
+    /// # Errors
+    /// Returns `PolicyError` when:
     /// * `PolicyExistError` - If a policy with the same name already exists for this user
     /// * `DatabaseOperationError` - If there is an error during database operation
+    /// * `InvalidParameter` - If the policy ID is missing or invalid in the request body
     pub async fn check_policy_exists(
         headers: &actix_web::http::header::HeaderMap,
         request_body: &Value,
@@ -229,7 +251,11 @@ impl PolicyRepository {
     ///
     /// # Returns
     /// * `Result<Option<Model>, PolicyError>` - The policy if found, None if not found
-    /// * `DatabaseOperationError` - If there is an error during database operation
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Failed to execute database query
+    /// * Failed to retrieve policy data
     pub async fn check_policy_exist_use_id(
         db: &DatabaseConnection,
         policy_id: String,
@@ -253,6 +279,11 @@ impl PolicyRepository {
     /// # Returns
     /// * `Result<Option<Model>, PolicyError>` - The policy if found, None if not found
     /// * `DatabaseOperationError` - If there is an error during database operation
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Failed to execute database query
+    /// * Failed to retrieve policy data
     pub async fn check_policy_exist_policy_name(
         db: &DatabaseConnection,
         user_id: String,
@@ -277,6 +308,10 @@ impl PolicyRepository {
     /// # Returns
     /// * `Result<(), PolicyError>` - Ok if successful
     /// * `DatabaseOperationError` - If there is an error during database operation
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Failed to execute database operation
     pub async fn delete_policies(
         db: &DatabaseConnection,
         policy_ids: Vec<String>,
@@ -301,6 +336,10 @@ impl PolicyRepository {
     /// # Returns
     /// * `Result<(), PolicyError>` - Ok if successful
     /// * `DatabaseOperationError` - If there is an error during database operation
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Failed to execute database operation
     pub async fn delete_policies_by_type(
         db: &DatabaseConnection,
         attester_type: String,
@@ -327,7 +366,10 @@ impl PolicyRepository {
     ///
     /// # Returns
     /// * `Result<(), PolicyError>` - Ok if successful
-    /// * `DatabaseOperationError` - If there is an error during database operation
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Failed to execute database operation
     pub async fn delete_all_policies(db: &DatabaseConnection, user_id: String) -> Result<(), PolicyError> {
         PolicyEntity::delete_many()
             .filter(Column::UserId.eq(user_id))
@@ -347,6 +389,10 @@ impl PolicyRepository {
     /// # Returns
     /// * `Result<Vec<SignaturePolicy>, PolicyError>` - List of default policies with valid signatures
     /// * `DatabaseOperationError` - If there is an error during database operation
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Failed to execute database operation
     pub async fn get_default_policies_by_type(
         db: &DatabaseConnection,
         attester_type: String,
@@ -433,7 +479,12 @@ impl PolicyRepository {
     /// * `user_id` - The ID of the user whose policies to retrieve
     ///
     /// # Returns
-    /// * `Result<Vec<SignaturePolicy>, PolicyError>` - List of all policies if successful, otherwise a PolicyError
+    /// * `Result<Vec<SignaturePolicy>, PolicyError>` - List of all policies if successful
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Failed to execute database query
+    /// * Failed to retrieve policy data
     pub async fn get_all_policies(
         db: &DatabaseConnection,
         user_id: String,
@@ -454,11 +505,16 @@ impl PolicyRepository {
     /// Marks a policy as corrupted by setting its valid code to 1.
     ///
     /// # Arguments
-    /// * `db` - The database transaction
+    /// * `db` - The database connection
     /// * `policy_id` - The UUID of the policy to mark as corrupted
     ///
     /// # Returns
-    /// * `Result<(), PolicyError>` - Ok if successful, otherwise a PolicyError
+    /// * `Result<(), PolicyError>` - Ok if successful
+    ///
+    /// # Errors
+    /// Returns `PolicyError` when:
+    /// * `DatabaseOperationError` - Failed to execute database operation
+    /// * `PolicyNotFoundError` - Policy with the given ID does not exist
     pub async fn set_is_corrupted(db: &DatabaseConnection, policy_id: String) -> Result<(), PolicyError> {
         let policy = PolicyEntity::find_by_id(policy_id)
             .one(db)
@@ -501,7 +557,12 @@ impl PolicyRepository {
     /// * `uuids` - List of policy UUIDs to retrieve
     ///
     /// # Returns
-    /// * `Result<Vec<SignaturePolicy>, PolicyError>` - List of non-corrupted policies if successful, otherwise a PolicyError
+    /// * `Result<Vec<SignaturePolicy>, PolicyError>` - List of non-corrupted policies if successful
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Failed to execute database query
+    /// * Failed to retrieve policy data
     pub async fn get_correct_policies_by_ids(
         db: &DatabaseConnection,
         policy_ids: Vec<String>,
@@ -523,7 +584,12 @@ impl PolicyRepository {
     /// * `user_id` - The ID of the user whose policies to count
     ///
     /// # Returns
-    /// * `Result<u64, PolicyError>` - The count of policies if successful, otherwise a PolicyError
+    /// * `Result<u64, PolicyError>` - The count of policies if successful
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Failed to execute database query
+    /// * Failed to count policy records
     pub async fn get_user_policy_count(db: &DatabaseTransaction, user_id: String) -> Result<u64, PolicyError> {
         PolicyEntity::find()
             .filter(Column::UserId.eq(user_id))
@@ -539,7 +605,12 @@ impl PolicyRepository {
     /// * `user_id` - The ID of the user whose policies to count
     ///
     /// # Returns
-    /// * `Result<u64, PolicyError>` - The count of policies if successful, otherwise a PolicyError
+    /// * `Result<u64, PolicyError>` - The count of policies if successful
+    ///
+    /// # Errors
+    /// Returns `PolicyError::DatabaseOperationError` when:
+    /// * Failed to execute database query
+    /// * Failed to count policy records
     pub async fn get_user_policy_count_with_connection(
         db: &DatabaseConnection,
         user_id: String,
@@ -558,7 +629,12 @@ impl PolicyRepository {
     /// * `key_version` - The key version to compare against
     ///
     /// # Returns
-    /// * `Result<Vec<SignaturePolicy>, KeyManagerError>` - List of policies with different key versions if successful, otherwise a KeyManagerError
+    /// * `Result<Vec<SignaturePolicy>, KeyManagerError>` - List of policies with different key versions if successful
+    ///
+    /// # Errors
+    /// Returns `KeyManagerError` when:
+    /// * Failed to execute database query
+    /// * Failed to retrieve policy data
     pub async fn get_policies_by_key_version(
         db: &DatabaseTransaction,
         key_version: &str,
@@ -583,7 +659,12 @@ impl PolicyRepository {
     /// * `new_signature` - The new signature bytes
     ///
     /// # Returns
-    /// * `Result<(), KeyManagerError>` - Ok if successful, otherwise a KeyManagerError
+    /// * `Result<(), KeyManagerError>` - Ok if successful
+    ///
+    /// # Errors
+    /// Returns `KeyManagerError` when:
+    /// * Failed to find policy in database
+    /// * Failed to update policy signature
     pub async fn update_policy_signature(
         db: &DatabaseTransaction,
         policy_id: String,
@@ -617,7 +698,12 @@ impl PolicyRepository {
     /// * `valid_code` - The new validity code to set
     ///
     /// # Returns
-    /// * `Result<(), KeyManagerError>` - Ok if successful, otherwise a KeyManagerError
+    /// * `Result<(), KeyManagerError>` - Ok if successful
+    ///
+    /// # Errors
+    /// Returns `KeyManagerError` when:
+    /// * Failed to find policy in database
+    /// * Failed to update policy corruption status
     pub async fn update_policy_corrupted(
         db: &DatabaseTransaction,
         policy_id: String,

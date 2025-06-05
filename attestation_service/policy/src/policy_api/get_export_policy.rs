@@ -48,6 +48,10 @@ pub fn get_export_policy(attester_type: &str) -> Result<String, PolicyError> {
 /// 
 /// # Returns
 /// * `Result<bool, PolicyError>` - Returns Ok(true/false) on success, error on failure
+/// 
+/// # Error
+/// * `PolicyError::InternalError` - Failed to acquire write lock on export policy cache
+/// * `PolicyError::NotFound` - No export policy found for the specified attester_type
 pub fn unload_export_policy(attester_type: &str) -> Result<bool, PolicyError> {
     let cache_lock = &EXPORT_POLICY_CACHE;
     let mut cache = cache_lock.write().map_err(|e| {

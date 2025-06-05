@@ -27,12 +27,26 @@ pub struct KeyStore {
 }
 
 // implementing thread safety tags
-unsafe impl Send for KeyStore {
-}
-unsafe impl Sync for KeyStore {
-}
+/// Safety:
+/// KeyStore is safe to be Send and Sync because all its fields
+/// (`inner` and `latest_version`) are composed of types that are
+/// themselves Send and Sync (`HashMap`, `Arc`, `RwLock`, `OnceCell`,
+/// `String`, `Vec<u8>`, and `openssl::pkey::PKey`).
+/// The RwLock in `inner` ensures safe concurrent access to the
+/// internal HashMap, and OnceCell in `latest_version` provides
+/// thread-safe one-time initialization.
+unsafe impl Send for KeyStore {}
+unsafe impl Sync for KeyStore {}
 
 impl KeyStore {
+    /// Returns a static, thread-safe instance of the KeyStore.
+    ///
+    /// This function ensures that only one instance of KeyStore is created
+    /// throughout the application's lifetime. It initializes the store
+    /// with empty version maps for predefined key types ("FSK", "NSK", "TSK").
+    ///
+    /// # Returns
+    /// A static reference to the global `KeyStore` instance.
     pub fn global() -> &'static Self {
         static INSTANCE: OnceCell<KeyStore> = OnceCell::new();
         INSTANCE.get_or_init(|| {
@@ -49,6 +63,23 @@ impl KeyStore {
         })
     }
 
+    /// Inserts a new KeyPair into the store for a specific key type and version.
+    ///
+    /// This function acquires a write lock on the version map for the given key type
+    /// and inserts the provided KeyPair. It returns an error if the key type is not
+    /// found or if the version already exists.
+    ///
+    /// # Arguments
+    /// * `key_type` - The type of key (e.g., "FSK", "NSK", "TSK").
+    /// * `version` - The version string for the key pair.
+    /// * `key_pair` - The KeyPair to insert.
+    ///
+    /// # Returns
+    /// `Ok(())` if the insertion is successful, or a `KeyManagerError` if an error occurs.
+    ///
+    /// # Errors
+    /// Returns `KeyManagerError` if the `key_type` is not recognized,
+    /// if the `RwLock` is poisoned, or if the `version` already exists for the given `key_type`.
     pub fn insert(&self, key_type: &str, version: &str, key_pair: KeyPair) -> Result<(), KeyManagerError> {
         let versions = self.inner.get(key_type).ok_or(KeyManagerError::new("Key type not found"))?;
 
@@ -59,11 +90,35 @@ impl KeyStore {
         Ok(())
     }
 
+    /// Retrieves a KeyPair from the store for a specific key type and version.
+    ///
+    /// This function acquires a read lock on the version map for the given key type
+    /// and retrieves the KeyPair. It returns `None` if the key type or version is not found.
+    ///
+    /// # Arguments
+    /// * `key_type` - The type of key (e.g., "FSK", "NSK", "TSK").
+    /// * `version` - The version string for the key pair.
+    ///
+    /// # Returns
+    /// An `Option<KeyPair>` containing the requested KeyPair if found, or `None` otherwise.
+    ///
+    /// # Panics
+    /// Panics if the internal `RwLock` is poisoned during a read operation.
     pub fn get(&self, key_type: &str, version: &str) -> Option<KeyPair> {
         let versions = self.inner.get(key_type)?;
         versions.borrow().get(version).cloned()
     }
 
+    /// Lists all unique version strings present in the KeyStore across all key types.
+    ///
+    /// This function iterates through all key types and their stored versions,
+    /// collecting all unique version strings into a vector.
+    ///
+    /// # Returns
+    /// A `Vec<String>` containing all unique version strings found in the store.
+    ///
+    /// # Panics
+    /// Panics if any internal `RwLock` is poisoned during a read operation.
     pub fn list_versions(&self) -> Vec<String> {
         self.inner
             .values()

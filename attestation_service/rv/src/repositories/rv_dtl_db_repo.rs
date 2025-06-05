@@ -23,6 +23,19 @@ use sea_orm::{ConnectionTrait, DatabaseTransaction, EntityTrait, Statement};
 pub struct RvDtlDbRepo {}
 
 impl RvDtlDbRepo {
+    /// Deletes reference value details by their reference value IDs
+    ///
+    /// # Arguments
+    /// * `txn` - Database transaction reference
+    /// * `user_id` - ID of the user who owns the reference values
+    /// * `rv_ids` - Vector of reference value IDs whose details should be deleted
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all details were successfully deleted
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to execute delete query
     pub async fn del_by_rv_ids(txn: &DatabaseTransaction, user_id: &str, rv_ids: &Vec<String>) -> Result<(), RefValueError> {
         Entity::delete_many()
             .filter(Column::Uid.eq(user_id).and(Column::RefValueId.is_in(rv_ids.clone())))
@@ -31,6 +44,19 @@ impl RvDtlDbRepo {
         Ok(())
     }
 
+    /// Deletes all reference value details of a specific attester type
+    ///
+    /// # Arguments
+    /// * `txn` - Database transaction reference
+    /// * `user_id` - ID of the user who owns the reference values
+    /// * `attester_type` - Type of attester whose details should be deleted
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all details were successfully deleted
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to execute delete query
     pub async fn del_by_attester_type(txn: &DatabaseTransaction, user_id: &str, attester_type: &str) -> Result<(), RefValueError> {
         Entity::delete_many()
             .filter(Column::Uid.eq(user_id).and(Column::AttesterType.eq(attester_type)))
@@ -39,6 +65,19 @@ impl RvDtlDbRepo {
         Ok(())
     }
 
+    /// Adds reference value details from a reference value model
+    ///
+    /// # Arguments
+    /// * `txn` - Database transaction reference
+    /// * `rv_model` - Reference value model containing the details to add
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all details were successfully added
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to parse JWT content
+    /// * Failed to add details to database
     pub async fn add(txn: &DatabaseTransaction, rv_model: &RefValueModel) -> Result<(), RefValueError> {
         let mut details = Utils::parse_rv_detail_from_jwt_content(&rv_model.content)?;
         details.set_all_ids(&rv_model.id);
@@ -51,6 +90,18 @@ impl RvDtlDbRepo {
         Ok(())
     }
 
+    /// Adds a batch of reference value details to the database
+    ///
+    /// # Arguments
+    /// * `txn` - Database transaction reference
+    /// * `dtl_values` - Vector of reference value details to add
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all details were successfully added
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * Failed to execute insert query
     pub async fn add_dtls(txn: &DatabaseTransaction, dtl_values: Vec<RefValueDetail>) -> Result<(), RefValueError> {
         let values = dtl_values
             .iter()
@@ -75,6 +126,20 @@ impl RvDtlDbRepo {
         Ok(())
     }
 
+    /// Updates the attester type for all reference value details associated with a given ID
+    ///
+    /// # Arguments
+    /// * `txn` - Database transaction reference
+    /// * `uid` - User ID
+    /// * `id` - Reference value ID
+    /// * `attester_type` - New attester type to set
+    ///
+    /// # Returns
+    /// * `Ok(())` - If the update was successful
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * `DbError` - If the database update operation fails
     pub async fn update_type_by_rv_id(
         txn: &DatabaseTransaction,
         uid: &str,
@@ -90,6 +155,18 @@ impl RvDtlDbRepo {
         Ok(())
     }
 
+    /// Queries reference value details by a list of reference value IDs
+    ///
+    /// # Arguments
+    /// * `conn` - Database connection reference
+    /// * `rv_ids` - Vector of reference value IDs to query
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Model>)` - List of reference value detail models matching the IDs
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * `DbError` - If the database query operation fails
     pub async fn query_by_ids(conn: &DatabaseConnection, rv_ids: Vec<&str>) -> Result<Vec<Model>, RefValueError> {
         let condition = Condition::all().add(Column::RefValueId.is_in(rv_ids));
         RepoExt::query_all::<Entity, Column>(conn, vec![], condition, Column::Id)
@@ -97,6 +174,22 @@ impl RvDtlDbRepo {
             .map_err(|e| RefValueError::DbError(e.to_string()))
     }
 
+    /// Counts the total number of pages for reference value details filtered by attester type and user ID
+    ///
+    /// # Arguments
+    /// * `conn` - Database connection reference
+    /// * `attester_type` - Type of attester to filter by
+    /// * `uid` - User ID to filter by
+    /// * `page_size` - Number of items per page
+    ///
+    /// # Returns
+    /// * `Ok(u64)` - Total number of pages
+    ///
+    /// # Errors
+    /// Returns `DbErr` when:
+    /// * Database connection fails
+    /// * Count operation fails
+    /// * Pagination calculation fails
     pub async fn count_pages_by_attester_type_and_uid(
         conn: &DatabaseConnection,
         attester_type: &str,
@@ -108,6 +201,22 @@ impl RvDtlDbRepo {
         RepoExt::count_pages_with_condition::<Entity, Column>(conn, page_size, condition, Column::Id).await
     }
 
+    /// Queries a page of reference value details filtered by attester type and user ID
+    ///
+    /// # Arguments
+    /// * `conn` - Database connection reference
+    /// * `attester_type` - Type of attester to filter by
+    /// * `uid` - User ID to filter by
+    /// * `page_num` - Page number to retrieve
+    /// * `page_size` - Number of items per page
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Model>)` - List of reference value detail models for the specified page
+    ///
+    /// # Errors
+    /// Returns `RefValueError` when:
+    /// * `DbError` - If the database query operation fails
+    /// * Pagination parameters are invalid
     pub async fn query_page_by_attester_type_and_uid(
         conn: &DatabaseConnection,
         attester_type: &str,

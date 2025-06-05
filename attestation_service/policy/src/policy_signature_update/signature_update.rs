@@ -28,6 +28,16 @@ pub(crate) type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>
 #[derive(Debug)]
 pub struct PolicyManager;
 
+/// # Safety
+/// PolicyManager contains no internal mutability and no unsafe methods,
+/// making it safe to share between threads
+unsafe impl Send for PolicyManager{}
+
+/// # Safety
+/// PolicyManager contains no internal state and no unsafe methods,
+/// making it safe to access from multiple threads simultaneously
+unsafe impl Sync for PolicyManager{}
+
 impl  KeyLifecycleObserver for PolicyManager {
     fn signature_update(
         &self,

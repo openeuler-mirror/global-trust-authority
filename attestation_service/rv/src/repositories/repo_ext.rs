@@ -49,6 +49,23 @@ impl RepoExt {
             .await
     }
 
+    /// Calculates the total number of pages based on the given condition and page size
+    ///
+    /// # Arguments
+    /// * `conn` - Database connection trait object
+    /// * `page_size` - Number of items per page
+    /// * `condition` - Filter condition for the query
+    /// * `order_by` - Column to order the results by
+    ///
+    /// # Returns
+    /// * `Ok(u64)` - Total number of pages
+    ///
+    /// # Errors
+    /// Returns `DbErr` when:
+    /// * Database connection fails
+    /// * Query execution fails
+    /// * Page count calculation fails
+    /// * Invalid pagination parameters
     pub async fn count_pages_with_condition<E, C>(
         conn: &impl ConnectionTrait,
         page_size: u64,
@@ -60,7 +77,7 @@ impl RepoExt {
         E::Model: Sync + Send + 'static,
         C: ColumnTrait + Clone,
     {
-        Self::build_query::<E, C>(vec![], condition, order_by) // 关键转换步骤
+        Self::build_query::<E, C>(vec![], condition, order_by)
             .paginate(conn, page_size)
             .num_pages()
             .await

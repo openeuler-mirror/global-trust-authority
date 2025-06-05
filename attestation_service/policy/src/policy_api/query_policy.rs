@@ -22,6 +22,9 @@ use crate::{entities::policy::Policy, policy_error::policy_error::PolicyError, h
 /// 
 /// # Returns
 /// * `Result<Vec<Policy>, PolicyError>` - Returns a list of policies on success, error on failure
+/// 
+/// # Error
+/// * `PolicyError` - Returns an error if any of the policies are not found
 pub async fn get_policy_by_ids(
     db: &DatabaseConnection,
     policy_ids: Vec<String>,
@@ -37,6 +40,9 @@ pub async fn get_policy_by_ids(
 /// 
 /// # Returns
 /// * `Result<Vec<Policy>, PolicyError>` - Returns a list of default policies on success, error on failure
+/// 
+/// # Error
+/// * `PolicyError` - Returns an error if any of the policies are not found
 pub async fn get_default_policies_by_type(
     db: &DatabaseConnection,
     attester_type: String<>,
