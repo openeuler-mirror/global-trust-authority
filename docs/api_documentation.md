@@ -46,7 +46,7 @@
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | message | string | No | Error message |
-| token | object | Yes | Token object |
+| token | object | No | Token object |
 
 ##### Example of request
 
@@ -82,8 +82,8 @@
 | Field | Sub-field | Type | Required | parameter constraint | Description |
 |-------|-----------|------|----------|-------------|-------------|
 | attester_type | | list of string | No | Fill in either tpm_boot or tpm_ima or both | Challenge type, defaults to traversing activated client plugins |
-| nonce_type | | string | Yes | ignore、user or default| ignore/user/default (default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
-| user_nonce | | string | No | Lenght 64-1024 characters | Filled when nonce_type is user |
+| nonce_type | | string | No | ignore、user or default| ignore/user/default (default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
+| user_nonce | | string | No | Lenght 64-1024 characters | Filled when nonce_type is user, Format: Base64 |
 | nonce | | object | No |  | Nonce value structure / required if nonce_type not filled |
 | | iat | u64 | No |  | Issue time |
 | | value | string | No | Lenght 64-1024 characters | Nonce value |
@@ -93,16 +93,16 @@
 #### Response Parameters
 | Field | Sub-field | Second-level Sub-field | Type | Required | Description |
 |-------|-----------|------------------------|------|----------|-------------|
-| agent_version | | | string | Yes | Client version number |
+| agent_version | | | string | No | Client version number |
 | nonce_type | | | string | No | ignore/user/default (default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
 | user_nonce | | | string | No | Filled when nonce_type is user |
-| measurements | | | list of objects | Yes | Measurement data |
+| measurements | | | list of objects | No | Measurement data |
 | | node_id | | string | No | Node ID, corresponds to ueid |
 | | nonce | | object | No | Nonce object, see /challenge definition |
 | | attester_data | | object | No | User-defined data to be passed through, must be placed in token as-is |
-| | evidences | | list of objects | Yes | Challenge report |
-| | | attester_type | string | Yes | Challenge type |
-| | | evidence | list of objects | Yes | Specific evidence |
+| | evidences | | list of objects | No | Challenge report |
+| | | attester_type | string | No | Challenge type |
+| | | evidence | list of objects | No | Specific evidence |
 
 ##### Example of request
 
