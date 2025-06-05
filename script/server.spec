@@ -59,8 +59,8 @@ install -pm 644 server_config_rpm.yaml                            %{buildroot}%{
 install -pm 644 logging.yaml                                  %{buildroot}%{_sysconfdir}/attestation_server/logging.yaml
 install -pm 644 .env.rpm                                      %{buildroot}%{_sysconfdir}/attestation_server/.env.rpm
 install -pm 644 rdb_sql/attestation_service/mysql/mysql_v1.sql         %{buildroot}%{_sysconfdir}/attestation_server/mysql_v1.sql
-install -pm 644 export_policy/tpm_ima                                     %{buildroot}%{_sysconfdir}/attestation_server/export_policy/tpm_ima
-install -pm 644 export_policy/tpm_boot                                          %{buildroot}%{_sysconfdir}/attestation_server/export_policy/tpm_boot
+install -pm 644 export_policy/tpm_ima.rego                                     %{buildroot}%{_sysconfdir}/attestation_server/export_policy/tpm_ima.rego
+install -pm 644 export_policy/tpm_boot.rego                                          %{buildroot}%{_sysconfdir}/attestation_server/export_policy/tpm_boot.rego
 
 
 %files
@@ -70,8 +70,8 @@ install -pm 644 export_policy/tpm_boot                                          
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/mysql_v1.sql
 %dir %attr(0750, root, root) %{_sysconfdir}/attestation_server/
 %dir %attr(0750, root, root) %{_sysconfdir}/attestation_server/export_policy/
-%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_ima
-%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_boot
+%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_ima.rego
+%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_boot.rego
 
 %attr(0550, root, root) %{_bindir}/attestation_service
 %attr(0550, root, root) %{_libdir}/libpolicy.so

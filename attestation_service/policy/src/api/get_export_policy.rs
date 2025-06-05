@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 use common_log::{error, info, warn};
 use crate::handler::export_policy_handler::ExportPolicyHandler;
-use crate::policy_error::policy_error::PolicyError;
+use crate::error::policy_error::PolicyError;
 
 // Use lazy_static to create a global cache for storing export policy content of different attester_types
 lazy_static! {

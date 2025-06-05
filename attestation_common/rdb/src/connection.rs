@@ -13,7 +13,6 @@
 //! Database Connection Management Module
 //! Provides unified database connection pool management functionality
 
-use std::env;
 use std::error::Error;
 use std::path::PathBuf;
 use sea_orm::{ConnectionTrait, DatabaseBackend, DatabaseConnection, Statement, TransactionTrait};
@@ -21,6 +20,7 @@ use std::sync::Arc;
 use tokio::sync::OnceCell;
 use dotenv::dotenv;
 use log::{info, error};
+#[allow(unused_imports)]
 use env_config_parse::find_file;
 use crate::config::DbConfig;
 use crate::DbError;

@@ -9,7 +9,7 @@ members = [
     "attestation_agent/attester/tpm/boot",
     "attestation_service/service_restful",
     "attestation_service/policy",
-    "attestation_service/rv",
+    "attestation_service/ref_value",
     "attestation_service/endorserment",
     "attestation_service/attestation_service",
     "attestation_service/nonce",
@@ -70,7 +70,7 @@ key_management = { path = "attestation_service/key_management" }
 nonce = { path = "./attestation_service/nonce" }
 policy = { path = "./attestation_service/policy" }
 endorserment = { path = "./attestation_service/endorserment" }
-rv = { path = "./attestation_service/rv" }
+rv = { path = "./attestation_service/ref_value" }
 resource_provider = {path = "attestation_service/resource_provider" }
 policy_engine = { path = "./attestation_service/policy_engine" }
 rand = "0.8.4"

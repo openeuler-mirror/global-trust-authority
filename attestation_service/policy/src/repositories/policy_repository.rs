@@ -12,7 +12,7 @@
 
 use crate::entities::policy_db_model::{ActiveModel, Column, Entity as PolicyEntity, Model};
 use crate::entities::signature_policy::SignaturePolicy;
-use crate::policy_error::policy_error::PolicyError;
+use crate::error::policy_error::PolicyError;
 use key_management::key_manager::error::KeyManagerError;
 use sea_orm::sea_query::Expr;
 use sea_orm::{

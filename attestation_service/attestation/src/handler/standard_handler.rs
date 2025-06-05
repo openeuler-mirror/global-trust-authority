@@ -18,7 +18,7 @@ use config_manager::types::context::CONFIG;
 use common_log::{error, info};
 use nonce::nonce_interface::{validate_nonce, Nonce, ValidateNonceParams};
 use plugin_manager::{PluginManager, PluginManagerInstance, ServiceHostFunctions, ServicePlugin};
-use policy::policy_api::{get_export_policy::get_export_policy, get_policy_by_ids, query_policy};
+use policy::api::{get_export_policy::get_export_policy, get_policy_by_ids, query_policy};
 use policy_engine::evaluate_policy;
 use rdb::get_connection;
 use token_management::token_manager::TokenManager;

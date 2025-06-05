@@ -17,8 +17,6 @@ use tpm_common_verifier::PcrValues;
 use tpm_common_verifier::CryptoVerifier;
 use plugin_manager::{PluginError, ServiceHostFunctions};
 use std::str::{self, FromStr};
-use std::fs::File;
-use std::io::{Write, Read};
 use openssl::hash::Hasher;
 use hex;
 
@@ -127,10 +125,10 @@ impl ImaLog {
             .map_err(|e| PluginError::InternalError(
                 format!("Failed to create hasher: {}", e)
             ))?;
-        hasher.update(&(hash_bytes.len() as u32).to_le_bytes());
-        hasher.update(hash_bytes);
-        hasher.update(&(name_bytes.len() as u32).to_le_bytes());
-        hasher.update(name_bytes);
+        hasher.update(&(hash_bytes.len() as u32).to_le_bytes()).expect("update hash_bytes failed!");
+        hasher.update(hash_bytes).expect("update hash_bytes failed!");
+        hasher.update(&(name_bytes.len() as u32).to_le_bytes()).expect("update name_bytes failed!");
+        hasher.update(name_bytes).expect("update name_bytes failed!");
         match hasher.finish() {
             Ok(digest) => Ok(hex::encode(digest)),
             Err(e) => Err(PluginError::InternalError(format!("Failed to finish hashing: {}", e)))

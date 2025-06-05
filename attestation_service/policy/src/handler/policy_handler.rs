@@ -22,7 +22,7 @@ use crate::entities::{
     policy_db_model::{ActiveModel, Model},
     signature_policy::SignaturePolicy,
 };
-use crate::policy_error::policy_error::PolicyError;
+use crate::error::policy_error::PolicyError;
 use crate::repositories::policy_repository::PolicyRepository;
 use crate::constants::{POLICY_CERT_TYPE, SIGNATURE_KEY_TYPE};
 use key_management::api::{

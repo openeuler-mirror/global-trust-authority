@@ -139,9 +139,6 @@ impl PcrValues {
     /// let result = pcr_values.verify(&quote_verifier).unwrap();
     /// ```
     pub fn verify(&self, quote_verifier: &QuoteVerifier) -> Result<bool, PluginError> {
-        // Check if the hash algorithm used for verification is consistent
-        let quote_alg = quote_verifier.get_hash_algorithm().to_string();
-
         // Calculate PCR digest
         let calculated_digest = self.calculate_bank_digest()?;
 
@@ -252,7 +249,7 @@ impl PcrValues {
     ) -> Result<String, PluginError> {
         let digest_alg = CryptoVerifier::hash_str_to_message_digest(algorithm)?;
 
-        let mut target_value = hex::decode(target_value)
+        let target_value = hex::decode(target_value)
             .map_err(|e| PluginError::InputError(format!("Failed to decode target value: {}", e)))?;
 
         let mut current_value = hex::decode(initial_value)

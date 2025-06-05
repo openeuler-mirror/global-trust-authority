@@ -18,31 +18,16 @@ use crate::entities::inner_model::rv_model::RefValueModel;
 use crate::entities::request_body::rv_update_req_body::RvUpdateReqBody;
 use crate::error::ref_value_error::RefValueError;
 use crate::repositories::repo_ext::RepoExt;
-use crate::repositories::rv_dtl_db_repo::RvDtlDbRepo;
 use crate::utils::utils::Utils;
 use config_manager::types::CONFIG;
 use key_management::api::{CryptoOperations, DefaultCryptoImpl};
 use log::error;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ColumnTrait, Condition, DatabaseTransaction, DbBackend, DbErr, QueryOrder, QuerySelect, TransactionTrait};
+use sea_orm::{ColumnTrait, Condition, DatabaseTransaction, DbErr, TransactionTrait};
 use sea_orm::{ConnectionTrait, DatabaseConnection, EntityTrait, QueryFilter, Statement};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct RvDbRepo {}
-
-const SELECT_COLUMNS_NEED_VERIFY_SIG: &[Column] = &[
-    Column::Id,
-    Column::Uid,
-    Column::Name,
-    Column::AttesterType,
-    Column::Content,
-    Column::IsDefault,
-    Column::KeyVersion,
-    Column::Signature,
-    Column::Version,
-];
-
-const SELECT_COLUMNS_IN_ALL: &[Column] = &[Column::Id, Column::Name, Column::AttesterType];
 
 impl RvDbRepo {
     pub async fn add<C>(

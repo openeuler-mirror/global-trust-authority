@@ -12,14 +12,16 @@
 
 use crate::init_chain::traits::{InitContext, InitHandler};
 use config_manager::types::context::{ServerConfig, CONFIG};
+#[allow(unused_imports)]
 use env_config_parse::find_file;
 use std::future::Future;
 use std::pin::Pin;
-use std::path::PathBuf;
 use common_log::info;
 
+#[allow(dead_code)]
 const CONFIG_FILE_NAME: &str = "server_config.yaml";
 
+#[allow(dead_code)]
 #[cfg(feature = "rpm_build")]
 const CONFIG_FILE_NAME_RPM: &str = "/etc/attestation_server/server_config_rpm.yaml";
 

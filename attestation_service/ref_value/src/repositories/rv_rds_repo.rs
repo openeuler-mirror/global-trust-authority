@@ -15,7 +15,6 @@ use crate::error::ref_value_error::RefValueError;
 use cache::client::RedisClient;
 use redis;
 use redis::AsyncCommands;
-use std::collections::HashMap;
 
 pub struct RvRedisRepo {}
 
@@ -41,7 +40,7 @@ impl RvRedisRepo {
                 .sadd(format!("idx:type:{}", model.attester_type), &key)
                 .sadd(format!("idx:rv:{}", model.rv_id), &key);
         }
-        pipe.query_async(&mut conn).await.map_err(|e| RefValueError::DbError(e.to_string()))?;
+        pipe.query_async::<_, ()>(&mut conn).await.map_err(|e| RefValueError::DbError(e.to_string()))?;
 
         Ok(())
     }
@@ -137,18 +136,8 @@ impl RvRedisRepo {
             pipe.srem(format!("idx:type:{}", t), rvs);
             pipe.srem(format!("idx:rv:{}", r), rvs);
         }
-        pipe.query_async(conn).await.map_err(|e| RefValueError::DbError(e.to_string()))?;
+        pipe.query_async::<_, ()>(conn).await.map_err(|e| RefValueError::DbError(e.to_string()))?;
 
         Ok(())
-    }
-
-    fn hash_to_file(sha256: &str, data: HashMap<String, String>) -> RvRedisModel {
-        RvRedisModel {
-            sha256: sha256.to_string(),
-            file_name: data.get("file_name").cloned().unwrap_or_default(),
-            user_id: data.get("user_id").cloned().unwrap_or_default(),
-            attester_type: data.get("attester_type").cloned().unwrap_or_default(),
-            rv_id: data.get("rv_id").cloned().unwrap_or_default(),
-        }
     }
 }

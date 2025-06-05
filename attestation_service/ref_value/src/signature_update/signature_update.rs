@@ -14,7 +14,7 @@ use crate::entities::db_model::rv_db_model::{ActiveModelBuilder, Model};
 use crate::repositories::rv_db_repo::RvDbRepo;
 use crate::utils::utils::Utils;
 use ctor::ctor;
-use common_log::{debug, error, info};
+use common_log::{error, info};
 use key_management::api::crypto_operations::CryptoOperations;
 use key_management::api::impls::default_crypto_impl::DefaultCryptoImpl;
 use key_management::key_manager::error::KeyManagerError;
@@ -52,7 +52,7 @@ impl KeyLifecycleObserver for RvSigUpdate {
                 }
             }
 
-            info!("rv key signature rotation completed");
+            info!("ref_value key signature rotation completed");
             Ok(())
         })
     }

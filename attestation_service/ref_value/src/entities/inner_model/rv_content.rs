@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::hash::{Hash, Hasher};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
