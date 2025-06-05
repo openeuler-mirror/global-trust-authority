@@ -41,13 +41,16 @@ attestation_service/
 
 ### 4.1 Add New Feature Flow
 - 1 Define Entity（entities/）
-  #[derive(Debug, Serialize, Deserialize)]
-  pub struct Entity  {
+```rust
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Entity  {
   pub name: String,
-  }
+}
+```
 
 - 2 Implement Data Access Layer（repositories/）
-  pub async fn save_entity(pool: &PgPool, entity: &Entity) -> Result<(), Error> {
+```rust
+pub async fn save_entity(pool: &PgPool, entity: &Entity) -> Result<(), Error> {
   sqlx::query!(
   "INSERT INTO entity (name) VALUES ($1)",
   entity.name
@@ -55,32 +58,42 @@ attestation_service/
   .execute(pool)
   .await?;
   Ok(())
-  }
+}
+```
 
 - 3 Implement Business Logic（services/）
-  pub async fn process_entity(request: EntityRequest) -> Result<EntityResponse, ServiceError> {
+```rust
+pub async fn process_entity(request: EntityRequest) -> Result<EntityResponse, ServiceError> {
   // Business logic implementation
-  }
+}
+
+```
 
 - 4 Add Controller（controllers/）
-  pub async fn create_entity(
+```rust
+pub async fn create_entity(
   State(pool): State<PgPool>,
   Json(request): Json<EntityRequest>,
-  ) -> Result<Json<EntityResponse>, ServiceError> {
+) -> Result<Json<EntityResponse>, ServiceError> {
   let entity = process_entity(request).await?;
   Ok(Json(entity))
-  }
+}
+```
+
 - 5 Configure Routes（routes/）
-  pub fn configure_routes(cfg: &mut web::ServiceConfig) {
+```rust
+pub fn configure_routes(cfg: &mut web::ServiceConfig) {
   cfg.service(
-  web::scope("/api")
-  .route("/entity", web::post().to(create_entity))
+    web::scope("/api")
+            .route("/entity", web::post().to(create_entity))
   );
-  }
+}
+```
 
 ## 5. Feature Usage Guide
 
 ### 5.1 Database Operation
+```rust
 // Create connection pool
 let pool = PgPoolOptions::new()
 .max_connections(5)
@@ -91,23 +104,30 @@ let pool = PgPoolOptions::new()
 let result = sqlx::query!("SELECT * FROM entity ")
 .fetch_all(&pool)
 .await?;
+```
+
 
 ### 5.2 Rate Limiting
+```rust
 // Execute query
 let governor = Arc::new(Governor::new(&GovernorConfigBuilder::default()
 .requests_per_second(10)
 .burst_size(5)
 .finish()
 .unwrap()));
+```
 
 ### 5.3 Logging
+```rust
 // Configure logging
 log::info!("Processing request: {:?}", request);
 log::error!("Error occurred: {:?}", error);
+```
 
 ## 6. Testing Guide
 
 ### 6.1 Unit Testing（tests/）
+```rust
 #[cfg(test)]
 mod tests {
 use super::*;
@@ -117,6 +137,7 @@ use super::*;
         // Test implementation
     }
 }
+```
 
 ## 7. Deployment Guide
 

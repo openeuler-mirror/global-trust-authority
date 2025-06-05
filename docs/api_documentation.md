@@ -781,15 +781,15 @@ empty
 **Request Method**: `POST /global-trust-authority/v1/service/policy`
 
 ##### Request Parameters
-| Field | Type           | Required | parameter constraint | Description |
-|-------|----------------|----------|-------------|-------------|
-| id | string         | No | length 1~36 characters | Policy ID, length  if filled, use it as policy ID, if not filled, generate UUID |
-| name | string         | Yes | length 1~255 characters | Policy name |
-| description | string         | No | length not exceeding 512 characters | Policy description |
-| attester_type | list of string | Yes | length 1~255 characters | Applicable challenge plugin type, see previous specification |
-| content_type | string         | Yes | jwt or text | jwt/text (corresponding to unsigned case) |
-| content | string         | Yes | Default maximum 500kb | Policy content, maximum 500KB before encoding |
-| is_default | boolean        | No | true or false | Whether it's default policy, defaults to false |
+| Field         | Type           | Required | parameter constraint                           | Description                                                                     |
+|---------------|----------------|----------|------------------------------------------------|---------------------------------------------------------------------------------|
+| id            | string         | No       | length 1~36 characters                         | Policy ID, length  if filled, use it as policy ID, if not filled, generate UUID |
+| name          | string         | Yes      | length 1~255 characters                        | Policy name                                                                     |
+| description   | string         | No       | length not exceeding 512 characters            | Policy description                                                              |
+| attester_type | list of string | Yes      | Each element character length 1~255 characters | Applicable challenge plugin type, see previous specification                    |
+| content_type  | string         | Yes      | jwt or text                                    | jwt/text (corresponding to unsigned case)                                       |
+| content       | string         | Yes      | Default maximum 500kb                          | Policy content, maximum 500KB before encoding                                   |
+| is_default    | boolean        | No       | true or false                                  | Whether it's default policy, defaults to false                                  |
 
 When content_type is jwt, jwt content:
 | Field Location | Field | Type | Required | Description |
@@ -843,15 +843,15 @@ When content_type is jwt, jwt content:
 **Request Method**: `PUT /global-trust-authority/v1/service/policy`
 
 ##### Request Parameters
-| Field | Type | Required | parameter constraint | Description |
-|-------|------|----------|-------------|-------------|
-| id | string | Yes | length 1~36 characters | Policy ID |
-| name | string | No | length 1~255 characters | Policy name |
-| description | string | No | length 0~512 characters | Policy description |
-| attester_type | list of string | No | length 1~255 characters | Applicable challenge plugin type |
-| content_type | string | No | jwt or text | jwt/text (corresponding to unsigned case) |
-| content | string | No | Default maximum 500kb | Policy content |
-| is_default | boolean | No | true or false | Whether it's default policy, defaults to false |
+| Field         | Type           | Required | parameter constraint                           | Description                                    |
+|---------------|----------------|----------|------------------------------------------------|------------------------------------------------|
+| id            | string         | Yes      | length 1~36 characters                         | Policy ID                                      |
+| name          | string         | No       | length 1~255 characters                        | Policy name                                    |
+| description   | string         | No       | length 0~512 characters                        | Policy description                             |
+| attester_type | list of string | No       | Each element character length 1~255 characters | Applicable challenge plugin type               |
+| content_type  | string         | No       | jwt or text                                    | jwt/text (corresponding to unsigned case)      |
+| content       | string         | No       | Default maximum 500kb                          | Policy content                                 |
+| is_default    | boolean        | No       | true or false                                  | Whether it's default policy, defaults to false |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
