@@ -6,7 +6,7 @@
   - [2.1 Get Token](#21-get-token)
   - [2.2 Get Evidence](#22-get-evidence)
 - [3. Service API](#3-service-api)
-  - [3.1 Baseline Management](#31-baseline-management)
+  - [3.1 Reference Value Management](#31-reference-value-management)
   - [3.2 Certificate Management](#32-certificate-management)
   - [3.3 Challenge Related](#33-challenge-related)
   - [3.4 Policy Management](#34-policy-management)
@@ -69,7 +69,7 @@
 
  ```
  {
-    "token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImprdSI6ImprdSIsImtpZCI6ImtpZCJ9.eyJpbnR1c2UiOiJHZW5lcmljIiwiZWF0X25vbmNlIjp7ImlhdCI6MTc0Nzg3OTg2MSwidmFsdWUiOiJwM1N1UnR1aEkwZmNVbStlZ2RhY0hYcDgyaWc1cU83eUw2ZlcyMkNYMHBEbDVWemZWeE1LcnhyVlNGMlhSRXhoL1Z2bmxMeVhSdDdWRWs3NFBOK09GZz09Iiwic2lnbmF0dXJlIjoiTDk1S1VRb2dRM01HVDVtSlFFcHJqeGhxK1lqd0djOWVzY2h3N1h0NVlaNW1tTXdaVTZKWTNOc1IyMEdJRUVBU2hqTTJLaWtKNDh0dlhnRCs0dXhZZjRTbk5aaSt0TFJwYXR0MFlHeG5jMHBab2wrWXNndHBUMG5OelZHS3RmMFNQcFRrREZtTHF0QnV3Ykp5TmdsbStJTHR0V21xS0c0K1U5bGZTVHE5YWhLVWFUbGtEOXhLbDRsKzdZMmpnY1ZvdXVaSlpqL085akkvaVNmZHJSVWtZNk1yRm95Q2h3TTFHbC9HQTM3Y0kxeWNiY0tLVEluMGFFeFArb0V1Q3lhdWFna0h1cE54TzNKRW5MSzRRVDBSNlA5R2hWVktCTG1XK1B3SXZpSVBQTS8ybm1CSkxkV0JDdnZiMlUwcG5GVEhuekhOeGFLYzliZ291b3RtSVBCNmQ0QXNQK1ZNVWc1T1VXT3FxRkpzYXBKS0NyOEFEQks1UXRoa3ZNWldqY3ZRdUkrNENkb1VDUjNOOUVtK3JLc0RJTTBvSkMyMWl4RFNYaHZjTUxoTXhWMkFmMEZRa2tsSXBZWU44enVoQXl5aWVxSlBURVBRUXZhNzVaZVlFd0F4bTRBQ2R2N1ZFSml4NGpPbXBqekdKT1YySThTTno3QWtpenhza2xaZm9zSEQifSwiYXR0ZXN0ZXJfZGF0YSI6InRlc3RfZGF0YSIsInVlaWQiOiJUUE0gQUsiLCJ0cG1fYm9vdCI6eyJhdHRlc3RhdGlvbl9zdGF0dXMiOiJ1bmtub3duIiwiaXNfbG9nX3ZhbGlkIjp0cnVlLCJwY3JzIjp7Imhhc2hfYWxnIjoic2hhMjU2IiwicGNyX3ZhbHVlcyI6W3siaXNfbWF0Y2hlZCI6dHJ1ZSwicGNyX2luZGV4IjowLCJwY3JfdmFsdWUiOiJlMjFiNzAzZWU2OWM3NzQ3NmJjY2I0M2VjMDMzNmE5YTFiMjkxNGIzNzg5NDRmN2IwMGExMDIxNGNhOGZlYTkzIiwicmVwbGF5X3ZhbHVlIjoiZTIxYjcwM2VlNjljNzc0NzZiY2NiNDNlYzAzMzZhOWExYjI5MTRiMzc4OTQ0ZjdiMDBhMTAyMTRjYThmZWE5MyJ9LHsiaXNfbWF0Y2hlZCI6dHJ1ZSwicGNyX2luZGV4IjoxLCJwY3JfdmFsdWUiOiJhMzJiZjhiZjMyOTkwN2RjMmI0ODM5ZmYzYzYxYjQ1NmE5ODU2ZDEyMTEwZjQ5ZDQ5MGRmMzNiYWYxODkzNDBlIiwicmVwbGF5X3ZhbHVlIjoiYTMyYmY4YmYzMjk5MDdkYzJiNDgzOWZmM2M2MWI0NTZhOTg1NmQxMjExMGY0OWQ0OTBkZjMzYmFmMTg5MzQwZSJ9LHsiaXNfbWF0Y2hlZCI6dHJ1ZSwicGNyX2luZGV4IjoyLCJwY3JfdmFsdWUiOiJhOWQ1YmRmM2IwYjAzNGE0MzRlZjNhZGRlMmQ1Y2IwYTc1MzM4MDNmOTdmODg4OWYxMTc0YWI2MGJkNGRjYjcwIiwicmVwbGF5X3ZhbHVlIjoiYTlkNWJkZjNiMGIwMzRhNDM0ZWYzYWRkZTJkNWNiMGE3NTMzODAzZjk3Zjg4ODlmMTE3NGFiNjBiZDRkY2I3MCJ9LHsiaXNfbWF0Y2hlZCI6dHJ1ZSwicGNyX2luZGV4IjozLCJwY3JfdmFsdWUiOiJlMjFiNzAzZWU2OWM3NzQ3NmJjY2I0M2VjMDMzNmE5YTFiMjkxNGIzNzg5NDRmN2IwMGExMDIxNGNhOGZlYTkzIiwicmVwbGF5X3ZhbHVlIjoiZTIxYjcwM2VlNjljNzc0NzZiY2NiNDNlYzAzMzZhOWExYjI5MTRiMzc4OTQ0ZjdiMDBhMTAyMTRjYThmZWE5MyJ9LHsiaXNfbWF0Y2hlZCI6dHJ1ZSwicGNyX2luZGV4Ijo0LCJwY3JfdmFsdWUiOiJmY2U3ZjEwODMwODJiMTZjZmUyYjA4NWRkNzg1OGJiMTFhMzdjMDliNzhlMzZjNzllNWEyZmQ1MjkzNTNjNGUyIiwicmVwbGF5X3ZhbHVlIjoiZmNlN2YxMDgzMDgyYjE2Y2ZlMmIwODVkZDc4NThiYjExYTM3YzA5Yjc4ZTM2Yzc5ZTVhMmZkNTI5MzUzYzRlMiJ9LHsiaXNfbWF0Y2hlZCI6dHJ1ZSwicGNyX2luZGV4Ijo1LCJwY3JfdmFsdWUiOiI4ZWRkZTkxMjY5OWNlZGRkZGM3ZDlhM2Q3ZWU0NGE4YjFiMTkxMDgxNTY5MmRlZjZjOWU2MzdlMmI5MzlmOTQxIiwicmVwbGF5X3ZhbHVlIjoiOGVkZGU5MTI2OTljZWRkZGRjN2Q5YTNkN2VlNDRhOGIxYjE5MTA4MTU2OTJkZWY2YzllNjM3ZTJiOTM5Zjk0MSJ9LHsiaXNfbWF0Y2hlZCI6dHJ1ZSwicGNyX2luZGV4Ijo2LCJwY3JfdmFsdWUiOiJlMjFiNzAzZWU2OWM3NzQ3NmJjY2I0M2VjMDMzNmE5YTFiMjkxNGIzNzg5NDRmN2IwMGExMDIxNGNhOGZlYTkzIiwicmVwbGF5X3ZhbHVlIjoiZTIxYjcwM2VlNjljNzc0NzZiY2NiNDNlYzAzMzZhOWExYjI5MTRiMzc4OTQ0ZjdiMDBhMTAyMTRjYThmZWE5MyJ9LHsiaXNfbWF0Y2hlZCI6dHJ1ZSwicGNyX2luZGV4Ijo3LCJwY3JfdmFsdWUiOiJlMjFiNzAzZWU2OWM3NzQ3NmJjY2I0M2VjMDMzNmE5YTFiMjkxNGIzNzg5NDRmN2IwMGExMDIxNGNhOGZlYTkzIiwicmVwbGF5X3ZhbHVlIjoiZTIxYjcwM2VlNjljNzc0NzZiY2NiNDNlYzAzMzZhOWExYjI5MTRiMzc4OTQ0ZjdiMDBhMTAyMTRjYThmZWE5MyJ9XX0sInNlY3VyZV9ib290IjoiTkEifSwiaWF0IjoxNzQ3ODc5ODYxNjU0LCJleHAiOjE3NDc4ODA0NjE2NTQsImlzcyI6ImlzcyIsImp0aSI6IjgyYjQxZTJlLTVhZTItNGQxOS1hZGFhLTY2ZGJlMzQ0YzQ3MSIsInZlciI6IjEuMCIsIm5iZiI6MTc0Nzg3OTg2MTY1NCwiZWF0X3Byb2ZpbGUiOiJlYXRfcHJvZmlsZSJ9.JcI_0kCFqrUh-SuhnfMhBXBY3o2CpwdLOdtFa89uuy0Lsj_5e8iDRX6k-KXfO1Iem25CTyVGHt6k0DEG6wJgA-dIBQndTPAjzWOUyGoErN_Y0jNFQXIDWrXNubjLlU7DmOmPDAid5zpz394sBqVxmpmLU4HRGTYq3ouG1e46MHaav7zky4pRE1hkRJuGObWj0ivoAAJO6fG-UINFQaAP601GoZJDvrr-SIykhIHhx6TkV-phrEuh2YelVs6_yhFf5ueQEAo70mDjzhBMyjH1Oj4GE1lHZ6SyxPbpht-RXzgtYhba7nB56zu12OFEmHugf_39TVWE6-XeC9R2SS4V8K0Mj4eMpp7eZo0r4kaDmrc8EJFYiei5IjVoL7FQEEVQM2P_ojBDgPn9qEWpPBlg_zbyq_sLMhQv5UA6xUOmmtr_HH9pCgSgu3brKGbDI9f9vMnJOw2zPnmKYQymlTjZodDd-qht6UNjQV9Hhv-syzPBwyfEqXoq8d2uuSPlqc7U"
+    "token":"xxx"
  }
  ```
 
@@ -124,37 +124,37 @@
 ###### response body
 
  ```
- {
-    "agent_version":"0.1.0","nonce_type":"default","user_nonce":null,"measurements":[{"node_id":"TPM AK","nonce":{"iat":123456789,"value":"5J7Q3sQbF6Yp6R6T1Qm8k1gX7j9YzvH4l6eQ2J1s8x0a9vT3h2K5z8W0u4x9V7n2b1c6e3w0p8m7u5q9t4r3y2z0v1s6d8a5g","signature":"Y0t2bGxwR1F6dGJmU1l4N3lBUXk2T2JZc3h5T0l6Z3Z4d2lQd2F6R0ZyZ3l6Z2V4V2V5d2F0Y3l6a2N6d2p6d2x5d2V6d2s="},"attester_data":"custom_data","evidences":[{"attester_type":"tpm_boot","evidence":{"ak_cert":"-----BEGIN CERTIFICATE-----\nMIIDBjCCAe4CFBL8z+Gow59PViXBqsqFMR2GhOUdMA0GCSqGSIb3DQEBCwUAMEcxCzAJBgNVBAYTAkNOMRAwDgYDVQQKDAd0ZXN0IENBMQ0wCwYDVQQLDAR0ZXN0MRcwFQYDVQQDDA5UUE0gUm9vdCBDQSB2MjAeFw0yNTA0MjgxNDA2MjJaFw0zNTA0MjYxNDA2MjJaMDgxDzANBgNVBAMMBlRQTSBBSzEYMBYGA1UECgwPTXkgT3JnYW5pemF0aW9uMQswCQYDVQQGEwJDTjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALKuVeLxr1WUlf3/IgDEmQ4KcIZQfsuu38U6s8PeiNbQytEBhMSIiqdteGevb+DHU7jtO+n39GJaBwp1OjuOJCo5QemaKidlG1IEfRxVO82cQ99FPXuqxFNIWcM4c6nWTmx+e3WDDSv8hRAowVgRsdqFkcR9fP9H7ahl8kyrOm5aSU2wKGfopxVBdUDlD+H+EaflwU0okXV8NW/Vq6+dFloCo6dMp37e3VI+YDc73Jp8xed7KmXqzUGUOWclBjAADg1W5hBdSDdCEzwJ9+1DspcyNkMYhs0UlXsHfxRY28Fmk66MIPEmcbbL/9Fs68qa0KEENABV5Vwb+rWFLlYviEkCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAw3l3M5Mq2hlL3mt01kzgRDJH5zLooWpq1Ze2BKKGaSbpqcvLI48WV0pvtJXrKELZecyTnVWMHjOVqrsWXUpzIx7sd4Gwrg4wa5xAU4azSI70Fa8apESI/m9K0ECUyhIOWdIo1xUHr21wPlLn09v1Ey59MQnfu/HvIhRifaEqEbHTw6PyQBBuWJ+YoAJ+Ry1Xs445Pvq2/wvBq6uypRcBnki/1mfabkOacE+pTQTvmji1iAl+40t6wcU+5KI6l4Mdor5wOzxWPIJJaq4NVUErAwtY/o44ZU1YAqdw2z5tyFz1SapWCDvqaEqm3FaOHtcozkHoHeZPMzKlWEupJf/Ekw==\n-----END CERTIFICATE-----","quote":{"quote_data":"/1RDR4AYACIAC6dK2j3UWnqCmI9se9Itpmwo+GB2VAKRbS/VU2Iczqe1ACA1SjdRM3NRYkY2WXA2UjZUMVFtOGsxZ1g3ajlZenZINAAAAACDq3eBAAAAGwAAAAABIBkQIwAWNjYAAAABAAsD/wAAACDmjVToNmS/+eKvnv6kvbrY+7FU8ALNmB8Ntz2L9wJotw==","signature":"ABQACwEAnm7Y3gZrwC81wPiFtz6I+2agoG7FOmFCSCz6OwuJScJ1fJTSL+UD0V/9R0NVDeH5ooRCc6z7r+khisBUiuOaC4o61W0CLrjZH35VXiLFtj2tQgmB8AKVKmTrj7sUN5Lu77NqUcKr4AWO2NgJyWqZgns1K5KKu/pcAzS679xUk6ZMdNg0hzJYQM6ufG90hjJO7Xa6Uww0T8fufWWEVOWnKlQmRM2DOSGIwWhuMf5/vHYSNab5s0roICIKj3wNlsP25t69kfy6PLBN2h/ZH2R5KsqplueKQr1ekuvwOtShBzfuijcxnbnLLyJkfjSWzkfSYACthMUvpkqI6by8v0ThLQ=="},"pcrs":{"hash_alg":"sha256","pcr_values":[{"pcr_index":0,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":1,"pcr_value":"a32bf8bf329907dc2b4839ff3c61b456a9856d12110f49d490df33baf189340e"},{"pcr_index":2,"pcr_value":"a9d5bdf3b0b034a434ef3adde2d5cb0a7533803f97f8889f1174ab60bd4dcb70"},{"pcr_index":3,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":4,"pcr_value":"fce7f1083082b16cfe2b085dd7858bb11a37c09b78e36c79e5a2fd529353c4e2"},{"pcr_index":5,"pcr_value":"8edde912699ceddddc7d9a3d7ee44a8b1b1910815692def6c9e637e2b939f941"},{"pcr_index":6,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":7,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"}]},"logs":[{"log_type":"TcgEventLog","log_data":"AAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACEAAABTcGVjIElEIEV2ZW50MDMAAAAAAAACAgIBAAAACwAgAAABAAAABgAAAAEAAAALAKUQl5WfT2u4kWVrAbSwFzFjH47hjONtvzakrA+LlDtEHAAAAAEAAAAUAAAAP56Gs4+udkBZNHIbDv9fS+P5kjUCAAAABQAAAAEAAAALAM6xuxF9FKN/B+I8luWAcp4/zBL3SZFbvcjtrfwg4hrPFQAAAFN0YXJ0IE9wdGlvbiBST00gU2NhbgIAAAAGAAAAAQAAAAsAQsNfc9yoYaT2lBuIXP60QTs/V44tYaVIrSbo/STF/vIgAAAABwAAABgAAAAAAAAAh/vA7LHufU2MjIjH2KL7Psj5nqUCAAAABgAAAAEAAAALAEhCcfsTwdRfjq1K1720aNnRAZTpRdNnOcSJR3WojkSDIAAAAAcAAAAYAAAAAAAAAKF3/pUe76cFAoGMcB9F4l1zCtadAgAAAAYAAAABAAAACwDoVl9LfTKvNQynp1Xau/dtFxpE0UeBPIM0P3be9myybSAAAAAHAAAAGAAAAAAAAABnDJzHm0hZlEcF7s5xDcMyGIt5tAQAAAAFAAAAAQAAAAsAehmlpW/SxKnJ29jHRTfzTQvEQqSlKMNvtEo8zYWN8SsPAAAAQ2FsbGluZyBJTlQgMTloAAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAUAAAABAAAACwCTSuIFkroG1wKWsgvJKnBsFgwLvBFfJlCJS3Y3UhxlOhwAAABCb290aW5nIEJDViBkZXZpY2UgODBoIChIREQpBAAAAA0AAAABAAAACwCfj8pNuhjuU9V1PHZiqzy9cTY3G9yjOqzfC6pJyRPlLAMAAABNQlIFAAAADgAAAAEAAAALAANFsCy5TpPzbQ926+9+lu9QuPhi1KuuUrcygr0MMilREwAAAE1CUiBQQVJUSVRJT05fVEFCTEU="}]},"policy_ids":null}]}]
- }
+{
+    "agent_version":"0.1.0","nonce_type":"default","user_nonce":null,"measurements":[{"node_id":"TPM AK","nonce":{"iat":123456789,"value":"5J7Q3sQbF6Yp6R6T1Qm8k1gX7j9YzvH4l6eQ2J1s8x0a9vT3h2K5z8W0u4x9V7n2b1c6e3w0p8m7u5q9t4r3y2z0v1s6d8a5g","signature":"Y0t2bGxwR1F6dGJmU1l4N3lBUXk2T2JZc3h5T0l6Z3Z4d2lQd2F6R0ZyZ3l6Z2V4V2V5d2F0Y3l6a2N6d2p6d2x5d2V6d2s="},"attester_data":"custom_data","evidences":[{"attester_type":"tpm_boot","evidence":{"ak_cert":"-----BEGIN CERTIFICATE-----\nxxxxx\n-----END CERTIFICATE-----","quote":{"quote_data":"/1RDR4AYACIAC6dK2j3UWnqCmI9se9Itpmwo+GB2VAKRbS/VU2Iczqe1ACA1SjdRM3NRYkY2WXA2UjZUMVFtOGsxZ1g3ajlZenZINAAAAACDq3eBAAAAGwAAAAABIBkQIwAWNjYAAAABAAsD/wAAACDmjVToNmS/+eKvnv6kvbrY+7FU8ALNmB8Ntz2L9wJotw==","signature":"ABQACwEAnm7Y3gZrwC81wPiFtz6I+2agoG7FOmFCSCz6OwuJScJ1fJTSL+UD0V/9R0NVDeH5ooRCc6z7r+khisBUiuOaC4o61W0CLrjZH35VXiLFtj2tQgmB8AKVKmTrj7sUN5Lu77NqUcKr4AWO2NgJyWqZgns1K5KKu/pcAzS679xUk6ZMdNg0hzJYQM6ufG90hjJO7Xa6Uww0T8fufWWEVOWnKlQmRM2DOSGIwWhuMf5/vHYSNab5s0roICIKj3wNlsP25t69kfy6PLBN2h/ZH2R5KsqplueKQr1ekuvwOtShBzfuijcxnbnLLyJkfjSWzkfSYACthMUvpkqI6by8v0ThLQ=="},"pcrs":{"hash_alg":"sha256","pcr_values":[{"pcr_index":0,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":1,"pcr_value":"a32bf8bf329907dc2b4839ff3c61b456a9856d12110f49d490df33baf189340e"},{"pcr_index":2,"pcr_value":"a9d5bdf3b0b034a434ef3adde2d5cb0a7533803f97f8889f1174ab60bd4dcb70"},{"pcr_index":3,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":4,"pcr_value":"fce7f1083082b16cfe2b085dd7858bb11a37c09b78e36c79e5a2fd529353c4e2"},{"pcr_index":5,"pcr_value":"8edde912699ceddddc7d9a3d7ee44a8b1b1910815692def6c9e637e2b939f941"},{"pcr_index":6,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":7,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"}]},"logs":[{"log_type":"TcgEventLog","log_data":"AAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACEAAABTcGVjIElEIEV2ZW50MDMAAAAAAAACAgIBAAAACwAgAAABAAAABgAAAAEAAAALAKUQl5WfT2u4kWVrAbSwFzFjH47hjONtvzakrA+LlDtEHAAAAAEAAAAUAAAAP56Gs4+udkBZNHIbDv9fS+P5kjUCAAAABQAAAAEAAAALAM6xuxF9FKN/B+I8luWAcp4/zBL3SZFbvcjtrfwg4hrPFQAAAFN0YXJ0IE9wdGlvbiBST00gU2NhbgIAAAAGAAAAAQAAAAsAQsNfc9yoYaT2lBuIXP60QTs/V44tYaVIrSbo/STF/vIgAAAABwAAABgAAAAAAAAAh/vA7LHufU2MjIjH2KL7Psj5nqUCAAAABgAAAAEAAAALAEhCcfsTwdRfjq1K1720aNnRAZTpRdNnOcSJR3WojkSDIAAAAAcAAAAYAAAAAAAAAKF3/pUe76cFAoGMcB9F4l1zCtadAgAAAAYAAAABAAAACwDoVl9LfTKvNQynp1Xau/dtFxpE0UeBPIM0P3be9myybSAAAAAHAAAAGAAAAAAAAABnDJzHm0hZlEcF7s5xDcMyGIt5tAQAAAAFAAAAAQAAAAsAehmlpW/SxKnJ29jHRTfzTQvEQqSlKMNvtEo8zYWN8SsPAAAAQ2FsbGluZyBJTlQgMTloAAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAUAAAABAAAACwCTSuIFkroG1wKWsgvJKnBsFgwLvBFfJlCJS3Y3UhxlOhwAAABCb290aW5nIEJDViBkZXZpY2UgODBoIChIREQpBAAAAA0AAAABAAAACwCfj8pNuhjuU9V1PHZiqzy9cTY3G9yjOqzfC6pJyRPlLAMAAABNQlIFAAAADgAAAAEAAAALAANFsCy5TpPzbQ926+9+lu9QuPhi1KuuUrcygr0MMilREwAAAE1CUiBQQVJUSVRJT05fVEFCTEU="}]},"policy_ids":null}]}]
+}
  ```
 
 ## 3. Service API
 
-### 3.1 Baseline Management
+### 3.1 Reference Value Management
 
-#### 3.1.1 Add Baseline
-**Description**: Add baseline
+#### 3.1.1 Add Reference Value
+**Description**: Add reference value
 
 **Request Method**: `POST /global-trust-authority/v1/service/ref_value`
 
 ##### Request Parameters
-| Field | Sub-field | Type | Required | parameter constraint | Description |
-|-------|-----------|------|----------|-------------|-------------|
-| name | | string | Yes | Length 1-255 characters | Baseline name |
-| description | | string | No | Length 0-512 characters | Baseline description |
-| attester_type | | string | Yes | only support tpm_ima | Applicable challenge plugin type |
-| content | | string | Yes | Maximum length 10M | Baseline content |
-| is_default | | boolean | No | true or false | Whether it's default baseline, defaults to false |
+| Field | Sub-field | Type | Required | parameter constraint | Description                                      |
+|-------|-----------|------|----------|-------------|--------------------------------------------------|
+| name | | string | Yes | Length 1-255 characters | Reference value name                             |
+| description | | string | No | Length 0-512 characters | Reference value description                      |
+| attester_type | | string | Yes | only support tpm_ima | Applicable challenge plugin type                 |
+| content | | string | Yes | Maximum length 10M | Reference value content                          |
+| is_default | | boolean | No | true or false | Whether it's default reference value, defaults to false |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
 |-------|-----------|------|----------|-------------|
 | message | | string | No | Error message |
-| refvalue | | object | Yes | Baseline information |
-| | id | string | Yes | Baseline ID |
-| | name | string | Yes | Baseline name |
-| | version | string | Yes | Baseline version number |
+| refvalue | | object | Yes | Reference value information |
+| | id | string | Yes | Reference value ID |
+| | name | string | Yes | Reference value name |
+| | version | string | Yes | Reference value version number |
 
 ##### Example of request
 
@@ -166,7 +166,7 @@
     "description": "test",
     "attester_type": "tpm_ima",
     "is_default":true,
-    "content": "eyJhbGciOiJSUzM4NCIsInR5cCI6IkpXVCJ9.eyJyZWZlcmVuY2VWYWx1ZXMiOlt7ImZpbGVOYW1lIjoic3l5eC0xLlBBVCIsInNoYTI1NiI6IjEyMzQ1NiJ9XX0.W15mJKFmdMA7FS_yDgC9-EGSxqwyDSEf5TyEkMRasYtJ_zjlMqsz57zpsPdPc384mX9_J6ITpSJKpk454fb7wWbdoi4S5g-3kaCW9WgaDDHiTDr7wbx9CN0e80UotI4vXGA7p0rEV8rExAtxehBP2QjOk9Dp39LKcO6iR5OWlStYevKNUHVVpfpidUiX14tm8lG4uGYOpnyVqoKBjpSS7-fkin5qacYo4XoFNFNwMFxtM57Cv2l-_6ky4n4wNpufJoH8FeE3uao-DX-v37o-DClkNPnP4Sj51Vsdnyx79FIEevnkPXYCizPxdiiN7LS068-EkVkenGv2TFigG8ySi_4FwiVxbHDf8lKjV6nunblgH8jK3uqxZkUwYMDmeej5dsk3624TRUxK-29d1KGnpB6ax-lGKqcqzYkJOa7CykmZyOJgo8aTj19qlC2MY_xN7iY-ZP1uvXvzvNF01UoOWIBmVsj0UH_moI-2huFu-k7PPmy661cwskKpycH3o813s7jEW-dTFtiht7iq1kDwIB5iMJWq-kxjAfwf8ICOUhimM2hoYPgCUxAlPguNnN26o2NWGKAdXhZdipARqyrZU5PwJU-iJwMernOKE1qtBpi-UKb5F9YbJ2EkRZTrUKW1hs9iMaPCauZWYJM1PXh3uPG98a7CbFGIwYql6B7pN6M"
+    "content": "xxxx"
 }
 ```
 
@@ -174,7 +174,7 @@
 
  ```
 {
-    "refvalue": {
+    "ref_value": {
         "id": "7255326052342740548",
         "version": "1",
         "name": "test"
@@ -184,30 +184,30 @@
 
 
 
-#### 3.1.2 Update Baseline
+#### 3.1.2 Update Reference Value
 
-**Description**: Update baseline
+**Description**: Update Reference Value
 
 **Request Method**: `PUT /global-trust-authority/v1/service/ref_value`
 
 ##### Request Parameters
 | Field | Sub-field | Type | Required | parameter constraint | Description |
 |-------|-----------|------|----------|-------------|-------------|
-| id | | string | Yes | Length 1-32 characters | Baseline ID |
-| name | | string | No | Length 1-255 characters | Baseline name, directly overwrites when name is the same |
-| description | | string | No | Length 0-512 characters | Baseline description |
-| content | | string | No | Maximum length 10M | Baseline content |
-| is_default | | boolean | No | true or false | Whether it's default baseline, defaults to false |
+| id | | string | Yes | Length 1-32 characters | Reference value ID |
+| name | | string | No | Length 1-255 characters | Reference value name, directly overwrites when name is the same |
+| description | | string | No | Length 0-512 characters | Reference value description |
+| content | | string | No | Maximum length 10M | Reference value content |
+| is_default | | boolean | No | true or false | Whether it's default Reference value, defaults to false |
 | attester_type | | string | No | only support tpm_ima | Applicable challenge plugin type |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
 |-------|-----------|------|----------|-------------|
 | message | | string | No | Error message |
-| refvalue | | object | Yes | Baseline information |
-| | id | string | Yes | Baseline ID |
-| | name | string | Yes | Baseline name |
-| | version | string | Yes | Baseline update version number |
+| refvalue | | object | Yes | Reference value information |
+| | id | string | Yes | Reference value ID |
+| | name | string | Yes | Reference value name |
+| | version | string | Yes | Reference value update version number |
 
 ##### Example of request
 
@@ -219,7 +219,7 @@
     "name": "test",
     "description": "test_description",
     "is_default":true,
-    "content": "eyJhbGciOiJSUzM4NCIsInR5cCI6IkpXVCJ9.eyJyZWZlcmVuY2VWYWx1ZXMiOlt7ImZpbGVOYW1lIjoic3l5eC0xLlBBVCIsInNoYTI1NiI6IjEyMzQ1NiJ9XX0.W15mJKFmdMA7FS_yDgC9-EGSxqwyDSEf5TyEkMRasYtJ_zjlMqsz57zpsPdPc384mX9_J6ITpSJKpk454fb7wWbdoi4S5g-3kaCW9WgaDDHiTDr7wbx9CN0e80UotI4vXGA7p0rEV8rExAtxehBP2QjOk9Dp39LKcO6iR5OWlStYevKNUHVVpfpidUiX14tm8lG4uGYOpnyVqoKBjpSS7-fkin5qacYo4XoFNFNwMFxtM57Cv2l-_6ky4n4wNpufJoH8FeE3uao-DX-v37o-DClkNPnP4Sj51Vsdnyx79FIEevnkPXYCizPxdiiN7LS068-EkVkenGv2TFigG8ySi_4FwiVxbHDf8lKjV6nunblgH8jK3uqxZkUwYMDmeej5dsk3624TRUxK-29d1KGnpB6ax-lGKqcqzYkJOa7CykmZyOJgo8aTj19qlC2MY_xN7iY-ZP1uvXvzvNF01UoOWIBmVsj0UH_moI-2huFu-k7PPmy661cwskKpycH3o813s7jEW-dTFtiht7iq1kDwIB5iMJWq-kxjAfwf8ICOUhimM2hoYPgCUxAlPguNnN26o2NWGKAdXhZdipARqyrZU5PwJU-iJwMernOKE1qtBpi-UKb5F9YbJ2EkRZTrUKW1hs9iMaPCauZWYJM1PXh3uPG98a7CbFGIwYql6B7pN6M"
+    "content": "xxxx"
 }
 ```
 
@@ -227,7 +227,7 @@
 
  ```
 {
-    "refvalue": {
+    "ref_value": {
         "id": "7255326052342740548",
         "version": "2",
         "name": "test"
@@ -235,33 +235,33 @@
 }
  ```
 
-#### 3.1.3 Query Baseline
+#### 3.1.3 Query Reference Value
 
-**Description**: Query baseline
+**Description**: Query Reference Value
 
 **Request Method**: `GET /global-trust-authority/v1/service/ref_value`
 
 ##### Request Parameters
-| Field         | Sub-field | Type | Required | parameter constraint | Description |
-|---------------|-----------|------|----------|-------------|-------------|
-| attester_type | | string | Yes | tpm_ima | Query baseline for specified purpose |
-| ids           | | List of String | Yes | Length 1-32 characters | Baseline name, if empty, input 10 |
+| Field         | Sub-field | Type | Required | parameter constraint | Description                                 |
+|---------------|-----------|------|----------|-------------|---------------------------------------------|
+| attester_type | | string | Yes | tpm_ima | Query reference value for specified purpose |
+| ids           | | List of String | Yes | Length 1-32 characters | Reference value name, if empty, input 10    |
 
 ##### Response Parameters
-| Field | Sub-field | Type | Required | Description |
-|-------|-----------|------|----------|-------------|
-| message | | string | No | Error message |
-| ref_values | | list of objects | Yes | Baseline information |
-| | id | string | Yes | Baseline ID |
-| | name | string | No | Baseline name |
-| | uid | string | Yes | User ID |
-| | description | string | No | Baseline description |
-| | content | string | No | Baseline content |
-| | attester_type | string | Yes | Applicable challenge plugin type |
-| | is_default | boolean | No | Whether it's default baseline, defaults to false |
-| | version | int | No | Baseline version |
-| | create_time | Long | Yes | Creation time |
-| | update_time | Long | Yes | Update time |
+| Field | Sub-field | Type | Required | Description                                             |
+|-------|-----------|------|----------|---------------------------------------------------------|
+| message | | string | No | Error message                                           |
+| ref_values | | list of objects | Yes | Reference value information                             |
+| | id | string | Yes | Reference value ID                                      |
+| | name | string | No | Reference value name                                    |
+| | uid | string | Yes | User ID                                                 |
+| | description | string | No | Reference value description                             |
+| | content | string | No | Reference value content                                 |
+| | attester_type | string | Yes | Applicable challenge plugin type                        |
+| | is_default | boolean | No | Whether it's default reference value, defaults to false |
+| | version | int | No | Reference value version                                 |
+| | create_time | Long | Yes | Creation time                                           |
+| | update_time | Long | Yes | Update time                                             |
 
 ##### Example of request
 
@@ -275,10 +275,10 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 
  ```
 {
-    "refvalue": [
+    "ref_value": [
         {
             "id": "2b0ead4b-6a15-4239-bf68-b1413df538bb",
-            "name": "syyx",
+            "name": "test_refvalue",
             "description": "This is Test",
             "content": "package verification\n\n# Extract is_log_valid from first tpm_ima log\nis_log_valid = valid {\n    some i\n    logs := input.evidence.logs\n    logs[i].log_type == \"ImaLog\"\n    valid := logs[i].is_log_valid\n}\n\n# Check if pcrs 10 is present in any hash algorithm (sha1, sha256, sha384, sha512)\npcr_present {\n    all := {x | x := [10][_] }\n    measured := {pcr.pcr_index | pcr := input.evidence.pcrs.pcr_values[_]}\n    all_pcrs_subset := all - measured\n    count(all_pcrs_subset) == 0\n}\n\n# Attestation valid if all conditions met\ndefault attestation_valid = false\nattestation_valid {\n    is_log_valid == true\n    pcr_present\n}\n\n# Output result\nresult = {\n    \"policy_matched\": attestation_valid,\n    \"custom_data\": {\n        \"hash_alg\": input.evidence.pcrs.hash_alg\n    }\n}",
             "attester_type": [
@@ -293,21 +293,38 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 }
  ```
 
-#### 3.1.4 Delete Baseline
+#### 3.1.4 Delete Reference Value
 
-**Description**: Delete baseline
+**Description**: Delete reference value
 
 **Request Method**: `DELETE /global-trust-authority/service/v1/ref_value`
 
 ##### Request Parameters
-| Field | Sub-field | Type | Required | parameter constraint | Description |
-|-------|-----------|------|----------|-------------|-------|
-| ids | | List of String | No | Length 1-32 characters | Baseline IDs |
-| attester_type | | string | No | tpm_ima | Baseline type |
-| delete_type | | string | Yes | id, type, all | Delete Type |
+| Field | Sub-field | Type | Required | parameter constraint | Description          |
+|-------|-----------|------|----------|-------------|----------------------|
+| ids | | List of String | No | Length 1-32 characters | Reference value IDs  |
+| attester_type | | string | No | tpm_ima | Reference value type |
+| delete_type | | string | Yes | id, type, all | Delete Type          |
 
 ##### Response Parameters
-无
+empty
+
+##### Example of request
+
+###### request body
+
+```
+{
+    "delete_type": "ids",
+    "ids": ["8710919450846562689"]
+}
+```
+
+###### response body
+
+ ```
+empty
+ ```
 
 ### 3.2 Certificate Management
 
@@ -343,10 +360,10 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 
 ```
 {
-	"name": "root.crt.refvalue",
+	"name": "root.crt",
 	"description": null,
 	"type": ["tpm_ima", "tpm_boot"],
-	"content": "-----BEGIN CERTIFICATE-----\nMIIDazCCAlOgAwIBAgIUa2Y3bA0XAm4XLafe/q8+KC3aokIwDQYJKoZIhvcNAQELBQAwRDELMAkGA1UEBhMCQ04xEDAOBgNVBAoMB3Rlc3QgQ0ExDTALBgNVBAsMBHRlc3QxFDASBgNVBAMMC1RQTSBSb290IENBMCAXDTI1MDQyODA5MjEwOVoYDzIwNTUwNDIxMDkyMTA5WjBEMQswCQYDVQQGEwJDTjEQMA4GA1UECgwHdGVzdCBDQTENMAsGA1UECwwEdGVzdDEUMBIGA1UEAwwLVFBNIFJvb3QgQ0EwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDAOdXbxpdveE7eBkjX7NEoiE1rosffByMdMGC4kT+LDYU8tO93TFYJpCBVT1JpubU5zEFCilER39z5DA+y5w/dRaZrpTkXWCD8RcGEB+wVzuJIsl2kafH+lgui374zVWB9pePbLfOHkv09OpPsNjF/rO1OlHEEuGSe1LD+GLuSblIzGoX97ODWl1TacZlot8LnzqidhXUwLgmXgYLr/VApXFHyUhZ7ipSQcQng3/Morek0bTQPPGUPd308G7Fotw2wp9Io2NLPxuZLGqeraH+hV22ayPaVWSOXfOD/mezt935NqVHgEHOJOIIMnDeT8JD+n/cHLSZM9Br6F8JwevUHAgMBAAGjUzBRMB0GA1UdDgQWBBTo4w19Mkg5ynJdPlllemXnRXZ+ijAfBgNVHSMEGDAWgBTo4w19Mkg5ynJdPlllemXnRXZ+ijAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQA09kjseBelT6x71ST6XAr7GIQjkxlTedQydTuY3sgWDLvCGW3rRHjuRDPRb+0c22DEVg8BvCsFbS7jexnscMFQz4llxCDpns2yPs9afIfxFolAizdaxwBaOkwNAIRUWbI9ZwTIHezaitreJDTWWZdVWTBHQMNQ6aAH9yOl/iWXXFyVcMIl5S4iVrOqH5sk+zl3BFkq4WPB6FbGKRVBJ4e9UlWKWflMrk7D6HmG93E7ZO4Vlen+HbnOvnOsIkaa/6rOqmgXhi1g1QTOZazSp7xHx1lOq0JYH9g1tSmTDBWg57ZZWOAUwusw2OSrG4k8GXhxNQDRJyDSNNd7AjTIvOYV\n-----END CERTIFICATE-----",
+	"content": "-----BEGIN CERTIFICATE-----\nxxxxx\n-----END CERTIFICATE-----",
 	"is_default": null,
 	"cert_revoked_list": null
 }
@@ -370,7 +387,7 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 {
 	"name": "crl.pem",
 	"type": ["crl"],
-	"crl_content": "-----BEGIN X509 CRL-----\nMIICAzCB7AIBATANBgkqhkiG9w0BAQsFADA+MQswCQYDVQQGEwJDTjEQMA4GA1UECAwHQmVpamluZzEOMAwGA1UECgwFTXlPcmcxDTALBgNVBAMMBE15Q0EXDTI1MDUyNjAyMzQwN1oXDTI1MDYyNTAyMzQwN1owajAzAhQC2wpY0qN4T92QbgwLGWWHe9iZphcNMjUwNTI2MDIzNDA3WjAMMAoGA1UdFQQDCgEBMDMCFHWjBOk+pritGnQS16/3gXqLBkVKFw0yNTA1MjYwMjI5MzdaMAwwCgYDVR0VBAMKAQGgDjAMMAoGA1UdFAQDAgECMA0GCSqGSIb3DQEBCwUAA4IBAQBCqlEhEtKc+yGPX2hst9lrOgkHPICrH5U7Xmzz6DGC6AY+/Wf+UuFAxB/OfIpVioH/bTQALaZURMwmYrga6QuhP1zVeccF2h4mgZpd2xEfVlZlLn0KUs1voa20e24opBFmBsg2VgCmbfzxADjJF7cHSNu5Hse730jDsCKh0Kv6BUM6kty1CKBQhz8bvYauGmgngfZdsSw7jKSdEhgITfxKJfTulaHEaLaukR4r9QOJmxlypml7oetqmaae0Xfaur9O6I1zYrSEVUqJGHiI0t93MDssyhY68eHdn1S5A5gZK3AynmTiyxtXY8FWKrgv5VZvCFSiYlZGAujaUGHriKyL\n-----END X509 CRL-----"
+	"crl_content": "-----BEGIN X509 CRL-----\nxxxxx\n-----END X509 CRL-----"
 }
 ```
 
@@ -487,7 +504,7 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/cert?ids=4740ac7fb9c65
     {
       "cert_id": "4740ac7fb9c659e5a1cafad301e1ed00",
       "cert_name": "root.crt.refvalue",
-      "content": "-----BEGIN CERTIFICATE-----\nMIIDazCCAlOgAwIBAgIUa2Y3bA0XAm4XLafe/q8+KC3aokIwDQYJKoZIhvcNAQELBQAwRDELMAkGA1UEBhMCQ04xEDAOBgNVBAoMB3Rlc3QgQ0ExDTALBgNVBAsMBHRlc3QxFDASBgNVBAMMC1RQTSBSb290IENBMCAXDTI1MDQyODA5MjEwOVoYDzIwNTUwNDIxMDkyMTA5WjBEMQswCQYDVQQGEwJDTjEQMA4GA1UECgwHdGVzdCBDQTENMAsGA1UECwwEdGVzdDEUMBIGA1UEAwwLVFBNIFJvb3QgQ0EwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDAOdXbxpdveE7eBkjX7NEoiE1rosffByMdMGC4kT+LDYU8tO93TFYJpCBVT1JpubU5zEFCilER39z5DA+y5w/dRaZrpTkXWCD8RcGEB+wVzuJIsl2kafH+lgui374zVWB9pePbLfOHkv09OpPsNjF/rO1OlHEEuGSe1LD+GLuSblIzGoX97ODWl1TacZlot8LnzqidhXUwLgmXgYLr/VApXFHyUhZ7ipSQcQng3/Morek0bTQPPGUPd308G7Fotw2wp9Io2NLPxuZLGqeraH+hV22ayPaVWSOXfOD/mezt935NqVHgEHOJOIIMnDeT8JD+n/cHLSZM9Br6F8JwevUHAgMBAAGjUzBRMB0GA1UdDgQWBBTo4w19Mkg5ynJdPlllemXnRXZ+ijAfBgNVHSMEGDAWgBTo4w19Mkg5ynJdPlllemXnRXZ+ijAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQA09kjseBelT6x71ST6XAr7GIQjkxlTedQydTuY3sgWDLvCGW3rRHjuRDPRb+0c22DEVg8BvCsFbS7jexnscMFQz4llxCDpns2yPs9afIfxFolAizdaxwBaOkwNAIRUWbI9ZwTIHezaitreJDTWWZdVWTBHQMNQ6aAH9yOl/iWXXFyVcMIl5S4iVrOqH5sk+zl3BFkq4WPB6FbGKRVBJ4e9UlWKWflMrk7D6HmG93E7ZO4Vlen+HbnOvnOsIkaa/6rOqmgXhi1g1QTOZazSp7xHx1lOq0JYH9g1tSmTDBWg57ZZWOAUwusw2OSrG4k8GXhxNQDRJyDSNNd7AjTIvOYV\n-----END CERTIFICATE-----",
+      "content": "-----BEGIN CERTIFICATE-----\nxxxxx\n-----END CERTIFICATE-----",
       "cert_type": [
         "tpm_ima",
         "tpm_boot"
@@ -515,7 +532,7 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/cert?cert_type=crl
         {
             "crl_id": "3ca52323-aa6a-4e70-af1f-46f015630d77",
             "crl_name": "crl.pem",
-            "crl_content": "-----BEGIN X509 CRL-----\nMIICAzCB7AIBATANBgkqhkiG9w0BAQsFADA+MQswCQYDVQQGEwJDTjEQMA4GA1UECAwHQmVpamluZzEOMAwGA1UECgwFTXlPcmcxDTALBgNVBAMMBE15Q0EXDTI1MDUyNjAyMzQwN1oXDTI1MDYyNTAyMzQwN1owajAzAhQC2wpY0qN4T92QbgwLGWWHe9iZphcNMjUwNTI2MDIzNDA3WjAMMAoGA1UdFQQDCgEBMDMCFHWjBOk+pritGnQS16/3gXqLBkVKFw0yNTA1MjYwMjI5MzdaMAwwCgYDVR0VBAMKAQGgDjAMMAoGA1UdFAQDAgECMA0GCSqGSIb3DQEBCwUAA4IBAQBCqlEhEtKc+yGPX2hst9lrOgkHPICrH5U7Xmzz6DGC6AY+/Wf+UuFAxB/OfIpVioH/bTQALaZURMwmYrga6QuhP1zVeccF2h4mgZpd2xEfVlZlLn0KUs1voa20e24opBFmBsg2VgCmbfzxADjJF7cHSNu5Hse730jDsCKh0Kv6BUM6kty1CKBQhz8bvYauGmgngfZdsSw7jKSdEhgITfxKJfTulaHEaLaukR4r9QOJmxlypml7oetqmaae0Xfaur9O6I1zYrSEVUqJGHiI0t93MDssyhY68eHdn1S5A5gZK3AynmTiyxtXY8FWKrgv5VZvCFSiYlZGAujaUGHriKyL\n-----END X509 CRL-----"
+            "crl_content": "-----BEGIN X509 CRL-----\nxxxxx\n-----END X509 CRL-----"
         }
     ]
 }
@@ -537,7 +554,7 @@ Note: To delete revoked certificates, type must specify crl.
 | type | | string | No       | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, refvalue/policy/tpm_boot/tpm_ima/crl |
 
 ##### Response Parameters
-无
+empty
 
 ###### delete cert request body
 
@@ -667,7 +684,94 @@ Note: To delete revoked certificates, type must specify crl.
 | | | | attestation_valid | boolean | Yes | Whether policy matching passed | Challenge response module |
 | | | | custom_data | object | No | Policy-defined output | Challenge response module |
 
-Too many parameters to show a sample request
+##### Example of request
+
+###### request body
+
+```
+{
+    "agent_version": "0.1.0",
+    "nonce_type": "ignore",
+    "user_nonce": null,
+    "measurements": [
+        {
+            "node_id": "TPM AK",
+            "nonce": null,
+            "attester_data": null,
+            "evidences": [
+                {
+                    "attester_type": "tpm_boot",
+                    "evidence": {
+                        "ak_cert": "-----BEGIN CERTIFICATE-----\nxxxxx\n-----END CERTIFICATE-----",
+                        "quote": {
+                            "quote_data": "/1RDR4AYACIAC6dK2j3UWnqCmI9se9Itpmwo+GB2VAKRbS/VU2Iczqe1AAAAAAAAqTW9RAAAABsAAAAAASAZECMAFjY2AAAAAQALA/8AAAAg5o1U6DZkv/nir57+pL262PuxVPACzZgfDbc9i/cCaLc=",
+                            "signature": "ABQACwEAB2a8RxbLV10KdV4rBaKvYZBxBrknL3E6flmOs1UCEz3U8v81RNWDxq5y7q301HsaF6HrP7TQWVq/5dX56RAgEtSxgiiKSIbR7S0SSaKMjHWKGHf+BeehZIaaxubl9rhlSVqBd+/K9rbHP3ADFJI8q1Ikg/6oAeYHsw1yZGinMocOF1+feMXBxri8YsEnX8a8/1tY8mAH34fhLf1OI8BjBnDmZG1kHQg930lJLcxB5uVNtEZd9Hcq/UMn9Hq+GQ6eVcpS4KgG9KwePnk96i/pjDTeDPk6VsZbYiXZPn9wQrAnwzDJX+7nTQj8QEOat49X7A57sAWHX9zRQV/mkVmvrw=="
+                        },
+                        "pcrs": {
+                            "hash_alg": "sha256",
+                            "pcr_values": [
+                                {
+                                    "pcr_index": 0,
+                                    "pcr_value": "e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"
+                                },
+                                {
+                                    "pcr_index": 1,
+                                    "pcr_value": "a32bf8bf329907dc2b4839ff3c61b456a9856d12110f49d490df33baf189340e"
+                                },
+                                {
+                                    "pcr_index": 2,
+                                    "pcr_value": "a9d5bdf3b0b034a434ef3adde2d5cb0a7533803f97f8889f1174ab60bd4dcb70"
+                                },
+                                {
+                                    "pcr_index": 3,
+                                    "pcr_value": "e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"
+                                },
+                                {
+                                    "pcr_index": 4,
+                                    "pcr_value": "fce7f1083082b16cfe2b085dd7858bb11a37c09b78e36c79e5a2fd529353c4e2"
+                                },
+                                {
+                                    "pcr_index": 5,
+                                    "pcr_value": "8edde912699ceddddc7d9a3d7ee44a8b1b1910815692def6c9e637e2b939f941"
+                                },
+                                {
+                                    "pcr_index": 6,
+                                    "pcr_value": "e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"
+                                },
+                                {
+                                    "pcr_index": 7,
+                                    "pcr_value": "e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"
+                                }
+                            ]
+                        },
+                        "logs": [
+                            {
+                                "log_type": "TcgEventLog",
+                                "log_data": "xxxxx"
+                            }
+                        ]
+                    },
+                    "policy_ids": null
+                }
+            ]
+        }
+    ]
+}
+```
+
+###### response body
+
+ ```
+{
+    "service_version": "1.0",
+    "tokens": [
+        {
+            "node_id": "TPM AK",
+            "token": "xxxxxx"
+        }
+    ]
+}
+ ```
 
 ### 3.4 Policy Management
 
@@ -677,15 +781,15 @@ Too many parameters to show a sample request
 **Request Method**: `POST /global-trust-authority/v1/service/policy`
 
 ##### Request Parameters
-| Field | Type | Required | parameter constraint | Description |
-|-------|------|----------|-------------|-------------|
-| id | string | No | length 1~36 characters | Policy ID, length  if filled, use it as policy ID, if not filled, generate UUID |
-| name | string | Yes | length 1~255 characters | Policy name |
-| description | string | No | length not exceeding 512 characters | Policy description |
-| attester_type | string | Yes | length 1~255 characters | Applicable challenge plugin type, see previous specification |
-| content_type | string | Yes | jwt or text | jwt/text (corresponding to unsigned case) |
-| content | string | Yes | Default maximum 500kb | Policy content, maximum 500KB before encoding |
-| is_default | boolean | No | true or false | Whether it's default policy, defaults to false |
+| Field         | Type           | Required | parameter constraint                           | Description                                                                     |
+|---------------|----------------|----------|------------------------------------------------|---------------------------------------------------------------------------------|
+| id            | string         | No       | length 1~36 characters                         | Policy ID, length  if filled, use it as policy ID, if not filled, generate UUID |
+| name          | string         | Yes      | length 1~255 characters                        | Policy name                                                                     |
+| description   | string         | No       | length not exceeding 512 characters            | Policy description                                                              |
+| attester_type | list of string | Yes      | Each element character length 1~255 characters | Applicable challenge plugin type, see previous specification                    |
+| content_type  | string         | Yes      | jwt or text                                    | jwt/text (corresponding to unsigned case)                                       |
+| content       | string         | Yes      | Default maximum 500kb                          | Policy content, maximum 500KB before encoding                                   |
+| is_default    | boolean        | No       | true or false                                  | Whether it's default policy, defaults to false                                  |
 
 When content_type is jwt, jwt content:
 | Field Location | Field | Type | Required | Description |
@@ -709,7 +813,7 @@ When content_type is jwt, jwt content:
 
 ```
 {
-    "name": "test_policy{{$number.int}}",
+    "name": "test_policy",
     "description": "This is Test",
     "attester_type": [
         "tpm_ima"
@@ -739,15 +843,15 @@ When content_type is jwt, jwt content:
 **Request Method**: `PUT /global-trust-authority/v1/service/policy`
 
 ##### Request Parameters
-| Field | Type | Required | parameter constraint | Description |
-|-------|------|----------|-------------|-------------|
-| id | string | Yes | length 1~36 characters | Policy ID |
-| name | string | No | length 1~255 characters | Policy name |
-| description | string | No | length 0~512 characters | Policy description |
-| attester_type | list of string | No | length 1~255 characters | Applicable challenge plugin type |
-| content_type | string | No | jwt or text | jwt/text (corresponding to unsigned case) |
-| content | string | No | Default maximum 500kb | Policy content |
-| is_default | boolean | No | true or false | Whether it's default policy, defaults to false |
+| Field         | Type           | Required | parameter constraint                           | Description                                    |
+|---------------|----------------|----------|------------------------------------------------|------------------------------------------------|
+| id            | string         | Yes      | length 1~36 characters                         | Policy ID                                      |
+| name          | string         | No       | length 1~255 characters                        | Policy name                                    |
+| description   | string         | No       | length 0~512 characters                        | Policy description                             |
+| attester_type | list of string | No       | Each element character length 1~255 characters | Applicable challenge plugin type               |
+| content_type  | string         | No       | jwt or text                                    | jwt/text (corresponding to unsigned case)      |
+| content       | string         | No       | Default maximum 500kb                          | Policy content                                 |
+| is_default    | boolean        | No       | true or false                                  | Whether it's default policy, defaults to false |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
@@ -788,7 +892,7 @@ When content_type is jwt, jwt content:
 
 **Description**: Delete policy
 
-**Request Method**: `DELETE /global-trust-authority/service/v1/policy`
+**Request Method**: `DELETE /global-trust-authority/v1/service/policy`
 
 ##### Request Parameters
 | Field | Type | Required | parameter constraint | Description |
@@ -801,6 +905,23 @@ When content_type is jwt, jwt content:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | message | string | No | Error message |
+
+##### Example of request
+
+###### request body
+
+```
+{
+    "delete_type": "attester_type",
+    "attester_type": "tpm_ima"
+}
+```
+
+###### response body
+
+ ```
+empty
+ ```
 
 #### 3.4.4 Query Policy
 **Description**: Query policy
@@ -889,7 +1010,7 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/policy?ids=2b0ead4b-6a
 
 ```
 {
-    "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImprdSI6ImprdSIsImtpZCI6ImtpZCJ9.eyJpbnR1c2UiOiJHZW5lcmljIiwidWVpZCI6IlRQTSBBSyIsInRwbV9ib290Ijp7ImF0dGVzdGF0aW9uX3N0YXR1cyI6ImZhaWwiLCJwb2xpY3lfaW5mbyI6W3siYXBwcmFpc2FsX3BvbGljeV9pZCI6IjgwMzhkNjlmLWY0MTItNGZhNC1hODFjLWRhYWJmZjUyNWYwOCIsInBvbGljeV92ZXJzaW9uIjoxLCJwb2xpY3lfbWF0Y2hlZCI6ZmFsc2UsImN1c3RvbV9kYXRhIjp7InBjcnMiOlt7ImJhc2VsaW5lX3ZhbHVlIjoiOWQ3NTA0YmIwZDMyZjYyZDQzMzEwZjM4ZGYzN2NkZDVlNDJiZGI4M2RkMGMwNTkyZmQ5YjFjM2IxNjc3MGMzNSIsImluZGV4IjowLCJtZWFzdXJlZF92YWx1ZSI6ImUyMWI3MDNlZTY5Yzc3NDc2YmNjYjQzZWMwMzM2YTlhMWIyOTE0YjM3ODk0NGY3YjAwYTEwMjE0Y2E4ZmVhOTMifSx7ImJhc2VsaW5lX3ZhbHVlIjoiMzg4NDYyNzFlMmE4NmQ2YmY0M2VmMzg4YmUyZDFjYjgzYTg5ZjFjMGJiMTU0ZmU0OTRhMWRkYTE5OGRhMjliZSIsImluZGV4IjoxLCJtZWFzdXJlZF92YWx1ZSI6ImEzMmJmOGJmMzI5OTA3ZGMyYjQ4MzlmZjNjNjFiNDU2YTk4NTZkMTIxMTBmNDlkNDkwZGYzM2JhZjE4OTM0MGUifSx7ImJhc2VsaW5lX3ZhbHVlIjoiM2Q0NThjZmU1NWNjMDNlYTFmNDQzZjE1NjJiZWVjOGRmNTFjNzVlMTRhOWZjZjlhNzIzNGExM2YxOThlNzk2OSIsImluZGV4IjoyLCJtZWFzdXJlZF92YWx1ZSI6ImE5ZDViZGYzYjBiMDM0YTQzNGVmM2FkZGUyZDVjYjBhNzUzMzgwM2Y5N2Y4ODg5ZjExNzRhYjYwYmQ0ZGNiNzAifSx7ImJhc2VsaW5lX3ZhbHVlIjoiM2Q0NThjZmU1NWNjMDNlYTFmNDQzZjE1NjJiZWVjOGRmNTFjNzVlMTRhOWZjZjlhNzIzNGExM2YxOThlNzk2OSIsImluZGV4IjozLCJtZWFzdXJlZF92YWx1ZSI6ImUyMWI3MDNlZTY5Yzc3NDc2YmNjYjQzZWMwMzM2YTlhMWIyOTE0YjM3ODk0NGY3YjAwYTEwMjE0Y2E4ZmVhOTMifSx7ImJhc2VsaW5lX3ZhbHVlIjoiOGVkMTJjNDE1MDU2MzYyYzdhNGQ0MDNlNmUyYWNhZGYwOTBlNzhiZmI0Nzk4YTg3YjBhMzI3YzgzODA2NDkzMSIsImluZGV4Ijo0LCJtZWFzdXJlZF92YWx1ZSI6ImZjZTdmMTA4MzA4MmIxNmNmZTJiMDg1ZGQ3ODU4YmIxMWEzN2MwOWI3OGUzNmM3OWU1YTJmZDUyOTM1M2M0ZTIifSx7ImJhc2VsaW5lX3ZhbHVlIjoiNjYxMjFkNWJjZGI4YWI2ZDYyOGI0OTgyNzU5MGFjOGUxZjJmMDllMjZhYTJkMWRkMWNmZWM1MzU4ODU0Y2QzYSIsImluZGV4Ijo1LCJtZWFzdXJlZF92YWx1ZSI6IjhlZGRlOTEyNjk5Y2VkZGRkYzdkOWEzZDdlZTQ0YThiMWIxOTEwODE1NjkyZGVmNmM5ZTYzN2UyYjkzOWY5NDEifSx7ImJhc2VsaW5lX3ZhbHVlIjoiM2Q0NThjZmU1NWNjMDNlYTFmNDQzZjE1NjJiZWVjOGRmNTFjNzVlMTRhOWZjZjlhNzIzNGExM2YxOThlNzk2OSIsImluZGV4Ijo2LCJtZWFzdXJlZF92YWx1ZSI6ImUyMWI3MDNlZTY5Yzc3NDc2YmNjYjQzZWMwMzM2YTlhMWIyOTE0YjM3ODk0NGY3YjAwYTEwMjE0Y2E4ZmVhOTMifSx7ImJhc2VsaW5lX3ZhbHVlIjoiNzRmYTJjMDY3ODkyZmFhNzRiZmIwY2FmYWNjNGM3MTAyZGQyYzljZjczZWZkZmE0MWYwN2ZkZmM3YzFlZWExYiIsImluZGV4Ijo3LCJtZWFzdXJlZF92YWx1ZSI6ImUyMWI3MDNlZTY5Yzc3NDc2YmNjYjQzZWMwMzM2YTlhMWIyOTE0YjM3ODk0NGY3YjAwYTEwMjE0Y2E4ZmVhOTMifV19fV0sImlzX2xvZ192YWxpZCI6dHJ1ZSwicGNycyI6eyJoYXNoX2FsZyI6InNoYTI1NiIsInBjcl92YWx1ZXMiOlt7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6MCwicGNyX3ZhbHVlIjoiZTIxYjcwM2VlNjljNzc0NzZiY2NiNDNlYzAzMzZhOWExYjI5MTRiMzc4OTQ0ZjdiMDBhMTAyMTRjYThmZWE5MyIsInJlcGxheV92YWx1ZSI6ImUyMWI3MDNlZTY5Yzc3NDc2YmNjYjQzZWMwMzM2YTlhMWIyOTE0YjM3ODk0NGY3YjAwYTEwMjE0Y2E4ZmVhOTMifSx7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6MSwicGNyX3ZhbHVlIjoiYTMyYmY4YmYzMjk5MDdkYzJiNDgzOWZmM2M2MWI0NTZhOTg1NmQxMjExMGY0OWQ0OTBkZjMzYmFmMTg5MzQwZSIsInJlcGxheV92YWx1ZSI6ImEzMmJmOGJmMzI5OTA3ZGMyYjQ4MzlmZjNjNjFiNDU2YTk4NTZkMTIxMTBmNDlkNDkwZGYzM2JhZjE4OTM0MGUifSx7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6MiwicGNyX3ZhbHVlIjoiYTlkNWJkZjNiMGIwMzRhNDM0ZWYzYWRkZTJkNWNiMGE3NTMzODAzZjk3Zjg4ODlmMTE3NGFiNjBiZDRkY2I3MCIsInJlcGxheV92YWx1ZSI6ImE5ZDViZGYzYjBiMDM0YTQzNGVmM2FkZGUyZDVjYjBhNzUzMzgwM2Y5N2Y4ODg5ZjExNzRhYjYwYmQ0ZGNiNzAifSx7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6MywicGNyX3ZhbHVlIjoiZTIxYjcwM2VlNjljNzc0NzZiY2NiNDNlYzAzMzZhOWExYjI5MTRiMzc4OTQ0ZjdiMDBhMTAyMTRjYThmZWE5MyIsInJlcGxheV92YWx1ZSI6ImUyMWI3MDNlZTY5Yzc3NDc2YmNjYjQzZWMwMzM2YTlhMWIyOTE0YjM3ODk0NGY3YjAwYTEwMjE0Y2E4ZmVhOTMifSx7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6NCwicGNyX3ZhbHVlIjoiZmNlN2YxMDgzMDgyYjE2Y2ZlMmIwODVkZDc4NThiYjExYTM3YzA5Yjc4ZTM2Yzc5ZTVhMmZkNTI5MzUzYzRlMiIsInJlcGxheV92YWx1ZSI6ImZjZTdmMTA4MzA4MmIxNmNmZTJiMDg1ZGQ3ODU4YmIxMWEzN2MwOWI3OGUzNmM3OWU1YTJmZDUyOTM1M2M0ZTIifSx7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6NSwicGNyX3ZhbHVlIjoiOGVkZGU5MTI2OTljZWRkZGRjN2Q5YTNkN2VlNDRhOGIxYjE5MTA4MTU2OTJkZWY2YzllNjM3ZTJiOTM5Zjk0MSIsInJlcGxheV92YWx1ZSI6IjhlZGRlOTEyNjk5Y2VkZGRkYzdkOWEzZDdlZTQ0YThiMWIxOTEwODE1NjkyZGVmNmM5ZTYzN2UyYjkzOWY5NDEifSx7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6NiwicGNyX3ZhbHVlIjoiZTIxYjcwM2VlNjljNzc0NzZiY2NiNDNlYzAzMzZhOWExYjI5MTRiMzc4OTQ0ZjdiMDBhMTAyMTRjYThmZWE5MyIsInJlcGxheV92YWx1ZSI6ImUyMWI3MDNlZTY5Yzc3NDc2YmNjYjQzZWMwMzM2YTlhMWIyOTE0YjM3ODk0NGY3YjAwYTEwMjE0Y2E4ZmVhOTMifSx7ImlzX21hdGNoZWQiOnRydWUsInBjcl9pbmRleCI6NywicGNyX3ZhbHVlIjoiZTIxYjcwM2VlNjljNzc0NzZiY2NiNDNlYzAzMzZhOWExYjI5MTRiMzc4OTQ0ZjdiMDBhMTAyMTRjYThmZWE5MyIsInJlcGxheV92YWx1ZSI6ImUyMWI3MDNlZTY5Yzc3NDc2YmNjYjQzZWMwMzM2YTlhMWIyOTE0YjM3ODk0NGY3YjAwYTEwMjE0Y2E4ZmVhOTMifV19LCJzZWN1cmVfYm9vdCI6Ik5BIn0sImlhdCI6MTc0Njg2NDExNTgxMSwiZXhwIjoxNzQ2ODY0NzE1ODExLCJpc3MiOiJpc3MiLCJqdGkiOiI4MDE3ODBjYi0wOTM3LTQ1ZjQtYmRmZi1iNzUxMDhhMjQ1MDciLCJ2ZXIiOiIxLjAiLCJuYmYiOjE3NDY4NjQxMTU4MTEsImVhdF9wcm9maWxlIjoiZWF0X3Byb2ZpbGUifQ.WAPSQ1WAITX68N4A33BZauS76CRJOLNuiHMEVrD4RD4VvChNrkitrPbugk6PPLMzEPl2xzgIL_rtapJBpsBXXXHdyUFpUnoDZ9c0VKj5GqrM4qd7cXjMLAbnNBuXNY-oPfmq_Rk-m0uI4CeIQL1lGHrgRARvxWYdJ7aNhJ9GQR9xD39qpsiH8dM_oPHTwScMmNdgO9Z89_pnsQDDeyolzMhXQiuMXpMEUiH5kAuO7ViHqravn7R93BxdKcS4QppPlRmbedkg7RoWuWU9jJahZX64CG_MtJAGZ22C0t6gI36jbuAlC4kX3RxT2B9KvSZqg2okCXjpJ9iaI9xuQFLe6pUwpkzS6mC-X3wjzOkmSq24mUDln8xE-Sr6tnSm726TSa9DzfICstGtcYDGjt0J1XHgjJbASbaIZx0gx9CwKDxHHEfN97Mv3Qx4L4vEtQInAHBn6soRzvy30N0kJ2JaTerWksXl580yd9rItyywbiSltTRA5w6Eqol2dZSMzmvQ"
+    "token": "xxxxx"
 }
 ```
 

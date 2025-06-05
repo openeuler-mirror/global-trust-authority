@@ -34,46 +34,59 @@ attestation_common/
 
 ### 4.1 Adding New Feature Flow
 - 1 Define Data Model
-  // src/models/entity.rs
-  #[derive(Debug, Serialize, Deserialize)]
+```rust
+// src/models/entity.rs
+#[derive(Debug, Serialize, Deserialize)]
   pub struct Entity  {
   pub name: String,
-  }
+}
+```
+
 
 - 2 Implement Error Handling
-  // src/error/types/entity_error.rs
-  #[derive(Debug, Error)]
-  pub enum EntityError {
+```rust
+// src/error/types/entity_error.rs
+#[derive(Debug, Error)]
+pub enum EntityError {
   #[error("Invalid name: {0}")]
   InvalidNonce(String),
   #[error("Entity expired")]
   Expired,
-  }
+}
+```
+
 
 - 3 Add Utility Functions
-  // src/utils/entity_utils.rs
-  pub fn is_name_valid(name: String) -> bool {
+```rust
+// src/utils/entity_utils.rs
+pub fn is_name_valid(name: String) -> bool {
 
 }
+```
 
 ### 3.2 Usage Examples
 
 - 1 Encryption Tool Usage
-  // Generate hash value
-  let hash = crypto::hash::generate_hash(data)?;
+```rust
+// Generate hash value
+let hash = crypto::hash::generate_hash(data)?;
 
 // Key management
 let key_pair = crypto::keys::generate_key_pair()?;
+```
 
 - 2 Rate Limit Usage
-  let governor = create_rate_limiter(
-  requests_per_second,
-  burst_size
-  )?;
+```rust
+let governor = create_rate_limiter(
+    requests_per_second,
+    burst_size
+)?;
+```
 
 ## 5. Feature Usage Guide
 
 ### 5.1 Encryption Functionality
+```rust
 // Hash calculation
 use attestation_common::crypto::hash;
 let hash_value = hash::sha256(data);
@@ -81,25 +94,31 @@ let hash_value = hash::sha256(data);
 // Key operations
 use attestation_common::crypto::keys;
 let key_pair = keys::generate_rsa_key_pair(2048)?;
+```
 
 ### 5.2 Error Handling
+```rust
 // Configure rate limit
 use attestation_common::error::{Result, Error};
 
 fn process_data() -> Result<()> {
-// Processing logic
-Ok(())
+  // Processing logic
+  Ok(())
 }
+```
 
 
 ### 5.3 Rate Limiting
+```rust
 use attestation_common::ratelimit::RateLimiter;
 
 let limiter = RateLimiter::new(10, 5)?; // 10 req/s, burst 5
+```
 
 ## 6. Testing Guide
 
 ### 6.1 Unit Testing（tests/）
+```rust
 #[cfg(test)]
 mod tests {
     #[test]
@@ -107,6 +126,7 @@ mod tests {
         // code implementation
     }
 }
+```
 
 ## 7. Build
 - Build：cargo build
