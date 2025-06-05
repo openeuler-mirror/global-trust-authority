@@ -10,8 +10,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
-mod ima_verifier;
-mod ima_log;
+mod verifier;
+mod measurement_log;
 
-pub use ima_verifier::TpmImaPlugin;
-pub use ima_log::ImaLog;
+pub use verifier::TpmImaPlugin;
+pub use measurement_log::ImaLog;

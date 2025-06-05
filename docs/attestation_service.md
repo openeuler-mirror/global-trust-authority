@@ -23,7 +23,6 @@ Attestation Service is the server-side component of the remote attestation syste
 attestation_service/
 ├── attestation/        # Core attestation functionality
 ├── attestation_service/# Main attestation service implementation
-├── config/            # Configuration management
 ├── endorserment/      # Certificate management
 ├── key_management/    # Key management
 ├── nonce/            # Random number generation and management
@@ -32,7 +31,6 @@ attestation_service/
 ├── resource_provider/ # Resource provider
 ├── rv/               # Remote verification related
 ├── server_config/    # Server configuration
-├── service_restful/  # RESTful API implementation
 ├── token_management/ # Token management
 ├── verifier/         # Verifier implementation
 ```

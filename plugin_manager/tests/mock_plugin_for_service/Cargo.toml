@@ -1,5 +1,5 @@
 [package]
-name = "test_plugin_for_service"
+name = "mock_plugin_for_service"
 version = "0.1.0"
 edition = "2021"
 

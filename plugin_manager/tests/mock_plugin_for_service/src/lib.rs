@@ -15,14 +15,14 @@ use serde_json::Value;
 use async_trait::async_trait;
 
 /// A simple test service plugin for testing the plugin manager
-pub struct TestServicePlugin<'a> {
+pub struct MockServicePlugin<'a> {
     plugin_type: String,
     validate_cert_chain: &'a ValidateCertChainFn,
     get_unmatched_measurements: &'a GetUnmatchedMeasurementsFn,
     query_configuration: &'a QueryConfigurationFn,
 }
 
-impl<'a> TestServicePlugin<'a> {
+impl<'a> MockServicePlugin<'a> {
     fn new(
         plugin_type: String,
         validate_cert_chain: &'a ValidateCertChainFn,
@@ -38,14 +38,14 @@ impl<'a> TestServicePlugin<'a> {
     }
 }
 
-impl<'a> PluginBase for TestServicePlugin<'a> {
+impl<'a> PluginBase for MockServicePlugin<'a> {
     fn plugin_type(&self) -> &str {
         self.plugin_type.as_str()
     }
 }
 
 #[async_trait]
-impl<'a> ServicePlugin for TestServicePlugin<'a> {
+impl<'a> ServicePlugin for MockServicePlugin<'a> {
     fn get_sample_output(&self) -> Value {
         serde_json::json!({
             "cert_verification_result": true,
@@ -77,5 +77,5 @@ pub fn create_plugin<'a>(host_functions: &'a ServiceHostFunctions, plugin_type: 
     let query_configuration = &host_functions.query_configuration;
     
     // Create a new instance with the host functions
-    Some(Box::new(TestServicePlugin::new(String::from(plugin_type), validate_cert_chain, get_unmatched_measurements, query_configuration)))
+    Some(Box::new(MockServicePlugin::new(String::from(plugin_type), validate_cert_chain, get_unmatched_measurements, query_configuration)))
 }

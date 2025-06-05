@@ -11,13 +11,10 @@
  */
 
 mod byte_reader;
-mod event_type;
-mod event_parse;
-mod event_serialize;
-mod event_log;
-mod boot_verifier;
+mod event;
+mod verifier;
 
-pub use event_type::{
+pub use event::model::{
     EventType, TpmEventLog,
     NO_ACTION_EVENT_SIZE, UEFI_PARTITION_NAME_SIZE,
     SPEC_ID_EVENT_SIGNATURE_03, SPEC_ID_EVENT_SIGNATURE_00, STARTUP_LOCALITY_SIGNATURE,
@@ -31,12 +28,12 @@ pub use event_type::{
     UefiImageLoadEvent
 };
 
-pub use event_parse::{
+pub use event::parser::{
     TcgDigestParse, TcgDigestParseV1, TcgDigestParseV2,
     parse_uefi_variable_data_event, parse_typed_event
 };
-pub use event_log::EventLog;
-pub use boot_verifier::TpmBootPlugin;
+pub use event::log::EventLog;
+pub use verifier::TpmBootPlugin;
 pub use byte_reader::{
     ByteReader, ByteParseable,
     UEFI_GUID_SIZE

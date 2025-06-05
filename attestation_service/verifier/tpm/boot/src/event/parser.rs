@@ -32,7 +32,7 @@ use crate::byte_reader::{
     ByteReader, ByteParseable,
     UEFI_GUID_SIZE,
 };
-use crate::event_type::{
+use crate::event::model::{
     EventType,
     NO_ACTION_EVENT_SIZE, UEFI_PARTITION_NAME_SIZE,
     SPEC_ID_EVENT_SIGNATURE_03, SPEC_ID_EVENT_SIGNATURE_00, STARTUP_LOCALITY_SIGNATURE,

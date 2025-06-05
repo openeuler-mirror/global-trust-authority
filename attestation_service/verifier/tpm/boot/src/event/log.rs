@@ -34,7 +34,7 @@ use openssl::hash::{Hasher, MessageDigest, DigestBytes};
 use tpm_common_verifier::{PcrValues, AlgorithmId, CryptoVerifier};
 use plugin_manager::PluginError;
 use crate::byte_reader::ByteReader;
-use crate::event_type::{
+use crate::event::model::{
     EventType, TpmEventLog,
     TcgDigestAlgorithm, EventLogEntry,
     EvNoActionEvent,
@@ -44,7 +44,7 @@ use crate::event_type::{
     UefiGptDataEvent,
     UefiImageLoadEvent,
 };
-use crate::event_parse::{
+use crate::event::parser::{
     TcgDigestParse, TcgDigestParseV1, TcgDigestParseV2,
     parse_uefi_variable_data_event, parse_typed_event
 };
