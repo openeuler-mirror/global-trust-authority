@@ -31,9 +31,9 @@ use crate::{
     error::attestation_error::AttestationError,
 };
 
-pub struct StandardHandler;
+pub struct DefaultHandler;
 
-impl StandardHandler {
+impl DefaultHandler {
     pub async fn validate_nonce_request(
         measurement: &Measurement,
         nonce_type: &str,
