@@ -87,14 +87,14 @@ Configuration of agent ip, server url, log file and plugins information on agent
 | logging | file | Log file Path | string | "/var/log/ra-agent.log" |
 | plugins | name | Plugin name | string | "tpm_boot", "tpm_ima" |
 | plugins | path | Plugin so path | string | "/usr/lib64/libtpm_boot_attester.so", "/usr/lib64/libtpm_ima_attester.so" |
-| plugins | policy_id | List of policy IDs associated with the plugin | array | [] |
+| plugins | policy_id | List of policy IDs associated with the plugin | string[] | [] |
 | plugins | enabled | Whether the plugin is enabled | boolean | true |
 | plugins | params.attester_type | attester type | string | "tpm_boot", "tpm_ima" |
 | plugins | params.tcti_config | TPM Command Transmission Interface configuration | string | "device" (options: device, mssim, swtpm, tabrmd, libtpm) |
-| plugins | params.ak_handle | Attestation Key handle | string | "0x81010020" |
-| plugins | params.ak_nv_index | Attestation Key NV index | string | "0x150001b" |
+| plugins | params.ak_handle | Attestation Key handle, Need to create in advance, please refer to the key handle range: https://trustedcomputinggroup.org/wp-content/uploads/Registry-of-Reserved-TPM-2.0-Handles-and-Localities-Version-1.2-Revision-1.00_pub.pdf | integer | 0x81010020 |
+| plugins | params.ak_nv_index | AK Cert nv_index, iak certificate application reference: https://trustedcomputinggroup.org/wp-content/uploads/TPM-2p0-Keys-for-Device-Identity-and-Attestation_v1_r12_pub10082021.pdf | integer | 0x150001b |
 | plugins | params.pcr_selections.banks | PCR banks to use | array | [0,1,2,3,4,5,6,7] for tpm_boot, [10] for tpm_ima |
-| plugins | params.pcr_selections.hash_alg | Hash algorithm to use | string | "sha256" (options: sha1, sha256, sha384, sha512, sm3) |
+| plugins | params.pcr_selections.hash_alg | The PCR hash algorithm selected and the supported algorithms depend on the TPM chip | string | "sha256" (options: sha1, sha256, sha384, sha512, sm3) |
 | plugins | params.quote_signature_scheme.signature_alg | Signature algorithm for quotes | string | "rsassa" (options: rsapss, rsassa, ecdsa) |
 | plugins | params.quote_signature_scheme.hash_alg | Hash algorithm for quotes | string | "sha256" (options: sha1, sha256, sha384, sha512, sm3) |
 | plugins | params.log_file_path | Measurement log file path | string | "/sys/kernel/security/tpm0/binary_bios_measurements" for tpm_boot, "/sys/kernel/security/ima/ascii_runtime_measurements" for tpm_ima |
@@ -297,6 +297,7 @@ Preparing...                          ################################# [100%]
 Updating / installing...
    1:ra-agent-0.0.1-1                 ################################# [100%]
 ```
+
 #### Deployment
 ##### start
 Execute the command to start the service
@@ -315,6 +316,43 @@ rpm -qa | grep ra-agent
 ```
 
 After executing the command, there is no output, proving that the agent service was uninstalled successfully
+
+### attestation_cli
+
+#### Build the rpm package
+
+Build the rpm package, run rpm_build.sh
+
+```
+sh script/rpm_build.sh -c
+```
+
+Take the x86 architecture as an example, after the build is complete, the rpm package is in /root/rpmbuild/RPMS/x86_64/ra-cli-0.0.1-1.x86_64.rpm
+
+#### Install the rpm package
+
+Install the rpm package
+
+```
+rpm -ivh --nodeps ra-cli-0.0.1-1.x86_64.rpm
+```
+
+The following message appears, proving that the rpm package was installed successfully
+
+```
+rpm: RPM should not be used directly install RPM packages, use Alien instead!
+rpm: However assuming you know what you are doing...
+Verifying...                          ################################# [100%]
+Preparing...                          ################################# [100%]
+Updating / installing...
+   1:ra-cli-0.0.1-1                   ################################# [100%]
+```
+#### Uninstall the rpm package
+```
+rpm -e ra-cli-0.0.1-1.x86_64
+rpm -qa | grep ra-cli
+```
+After executing the command, there is no output, proving that the cli tool was uninstalled successfully
 
 ## Interact with Rest API && environment preset data
 
