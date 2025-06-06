@@ -10,10 +10,11 @@
  * See the Mulan PSL v2 for more details.
  */
 
- #![allow(unused_imports)]
+#![allow(unused_imports)]
 use crate::entities::cert_error::CertVerifyError;
 use crate::entities::{cert_info, cert_revoked_list, crl_info};
 use crate::repositories::cert_repository::CertRepository;
+use actix_web::http::StatusCode;
 use actix_web::web::Data;
 use actix_web::HttpResponse;
 use chrono::NaiveDateTime;
@@ -305,9 +306,16 @@ impl CertService {
             },
             Err(e) => {
                 error!("Query crl_info error: {:?}", e);
-                Ok(HttpResponse::InternalServerError().body(format!("Query crl_info error: {:?}", e)))
+                Ok(Self::build_http_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Query crl_info error: {}", e.to_string()),
+                ))
             },
         }
+    }
+
+    fn build_http_response(status_code: StatusCode, message: String) -> HttpResponse {
+        HttpResponse::build(status_code).json(json!({"message": message}))
     }
 
     /// Retrieves all certificates for a given user, optionally filtered by IDs or type.
@@ -335,7 +343,10 @@ impl CertService {
         if let Some(ids) = &ids {
             if ids.len() > CertService::MAX_NUMBER_OF_QUERIES {
                 error!("IDs exceed maximum limit of 100");
-                return Ok(HttpResponse::BadRequest().body("IDs exceed maximum limit of 100".to_string()));
+                return Ok(Self::build_http_response(
+                    StatusCode::BAD_REQUEST,
+                    "IDs exceed maximum limit of 100".to_string(),
+                ));
             }
         }
         // Verify the type field
@@ -347,7 +358,7 @@ impl CertService {
             }
             if !valid_types.contains(&cert_type.as_str()) {
                 error!("Invalid certificate type");
-                return Ok(HttpResponse::BadRequest().body("Invalid certificate type".to_string()));
+                return Ok(Self::build_http_response(StatusCode::BAD_REQUEST, "Invalid certificate type".to_string()));
             }
         }
 
@@ -358,7 +369,10 @@ impl CertService {
                     Ok(tx) => tx,
                     Err(e) => {
                         error!("Failed to get database transaction: {}", e);
-                        return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+                        return Ok(Self::build_http_response(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("Failed to get database transaction: {}", e.to_string()),
+                        ));
                     },
                 };
                 // Query single/multiple certificate files (Ids query), verify signatures, check if certificates have expired or been revoked,
@@ -421,13 +435,19 @@ impl CertService {
                 }
                 if let Err(e) = tx.commit().await {
                     error!("Failed to commit database transaction: {}", e);
-                    return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+                    return Ok(Self::build_http_response(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Failed to commit database transaction: {}", e.to_string()),
+                    ));
                 }
                 Ok(HttpResponse::Ok().json(CertService::convert_to_query_response(certs)))
             },
             Err(e) => {
                 error!("Failed to retrieve certs: {:?}", e);
-                Ok(HttpResponse::InternalServerError().body(e.to_string()))
+                Ok(Self::build_http_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to retrieve certs: {}", e.to_string()),
+                ))
             },
         }
     }
@@ -498,7 +518,10 @@ impl CertService {
             Ok(_) => Ok(HttpResponse::Ok().finish()),
             Err(e) => {
                 error!("Failed to delete certs: {:?}", e);
-                Ok(HttpResponse::BadRequest().body(e.to_string()))
+                Ok(Self::build_http_response(
+                    StatusCode::BAD_REQUEST,
+                    format!("Failed to delete certs: {}", e.to_string()),
+                ))
             },
         }
     }
@@ -523,23 +546,34 @@ impl CertService {
     ) -> actix_web::Result<HttpResponse> {
         if let Err(e) = request.validate() {
             error!("Request body is invalidate: {:?}", e);
-            return Ok(HttpResponse::BadRequest().body(e.to_string()));
+            return Ok(Self::build_http_response(
+                StatusCode::BAD_REQUEST,
+                format!("Request body is invalidate: {}", e.to_string()),
+            ));
         }
         // Verify required fields based on type
         if request.cert_type.contains(&CertificateType::CRL.to_string()) {
             if request.cert_type.len() > 1 {
                 error!("When a revoked certificate is passed in, the type can only be crl");
-                return Ok(HttpResponse::BadRequest()
-                    .body("When a revoked certificate is passed in, the type can only be crl".to_string()));
+                return Ok(Self::build_http_response(
+                    StatusCode::BAD_REQUEST,
+                    "When a revoked certificate is passed in, the type can only be crl".to_string(),
+                ));
             }
             if request.crl_content.is_none() {
                 error!("Cert revoked list is required for CRL type");
-                return Ok(HttpResponse::BadRequest().body("Cert revoked list is required for CRL type".to_string()));
+                return Ok(Self::build_http_response(
+                    StatusCode::BAD_REQUEST,
+                    "Cert revoked list is required for CRL type".to_string(),
+                ));
             }
         } else {
             if request.content.is_none() {
                 error!("Content are required for this type");
-                return Ok(HttpResponse::BadRequest().body("Content are required for this type".to_string()));
+                return Ok(Self::build_http_response(
+                    StatusCode::BAD_REQUEST,
+                    "Content are required for this type".to_string(),
+                ));
             }
         }
         // Processing certificate types
@@ -560,14 +594,17 @@ impl CertService {
             Ok(crl) => crl,
             Err(e) => {
                 error!("Failed to parse CRL content: {:?}", e);
-                return Err(HttpResponse::BadRequest().body(format!("Failed to parse CRL content: {:?}", e)));
+                return Err(Self::build_http_response(
+                    StatusCode::BAD_REQUEST,
+                    format!("Failed to parse CRL content: {}", e.to_string()),
+                ));
             },
         };
 
         // Verify that the entries in the revocation list are empty
         if crl.get_revoked().is_none() {
             error!("Failed to get CRL revoked");
-            return Err(HttpResponse::BadRequest().body("Failed to get CRL revoked".to_string()));
+            return Err(Self::build_http_response(StatusCode::BAD_REQUEST, "Failed to get CRL revoked".to_string()));
         }
 
         // Check the validity period
@@ -576,12 +613,18 @@ impl CertService {
                 Ok(now_time) => {
                     if next_update < now_time {
                         error!("CRL next update time is timeout");
-                        return Err(HttpResponse::BadRequest().body("CRL next update time is timeout".to_string()));
+                        return Err(Self::build_http_response(
+                            StatusCode::BAD_REQUEST,
+                            "CRL next update time is timeout".to_string(),
+                        ));
                     }
                 },
                 Err(e) => {
                     error!("get now time error: {:?}", e);
-                    return Err(HttpResponse::InternalServerError().body(format!("get now time error: {:?}", e)));
+                    return Err(Self::build_http_response(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("get now time error: {}", e.to_string()),
+                    ));
                 },
             };
         }
@@ -591,14 +634,18 @@ impl CertService {
             Ok(count) => {
                 if count >= CONFIG.get_instance().unwrap().attestation_service.cert.single_user_cert_limit {
                     error!("this user's crl has arrived the online limit");
-                    return Err(
-                        HttpResponse::BadRequest().body("this user's crl has arrived the online limit".to_string())
-                    );
+                    return Err(Self::build_http_response(
+                        StatusCode::BAD_REQUEST,
+                        "this user's crl has arrived the online limit".to_string(),
+                    ));
                 }
             },
             Err(e) => {
                 error!("Failed to get user crl count: {:?}", e);
-                return Err(HttpResponse::InternalServerError().body(format!("Failed to get user crl count: {:?}", e)));
+                return Err(Self::build_http_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to get user crl count: {}", e.to_string()),
+                ));
             },
         }
         Ok(crl)
@@ -615,7 +662,10 @@ impl CertService {
             Ok(crl_id) => crl_id,
             Err(e) => {
                 error!("Get user crl id error: {:?}", e);
-                return Err(HttpResponse::InternalServerError().body(format!("Get user crl id error: {:?}", e)));
+                return Err(Self::build_http_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Get user crl id error: {}", e.to_string()),
+                ));
             },
         };
         let issuer = get_crl_issuer_name(&crl);
@@ -629,9 +679,10 @@ impl CertService {
                 Ok(revocation_timestamp) => revocation_timestamp,
                 Err(e) => {
                     error!("Failed to parse CRL revocation date: {:?}", e);
-                    return Err(
-                        HttpResponse::BadRequest().body(format!("Failed to parse CRL revocation date: {:?}", e))
-                    );
+                    return Err(Self::build_http_response(
+                        StatusCode::BAD_REQUEST,
+                        format!("Failed to parse CRL revocation date: {}", e.to_string()),
+                    ));
                 },
             };
             // Obtain the reason for revocation
@@ -640,14 +691,18 @@ impl CertService {
                     Some(reason) => reason.1.get_i64().unwrap_or(0),
                     None => {
                         error!("this user's revoke certs has exceeded the online limit");
-                        return Err(HttpResponse::BadRequest().body("CRL revocation reason code is empty".to_string()));
+                        return Err(Self::build_http_response(
+                            StatusCode::BAD_REQUEST,
+                            "CRL revocation reason code is empty".to_string(),
+                        ));
                     },
                 },
                 Err(e) => {
                     error!("Failed to parse CRL revocation reason code: {:?}", e);
-                    return Err(
-                        HttpResponse::BadRequest().body(format!("Failed to parse CRL revocation reason code: {:?}", e))
-                    );
+                    return Err(Self::build_http_response(
+                        StatusCode::BAD_REQUEST,
+                        format!("Failed to parse CRL revocation reason code: {}", e.to_string()),
+                    ));
                 },
             };
             // Generate certificate ID
@@ -707,7 +762,10 @@ impl CertService {
             Ok(tx) => tx,
             Err(e) => {
                 error!("Failed to get database transaction: {}", e);
-                return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+                return Ok(Self::build_http_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to get database transaction: {}", e.to_string()),
+                ));
             },
         };
         // Delete data from revocation table
@@ -716,9 +774,12 @@ impl CertService {
         {
             error!("Failed to delete crl: {:?}", e);
             if let Err(e) = tx.rollback().await {
-                error!("Failed to rollback database transaction: {}", e);
+                error!("Failed to rollback database transaction: {:?}", e);
             }
-            return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+            return Ok(Self::build_http_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to delete crl: {}", e.to_string()),
+            ));
         }
         // Insert revocation table data
         if let Err(e) = CertRepository::insert_crl_info(&tx, crl_info.clone()).await {
@@ -726,7 +787,10 @@ impl CertService {
             if let Err(e) = tx.rollback().await {
                 error!("Failed to rollback database transaction: {}", e);
             }
-            return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+            return Ok(Self::build_http_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to insert crl: {}", e.to_string()),
+            ));
         }
 
         for cert_revoked in cert_revoked_list.clone() {
@@ -735,12 +799,18 @@ impl CertService {
                 if let Err(e) = tx.rollback().await {
                     error!("Failed to rollback database transaction: {}", e);
                 }
-                return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+                return Ok(Self::build_http_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to insert cert revoked: {}", e.to_string()),
+                ));
             }
         }
         if let Err(e) = tx.commit().await {
             error!("Failed to commit database transaction: {}", e);
-            return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+            return Ok(Self::build_http_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to commit database transaction: {}", e.to_string()),
+            ));
         }
 
         Ok(HttpResponse::Ok().json(json!({
@@ -762,7 +832,10 @@ impl CertService {
             Ok(cert) => {
                 if !CertService::verify_cert(&cert) {
                     error!("The imported certificate is invalid.");
-                    return Ok(HttpResponse::BadRequest().body("The imported certificate is invalid.".to_string()));
+                    return Ok(Self::build_http_response(
+                        StatusCode::BAD_REQUEST,
+                        "The imported certificate is invalid.".to_string(),
+                    ));
                 }
                 // Obtain certificate serial number and issuer
                 let serial_num = get_cert_serial_number(&cert);
@@ -823,10 +896,7 @@ impl CertService {
                             error!(
                                     "User has reached the maximum number of cert or cert name or cert is exist, please retry!"
                                 );
-                            return Ok(HttpResponse::BadRequest().body(
-                            "User has reached the maximum number of cert or cert name or cert is exist, please retry!"
-                                .to_string(),
-                        ));
+                            return Ok(Self::build_http_response(StatusCode::BAD_REQUEST, "User has reached the maximum number of cert or cert name or cert is exist, please retry!".to_string()));
                         }
                         Ok(HttpResponse::Ok().json(AddCertResponse {
                             cert: Some(CertRespInfo {
@@ -840,13 +910,19 @@ impl CertService {
                     },
                     Err(e) => {
                         error!("Failed to insert cert info: {:?}", e);
-                        Ok(HttpResponse::InternalServerError().body(e.to_string()))
+                        Ok(Self::build_http_response(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("Failed to insert cert info: {}", e.to_string()),
+                        ))
                     },
                 }
             },
             Err(e) => {
                 error!("Failed to parse certificate content: {:?}", e);
-                Ok(HttpResponse::BadRequest().body(e.to_string()))
+                Ok(Self::build_http_response(
+                    StatusCode::BAD_REQUEST,
+                    format!("Failed to parse certificate content: {}", e.to_string()),
+                ))
             },
         }
     }
@@ -875,23 +951,42 @@ impl CertService {
     ) -> actix_web::Result<HttpResponse> {
         if let Err(e) = request.validate() {
             error!("Request body is invalidate: {:?}", e);
-            return Ok(HttpResponse::BadRequest().body(e.to_string()));
+            return Ok(Self::build_http_response(
+                StatusCode::BAD_REQUEST,
+                format!("Request body is invalidate: {}", e.to_string()),
+            ));
         }
-        if !Self::validate_cert_update_body(&request){
+        if !Self::validate_cert_update_body(&request) {
             error!("there is no field need to be updated");
-            return Ok(HttpResponse::BadRequest().body("there is no field need to be updated".to_string()));
+            return Ok(Self::build_http_response(
+                StatusCode::BAD_REQUEST,
+                "there is no field need to be updated".to_string(),
+            ));
         }
         if request.name.is_some() {
-            match CertRepository::verify_name_is_duplicated(&db, request.name.clone(), Some(request.id.clone()), &user_id.clone()).await {
+            match CertRepository::verify_name_is_duplicated(
+                &db,
+                request.name.clone(),
+                Some(request.id.clone()),
+                &user_id.clone(),
+            )
+            .await
+            {
                 Ok(is_exist) => {
                     if is_exist {
                         error!("Name is duplicated");
-                        return Ok(HttpResponse::BadRequest().body("Name is duplicated".to_string()));
+                        return Ok(Self::build_http_response(
+                            StatusCode::BAD_REQUEST,
+                            "Name is duplicated".to_string(),
+                        ));
                     }
                 },
                 Err(e) => {
                     error!("Failed to verify name is duplicated: {:?}", e);
-                    return Ok(HttpResponse::InternalServerError().body(e.to_string()));
+                    return Ok(Self::build_http_response(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Failed to verify name is duplicated: {}", e.to_string()),
+                    ));
                 },
             }
         }
@@ -900,7 +995,10 @@ impl CertService {
                 Some(cert_info_model) => {
                     if !cert_info_model.user_id.clone().unwrap_or("".to_string()).eq(&user_id) {
                         error!("No certificate update permission");
-                        return Ok(HttpResponse::BadRequest().body("No certificate update permission".to_string()));
+                        return Ok(Self::build_http_response(
+                            StatusCode::BAD_REQUEST,
+                            "No certificate update permission".to_string(),
+                        ));
                     }
                     let mut cert_model_sig = cert_info::Model {
                         id: cert_info_model.id.clone(),
@@ -969,24 +1067,35 @@ impl CertService {
                                 }))
                             } else {
                                 error!("Certificate has been modified by another request, please retry");
-                                Ok(HttpResponse::BadRequest()
-                                    .body("Certificate has been modified by another request, please retry".to_string()))
+                                Ok(Self::build_http_response(
+                                    StatusCode::BAD_REQUEST,
+                                    "Certificate has been modified by another request, please retry".to_string(),
+                                ))
                             }
                         },
                         Err(e) => {
                             error!("Certificate update failure {}", e);
-                            Ok(HttpResponse::InternalServerError().body("Occur database error".to_string()))
+                            Ok(Self::build_http_response(
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                format!("Certificate update failure {}", e.to_string()),
+                            ))
                         },
                     }
                 },
                 None => {
                     error!("No corresponding certificate found");
-                    Ok(HttpResponse::BadRequest().body("No corresponding certificate found"))
+                    Ok(Self::build_http_response(
+                        StatusCode::BAD_REQUEST,
+                        "No corresponding certificate found".to_string(),
+                    ))
                 },
             },
             Err(e) => {
                 error!("No corresponding certificate found {}", e);
-                Ok(HttpResponse::BadRequest().body("Occur database error".to_string()))
+                Ok(Self::build_http_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("No corresponding certificate found {}", e.to_string()),
+                ))
             },
         }
     }

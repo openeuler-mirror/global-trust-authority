@@ -13,6 +13,7 @@
 use actix_web::{web, HttpResponse};
 use log::{error, info};
 use serde::Deserialize;
+use serde_json::json;
 use token_management::token_manager::TokenManager;
 
 /// token controller
@@ -30,10 +31,12 @@ pub async fn verify_token(token_req: web::Json<TokenRequest>) -> HttpResponse {
 
     if token.is_empty() {
         error!("Token is empty");
-        return HttpResponse::BadRequest().body("Token is empty");
+        return HttpResponse::BadRequest().json(json!({"message": "Token is empty".to_string()}));
     }
     match TokenManager::verify_token(token).await {
         Ok(verify_token_response) => HttpResponse::Ok().json(verify_token_response),
-        Err(verify_token_error) => HttpResponse::ServiceUnavailable().body(verify_token_error.to_string())
+        Err(verify_token_error) => {
+            HttpResponse::ServiceUnavailable().json(json!({"message": verify_token_error.to_string()}))
+        },
     }
 }
