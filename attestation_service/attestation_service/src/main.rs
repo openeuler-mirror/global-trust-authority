@@ -64,7 +64,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             // Add rate limiting middleware
             .service(
-                web::scope("/global-trust-authority/v1/service")
+                web::scope("/global-trust-authority/service/v1")
                     .app_data(web::Data::new(pool.clone()))
                     .app_data(web::JsonConfig::default().limit(max_json_size).error_handler(|err, _| {
                         // Enable JSON error handling

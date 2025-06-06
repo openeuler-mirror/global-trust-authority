@@ -29,7 +29,7 @@ attestation_service/
 ├── policy/           # Policy definition and management
 ├── policy_engine/    # Policy engine implementation
 ├── resource_provider/ # Resource provider
-├── rv/               # Remote verification related
+├── ref_value/        # reference value management
 ├── server_config/    # Server configuration
 ├── token_management/ # Token management
 ├── verifier/         # Verifier implementation

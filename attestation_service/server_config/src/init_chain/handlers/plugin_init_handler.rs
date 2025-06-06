@@ -86,10 +86,9 @@ impl PluginInitHandler {
             get_unmatched_measurements: Box::new(|measured_values, attester_type, user_id| {
                 Box::pin(async move {
                     // The verify method now returns a Result<Vec<String>, String>
-                    match RvFactory::create_ref_value().verify(measured_values, user_id, attester_type).await {
-                        Ok(unmatched) => Ok(unmatched),
-                        Err(e) => Err(e)
-                    }
+                    let unmatch = RvFactory::create_ref_value().verify(measured_values, user_id, attester_type).await?;
+                    info!("Unmatched measurements length: {:?}", unmatch.len());
+                    Ok(unmatch)
                 })
             }),
             query_configuration: |plugin_name| {LAZY_PLUGIN_CONFIG.get().and_then(|config| config.get(&plugin_name)).cloned()},

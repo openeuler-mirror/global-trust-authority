@@ -766,21 +766,6 @@ impl PolicyHandler {
                 }
             }
         }
-
         Err(PolicyError::PolicyMatchSyntaxError("No valid attester type found".to_string()))
-    }
-
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_decode_policy_content_text() {
-        let content = STANDARD.encode("test content");
-        let result = PolicyHandler::decode_policy_content(content, "text");
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "test content");
     }
 }

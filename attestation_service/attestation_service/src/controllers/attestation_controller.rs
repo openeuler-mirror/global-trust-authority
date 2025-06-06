@@ -69,7 +69,7 @@ pub async fn attest(request: web::Json<AttestRequest>, req: HttpRequest) -> Http
         }));
     }
     // if you need to support multiple types of attestation, you will need to create different facades based on the different types.
-    let facade = AttestationFacade::new(AttestationType::Standard);
+    let facade = AttestationFacade::new(AttestationType::Default);
 
     facade.process_attestation(&request, &req).await.unwrap_or_else(|err| {
         error!("Failed to attest evidence: {}", err);

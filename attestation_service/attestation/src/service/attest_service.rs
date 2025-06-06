@@ -19,7 +19,7 @@ use crate::{
     constants::SERVICE_VERSION,
     entities::{attest_request::AttestRequest, token_response::TokenResponse},
     error::attestation_error::AttestationError,
-    handler::standard_handler::StandardHandler,
+    handler::default_handler::StandardHandler,
 };
 
 pub struct AttestationService;
@@ -33,7 +33,7 @@ impl AttestationService {
     ///
     /// # Returns
     /// * `Result<HttpResponse, AttestationError>` - Returns HTTP response with tokens on success, or error on failure
-    pub async fn process_standard_attestation(
+    pub async fn process_default_attestation(
         request: &web::Json<AttestRequest>,
         user_id: String,
     ) -> Result<HttpResponse, AttestationError> {
@@ -48,7 +48,6 @@ impl AttestationService {
             info!("Start processing measurement, node_id: {}", measurement.node_id);
             // Validate nonce request
             StandardHandler::validate_nonce_request(measurement, nonce_type, &request).await?;
-            info!("Nonce validation passed");
             let mut evidence_token_responses = HashMap::new();
             // Process each evidence
             for evidence in &measurement.evidences {
@@ -63,7 +62,6 @@ impl AttestationService {
                     evidence,
                     nonce_bytes,
                 ).await?;
-                info!("Evidence verification completed");
                 // Evaluate export policy
                 let raw_evidence = StandardHandler::evaluate_export_policy(&verify_evidence, attester_type)?;
                 // Evaluate custom policies
