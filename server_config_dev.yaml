@@ -14,7 +14,6 @@ attestation_service:
     iss: "iss"
     eat_profile: "eat_profile"
     mq_enabled: false
-
     token_topic: "ra_token_topic"
   policy:
     export_policy_file:
