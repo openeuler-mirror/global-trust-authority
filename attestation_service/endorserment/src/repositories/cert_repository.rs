@@ -17,11 +17,7 @@ use crate::services::cert_service::DeleteType;
 use common_log::info;
 use config_manager::types::CONFIG;
 use sea_orm::sea_query::Expr;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, DatabaseBackend, DatabaseConnection,
-    DatabaseTransaction, DbErr, DeleteResult, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
-    Statement, TransactionTrait, UpdateResult,
-};
+use sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, DatabaseBackend, DatabaseConnection, DatabaseTransaction, DbErr, DeleteResult, EntityTrait, MockDatabase, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Statement, TransactionTrait, UpdateResult};
 use uuid::Uuid;
 
 pub struct CertRepository;
