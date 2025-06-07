@@ -35,9 +35,9 @@ impl ActiveModelBehavior for ActiveModel {}
 
 pub async fn get_current_key_version() -> Result<Version, DbErr> {
     info!("KeyManagerKeyVersion: Getting current key version");
-    let db = get_connection().await.map_err(|_e| {
-        error!("Failed to get database connection");
-        DbErr::ConnectionAcquire
+    let db = get_connection().await.map_err(|e| {
+        error!("Failed to acquire connection from pool: {:?}", e);
+        sea_orm::DbErr::Conn(sea_orm::RuntimeErr::Internal("Failed to acquire connection from pool".to_string()))
     })?;
     let db = db.as_ref();
     // let result = Entity::find().one(db).await?;

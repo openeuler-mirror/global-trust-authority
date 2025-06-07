@@ -149,20 +149,20 @@ mod tests {
         }
     }
 
-    // Initialize test environment (reset KeyStore before each test)
+    // // Initialize test environment (reset KeyStore before each test)
     // fn init_test_store() {
     //     let store = KeyStore::global();
     //     // Clear all versions of TSK type
     //     if let Some(versions) = store.inner.get("TSK") {
-    //         versions.write().unwrap().clear();
+    //         versions.borrow_mut().clear();
     //     }
     //
     //     unsafe {
     //         let store_ptr = store as *const KeyStore as *mut KeyStore;
-    //         (*store_ptr).latest_versions.take(0);
+    //         (*store_ptr).latest_versions.clear();
     //     }
     // }
-
+    //
     // #[tokio::test]
     // #[serial] // Ensure serial execution
     // async fn test_version_ordering() {
@@ -220,7 +220,7 @@ mod tests {
     //     };
     //     unsafe {
     //         let store_ptr = KeyStore::global() as *const KeyStore as *mut KeyStore;
-    //         (*store_ptr).latest_versions.take(0);
+    //         (*store_ptr).latest_versions.clear();
     //     }
     //     KeyStore::global().insert("TSK", "v3", generate_key_pair("rsa 3072 pss")).unwrap();
     //

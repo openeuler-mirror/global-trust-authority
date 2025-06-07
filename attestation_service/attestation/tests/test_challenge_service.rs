@@ -20,7 +20,7 @@ mod tests {
 
         // Arrange
         let request = ChallengeRequest {
-            agent_version: "1.0".to_string(),
+            agent_version: Option::from("1.0".to_string()),
             attester_type: vec!["INVALID_TYPE".to_string()]
         };
         let json_request = web::Json(request);

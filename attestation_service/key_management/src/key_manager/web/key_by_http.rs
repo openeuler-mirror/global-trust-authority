@@ -16,7 +16,6 @@ use crate::config::ConfigLoader;
 use crate::key_manager::error::KeyManagerError;
 use crate::key_manager::model::VaultResponse;
 use mockall::automock;
-use common_log::info;
 use crate::key_manager::web::key_api_client::KeyApiClientTrait;
 
 #[automock]
