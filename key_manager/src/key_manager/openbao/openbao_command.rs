@@ -120,7 +120,7 @@ impl OpenBaoManager {
         self
     }
 
-    pub fn version(&mut self, version: &i32) -> &mut Self {
+    pub fn version(&mut self, version: &u32) -> &mut Self {
         self.args.push(format!("--version={}", version));
         self
     }
@@ -135,6 +135,7 @@ impl OpenBaoManager {
         self
     }
 
+    /// desc: check openbao status, check if the status is health
     pub fn check_status(&mut self) -> bool {
         log::info!("start check openbao status");
         self.clean().status().format_json();
@@ -145,7 +146,7 @@ impl OpenBaoManager {
                     log::error!("openbao status check error, message: {:?}", String::from_utf8_lossy(&out.stderr));
                     return false;
                 }
-                let data: Value = from_str(&String::from_utf8(out.stdout).unwrap()).unwrap();
+                let data: Value = from_str(&String::from_utf8(out.stdout).unwrap_or("{}".to_string())).unwrap_or(Value::Null);
                 if data["Initialized"] == false {
                     log::error!("openbao not initialized, please check");
                     return false;
@@ -194,4 +195,14 @@ pub struct Version {
     pub created_time: String,
     pub deletion_time: String,
     pub destroyed: bool,
+}
+
+impl Version {
+    pub fn default() -> Self {
+        Self{
+            created_time: "".to_string(),
+            deletion_time: "".to_string(),
+            destroyed: false,
+        }
+    }
 }

@@ -16,10 +16,16 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 use std::io;
 use std::process::{Command, Output};
-use std::sync::*;
+use std::sync::{Arc, Mutex};
 
 #[automock]
 pub trait CommandExecutor {
+    /// desc: abstract method to impl linux shell command
+    /// params: 
+    ///     self: impl trait struct
+    ///     command: shell command
+    ///     args: command param
+    ///     envs: execute shell env map
     fn execute(&self, command: &str, args: &Vec<String>, envs: &HashMap<OsString, OsString>) -> io::Result<Output>;
 }
 pub struct CommandService;

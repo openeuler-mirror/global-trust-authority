@@ -36,6 +36,7 @@ fn parse_level(level: &str) -> LevelFilter {
     }
 }
 
+/// desc: init log config
 pub fn init_logger(enable_stdout: bool) -> Result<(), SetLoggerError> {
     let log_level = &Environment::global().log_level;
     let log_path = &Environment::global().log_path;
@@ -45,8 +46,7 @@ pub fn init_logger(enable_stdout: bool) -> Result<(), SetLoggerError> {
     // Logging to log file.
     let root_appender = FileAppender::builder()
         .encoder(Box::new(PatternEncoder::new(LOG_PATTERN)))
-        .build(log_path)
-        .unwrap();
+        .build(log_path).expect("Unable to create logger appender");
 
     // Log Trace level output to file where trace is the default level
     // and the programmatically specified level to stdout.
@@ -67,7 +67,7 @@ pub fn init_logger(enable_stdout: bool) -> Result<(), SetLoggerError> {
     }
     let config = config_builder
         .build(Root::builder().appenders(root_appenders).build(level))
-        .unwrap();
+        .expect("Unable to create logger config");
 
     let _handle = log4rs::init_config(config)?;
 
