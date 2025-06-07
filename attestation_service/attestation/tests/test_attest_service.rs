@@ -15,7 +15,7 @@ mod tests {
     fn create_invalid_request() -> web::Json<AttestRequest> {
         web::Json(AttestRequest {
             message: None,
-            agent_version: "".to_string(),
+            agent_version: Option::from("".to_string()),
             nonce_type: Some("default".to_string()),
             user_nonce: None,
             measurements: vec![]
@@ -32,7 +32,7 @@ mod tests {
         let user_id = "test_user".to_string();
 
         // Act
-        let result = AttestationService::process_standard_attestation(&request, user_id).await;
+        let result = AttestationService::process_default_attestation(&request, user_id).await;
 
         // Assert
         assert!(result.is_err());

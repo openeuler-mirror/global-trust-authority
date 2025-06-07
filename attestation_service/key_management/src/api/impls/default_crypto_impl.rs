@@ -154,12 +154,12 @@ mod tests {
         let store = KeyStore::global();
         // Clear all versions of TSK type
         if let Some(versions) = store.inner.get("TSK") {
-            versions.write().unwrap().clear();
+            versions.borrow_mut().clear();
         }
 
         unsafe {
             let store_ptr = store as *const KeyStore as *mut KeyStore;
-            (*store_ptr).latest_versions.take(0);
+            (*store_ptr).latest_versions.clear();
         }
     }
 
@@ -220,7 +220,7 @@ mod tests {
         };
         unsafe {
             let store_ptr = KeyStore::global() as *const KeyStore as *mut KeyStore;
-            (*store_ptr).latest_versions.take(0);
+            (*store_ptr).latest_versions.clear();
         }
         KeyStore::global().insert("TSK", "v3", generate_key_pair("rsa 3072 pss")).unwrap();
 

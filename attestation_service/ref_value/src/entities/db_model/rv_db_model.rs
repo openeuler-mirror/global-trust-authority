@@ -22,24 +22,24 @@ use crate::entities::inner_model::rv_model::RefValueModel;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: String,
-    #[sea_orm(column_type = String(36))]
+    #[sea_orm(column_type = "String(StringLen::N(36))")]
     pub uid: String,
-    #[sea_orm(column_type = String(64))]
+    #[sea_orm(column_type = "String(StringLen::N(64))")]
     pub name: String,
-    #[sea_orm(column_type = String(32))]
+    #[sea_orm(column_type = "String(StringLen::N(32))")]
     pub description: String,
-    #[sea_orm(column_type = String(64))]
+    #[sea_orm(column_type = "String(StringLen::N(64))")]
     pub attester_type: String,
-    #[sea_orm(column_type = TEXT)]
+    #[sea_orm(column_type = "Text")]
     pub content: String,
     pub is_default: bool,
     pub create_time: i64,
     pub update_time: i64,
     pub version: i32,
 
-    #[sea_orm(column_type = Binary(512))]
+    #[sea_orm(column_type = "Binary(512)")]
     pub signature: Vec<u8>,
-    #[sea_orm(column_type = String(36))]
+    #[sea_orm(column_type = "String(StringLen::N(36))")]
     pub key_version: String,
     pub valid_code: i8,
 }

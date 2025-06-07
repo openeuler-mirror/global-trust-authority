@@ -20,30 +20,30 @@ use crate::entities::policy::Policy;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub policy_id: String,
-    #[sea_orm(column_type = String(255))]
+    #[sea_orm(column_type = "String(StringLen::N(255))")]
     pub policy_name: String,
-    #[sea_orm(column_type = String(512))]
+    #[sea_orm(column_type = "String(StringLen::N(512))")]
     pub policy_description: String,
-    #[sea_orm(column_type = Text)]
+    #[sea_orm(column_type = "Text")]
     pub policy_content: String,
     pub is_default: bool,
     pub policy_version: i32,
     pub create_time: i64,
     pub update_time: i64,
-    #[sea_orm(indexed, column_type = String(36))]
+    #[sea_orm(indexed, column_type = "String(StringLen::N(36))")]
     pub user_id: String,
-    #[sea_orm(column_type = Json)]
+    #[sea_orm(column_type = "Json")]
     pub attester_type: Value,
-    #[sea_orm(column_type = Binary(512))]
+    #[sea_orm(column_type = "Binary(512)")]
     pub signature: Vec<u8>,
     pub valid_code: i8,
-    #[sea_orm(column_type = String(36))]
+    #[sea_orm(column_type = "String(StringLen::N(36))")]
     pub key_version: String,
-    #[sea_orm(column_type = String(128))]
+    #[sea_orm(column_type = "String(StringLen::N(128))")]
     pub product_name: String,
-    #[sea_orm(column_type = String(128))]
+    #[sea_orm(column_type = "String(StringLen::N(128))")]
     pub product_type: String,
-    #[sea_orm(column_type = String(128))]
+    #[sea_orm(column_type = "String(StringLen::N(128))")]
     pub board_type: String,
 }
 
