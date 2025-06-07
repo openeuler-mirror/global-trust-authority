@@ -268,7 +268,7 @@
 ###### request url
 
 ```
-http://10.10.0.102:8080/global-trust-authority/service/v1/refvalue?ids=2b0ead4b-6a15-4239-bf68-b1413df538bb
+http(s)://ip:port/global-trust-authority/service/v1/refvalue?ids=2b0ead4b-6a15-4239-bf68-b1413df538bb
 ```
 
 ###### response body
@@ -493,7 +493,7 @@ Note: To query revoked certificates, type must specify crl.
 ###### query cert request url
 
 ```
-http://10.10.0.102:8080/global-trust-authority/service/v1/cert?ids=4740ac7fb9c659e5a1cafad301e1ed00
+http(s)://ip:port/global-trust-authority/service/v1/cert?ids=4740ac7fb9c659e5a1cafad301e1ed00
 ```
 
 ###### query cert response body
@@ -521,7 +521,7 @@ http://10.10.0.102:8080/global-trust-authority/service/v1/cert?ids=4740ac7fb9c65
 ###### query crl request url
 
 ```
-http://10.10.0.102:8080/global-trust-authority/service/v1/cert?cert_type=crl
+http(s)://ip:port/global-trust-authority/service/v1/cert?cert_type=crl
 ```
 
 ###### query crl response body
@@ -956,7 +956,7 @@ empty
 ###### request url
 
 ```
-http://10.10.0.102:8080/global-trust-authority/service/v1/policy?ids=2b0ead4b-6a15-4239-bf68-b1413df538bb
+http(s)://ip:port/global-trust-authority/service/v1/policy?ids=2b0ead4b-6a15-4239-bf68-b1413df538bb
 ```
 
 ###### response body
