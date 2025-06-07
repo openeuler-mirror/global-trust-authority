@@ -9,7 +9,10 @@
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+use std::fs;
+use std::fs::OpenOptions;
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+use std::path::Path;
 use crate::utils::env_setting_center::Environment;
 use log::{LevelFilter, SetLoggerError, info};
 use log4rs::{
@@ -40,13 +43,20 @@ fn parse_level(level: &str) -> LevelFilter {
 pub fn init_logger(enable_stdout: bool) -> Result<(), SetLoggerError> {
     let log_level = &Environment::global().log_level;
     let log_path = &Environment::global().log_path;
-
+    
+    let log_dir = Path::new(log_path).parent().expect("log path could not get parent directory");
+    fs::create_dir_all(log_dir).expect("log path create error");
+    let dir_permissions = fs::Permissions::from_mode(0o750);
+    fs::set_permissions(log_dir, dir_permissions).expect("log path permission set error");
     let level = parse_level(&log_level);
 
     // Logging to log file.
     let root_appender = FileAppender::builder()
         .encoder(Box::new(PatternEncoder::new(LOG_PATTERN)))
         .build(log_path).expect("Unable to create logger appender");
+
+    let file_permissions = fs::Permissions::from_mode(0o640); // 640 = rw-r-----
+    fs::set_permissions(log_path, file_permissions).expect("log file permission set error");
 
     // Log Trace level output to file where trace is the default level
     // and the programmatically specified level to stdout.
