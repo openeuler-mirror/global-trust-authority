@@ -59,9 +59,9 @@ Configuration of nonce, token, policy, certificate, baseline on server side
 |       plugins       |            name            |                               Plugin Name                               |  string[]  |                                    ["tpm_boot", "tpm_ima"]                                    |
 |       plugins       |            path            |          Plugin library file path<br/>(Fill in actual details)          |  string[]  |      ["/usr/local/lib/libtpm_boot_verifier.so", "/usr/local/lib/libtpm_ima_verifier.so"]      |
 
-#### attestation_service/attestation_service/Cargo.toml
+#### attestation_server/api/Cargo.toml
 
-In the attestation_service/attestation_service/Cargo.toml file in the root directory, change the features
+In the attestation_server/api/Cargo.toml file in the root directory, change the features
 
 docker_build for docker builds
 
@@ -115,7 +115,7 @@ The agent supports auto-start at startup, and this file cannot be customized and
 
 [Key Manager Installation](./key_manager_install.md#L108)
 
-### attestation_service
+### attestation_server
 
 #### Uploading certificates that interact with key_manager
 
@@ -172,7 +172,7 @@ docker stop CONTAINER ID
 
 [Key Manager Installation](./key_manager_install.md#L82)
 
-### attestation_service
+### attestation_server
 
 #### Uploading TLS certificates with key_manager and install librdkafka
 
