@@ -11,6 +11,7 @@
  */
 
 use serde::Deserialize;
+use serde_json;
 use crate::challenge_error::ChallengeError;
 use crate::challenge::{
     AttesterInfo, GetEvidenceResponse, Nonce, collect_evidences_core, get_node_id, validate_nonce_fields
@@ -42,7 +43,7 @@ pub struct GetEvidenceRequest {
     // Additional attestation data
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub attester_data: Option<String>,
+    pub attester_data: Option<serde_json::Value>,
 }
 
 impl GetEvidenceRequest {
@@ -57,7 +58,7 @@ impl GetEvidenceRequest {
             nonce_type: self.nonce_type.filter(|t| !t.trim().is_empty()),
             user_nonce: self.user_nonce.filter(|n| !n.trim().is_empty()),
             nonce: self.nonce,
-            attester_data: self.attester_data.filter(|d| !d.trim().is_empty()),
+            attester_data: self.attester_data.filter(|d| !d.is_null()),
         }
     }
 

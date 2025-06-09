@@ -168,7 +168,7 @@ async fn main() -> Result<(), AgentError> {
         std::thread::spawn(|| {
             info!("Scheduler task executed (threaded)");
             let attester_info: Option<Vec<AttesterInfo>> = None;
-            let attester_data: Option<String> = None;
+            let attester_data: Option<serde_json::Value> = None;
             let result = {
                 let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
                 rt.block_on(async { do_challenge(&attester_info, &attester_data).await })

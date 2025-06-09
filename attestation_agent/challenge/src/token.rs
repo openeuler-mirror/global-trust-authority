@@ -30,7 +30,7 @@ pub struct TokenRequest {
     // Optional additional data for attestation
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub attester_data: Option<String>,
+    pub attester_data: Option<serde_json::Value>,
 }
 
 impl TokenRequest {
@@ -43,7 +43,7 @@ impl TokenRequest {
         TokenRequest {
             attester_info: self.attester_info.and_then(|info| if info.is_empty() { None } else { Some(info) }),
             challenge: self.challenge,
-            attester_data: self.attester_data.and_then(|data| if data.trim().is_empty() { None } else { Some(data) }),
+            attester_data: self.attester_data.and_then(|data| if data.is_null() { None } else { Some(data) }),
         }
     }
 
