@@ -448,7 +448,7 @@ async fn get_nonce_from_server(
 
     let client = Client::instance();
     let response = client
-        .request(Method::POST, "/global-trust-authority/v1/service/challenge", Some(request))
+        .request(Method::POST, "/global-trust-authority/service/v1/challenge", Some(request))
         .await
         .map_err(|e| {
             log::error!("Failed to get nonce from server: {}", e);
@@ -488,7 +488,7 @@ async fn get_tokens_from_server(
     let client = Client::instance();
     // Send the evidence to the attestation server
     let response = client
-        .request(Method::POST, "/global-trust-authority/v1/service/attest", Some(serde_json::to_value(evidence)?))
+        .request(Method::POST, "/global-trust-authority/service/v1/attest", Some(serde_json::to_value(evidence)?))
         .await
         .map_err(|e| {
             log::error!("Failed to send evidence to server: {}", e);

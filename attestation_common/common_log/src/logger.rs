@@ -119,6 +119,41 @@ impl Logger {
         }
 
         let handle = log4rs::init_config(final_config)?;
+
+        // Spawn a new thread to periodically check and set file permissions
+        std::thread::spawn(move || {
+            let log_out_dir = env::var("LOG_OUTPUT_DIR").expect("LOG_OUTPUT_DIR must be set");
+            let relative_log_directory = std::path::Path::new(&log_out_dir).join("logs").to_string_lossy().to_string();
+
+            loop {
+                // Set root log file permissions to 640 (owner rw, group r, others none)
+                let root_log_file = std::path::Path::new(&relative_log_directory).join("root.log");
+                if let Ok(metadata) = std::fs::metadata(&root_log_file) {
+                    if metadata.is_file() {
+                        let permissions = Permissions::from_mode(0o640);
+                        if let Err(e) = std::fs::set_permissions(&root_log_file, permissions) {
+                            error!("Failed to set root log file permissions: {}", e);
+                        }
+                    }
+                }
+
+                // Set zip file permissions to 440 (owner r, group r, others none)
+                if let Ok(entries) = std::fs::read_dir(&relative_log_directory) {
+                    for entry in entries.filter_map(Result::ok) {
+                        let path = entry.path();
+                        if path.is_file() && path.extension().map_or(false, |ext| ext == "zip") {
+                            let permissions = Permissions::from_mode(0o440);
+                            if let Err(e) = std::fs::set_permissions(&path, permissions) {
+                                error!("Failed to set zip file permissions for {}: {}", path.display(), e);
+                            }
+                        }
+                    }
+                }
+                // Sleep for a period before checking again
+                std::thread::sleep(std::time::Duration::from_secs(5));
+            }
+        });
+
         Ok(Self { handle })
     }
 

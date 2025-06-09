@@ -114,7 +114,7 @@ static USER_ID: &str = "User-Id";
 static AGENT_VERSION: &str = "1.0.0";
 static START_STR: &str = "@";
 static RPM_CONFIG_PATH: &str = "/etc/attestation_cli/agent_config.yaml";
-static SERVICE_URL_PREFIX: &str = "/global-trust-authority/v1/service";
+static SERVICE_URL_PREFIX: &str = "/global-trust-authority/service/v1";
 
 lazy_static! {
     static ref CONFIG_PATH: PathBuf =

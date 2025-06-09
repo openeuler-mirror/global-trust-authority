@@ -17,15 +17,15 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: String,
-    #[sea_orm(column_type = String(36))]
+    #[sea_orm(column_type = "String(StringLen::N(36))")]
     pub uid: String,
-    #[sea_orm(column_type = String(64))]
+    #[sea_orm(column_type = "String(StringLen::N(64))")]
     pub attester_type: String,
-    #[sea_orm(column_type = String(255))]
+    #[sea_orm(column_type = "String(StringLen::N(255))")]
     pub file_name: String,
-    #[sea_orm(column_type = String(64))]
+    #[sea_orm(column_type = "String(StringLen::N(64))")]
     pub sha256: String,
-    #[sea_orm(column_type = String(32))]
+    #[sea_orm(column_type = "String(StringLen::N(32))")]
     pub ref_value_id: String,
 }
 

@@ -26,7 +26,7 @@ pub struct Model {
     pub serial_num: Option<String>,
     #[sea_orm(column_name = "user_id")]
     pub user_id: Option<String>,
-    #[sea_orm(column_type = Json)]
+    #[sea_orm(column_type = "Json")]
     #[sea_orm(column_name = "type")]
     pub cert_type: Option<Value>,
     #[sea_orm(column_name = "name", unique)]

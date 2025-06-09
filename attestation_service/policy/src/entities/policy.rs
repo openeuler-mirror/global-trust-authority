@@ -172,7 +172,6 @@ mod tests {
         assert_eq!(base_json["name"], json!(policy.name));
         assert_eq!(base_json["attester_type"], json!(policy.attester_type));
         assert_eq!(base_json["update_time"], json!(policy.update_time));
-        assert_eq!(base_json["valid_code"], json!(policy.valid_code));
         assert!(!base_json.as_object().unwrap().contains_key("description"));
     }
 

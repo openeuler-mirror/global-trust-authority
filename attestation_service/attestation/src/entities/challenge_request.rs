@@ -16,7 +16,7 @@ use serde::Deserialize;
 #[derive(Deserialize, Validate, Debug)]
 pub struct ChallengeRequest {
     #[validate(length(min = 1, max = 50))]
-    pub agent_version: String,
+    pub agent_version: Option<String>,
 
     #[validate(length(min = 1), custom(function = "validate_attester_type_elements"))]
     pub attester_type: Vec<String>,

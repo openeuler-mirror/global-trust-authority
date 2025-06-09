@@ -11,10 +11,10 @@
  */
 
 use crate::strategy::attestation_strategy::AttestationStrategy;
-use crate::strategy::strategy_impl::standard::StandardAttestationStrategy;
+use crate::strategy::strategy_impl::default::DefaultAttestationStrategy;
 
 pub enum AttestationType {
-    Standard,
+    Default,
 }
 
 pub struct AttestationFactory;
@@ -22,7 +22,7 @@ pub struct AttestationFactory;
 impl AttestationFactory {
     pub fn create_strategy(attestation_type: AttestationType) -> Box<dyn AttestationStrategy> {
         match attestation_type {
-            AttestationType::Standard => Box::new(StandardAttestationStrategy::new()),
+            AttestationType::Default => Box::new(DefaultAttestationStrategy::new()),
         }
     }
 }

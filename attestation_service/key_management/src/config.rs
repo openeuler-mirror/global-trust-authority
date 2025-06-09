@@ -50,8 +50,8 @@ impl ConfigLoader for YamlConfigLoader {
             let env_file = find_file(".env.dev")
                 .map(|file| file.to_str().unwrap().to_string()).unwrap_or("./.env.dev".to_string());
             dotenv::from_filename(env_file).ok();
-            let vault_get_key_url = env::var("VAULT_GET_KEY_URL").expect("DB_TYPE must be set");
             let yml_config = CONFIG.get_instance().expect("Failed to obtain the YAML configuration").clone();
+            let vault_get_key_url = yml_config.attestation_service.key_management.vault_get_key_url;
             let is_require_sign = yml_config.attestation_service.key_management.is_require_sign;
             let key_ca_cert_path = yml_config.attestation_service.key_management.key_ca_cert_path;
             let key_cli_key_path = yml_config.attestation_service.key_management.key_cli_key_path;

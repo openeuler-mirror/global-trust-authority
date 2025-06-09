@@ -136,7 +136,7 @@
 #### 3.1.1 Add Reference Value
 **Description**: Add reference value
 
-**Request Method**: `POST /global-trust-authority/v1/service/ref_value`
+**Request Method**: `POST /global-trust-authority/service/v1/ref_value`
 
 ##### Request Parameters
 | Field | Sub-field | Type | Required | parameter constraint | Description                                      |
@@ -188,7 +188,7 @@
 
 **Description**: Update Reference Value
 
-**Request Method**: `PUT /global-trust-authority/v1/service/ref_value`
+**Request Method**: `PUT /global-trust-authority/service/v1/ref_value`
 
 ##### Request Parameters
 | Field | Sub-field | Type | Required | parameter constraint | Description |
@@ -239,7 +239,7 @@
 
 **Description**: Query Reference Value
 
-**Request Method**: `GET /global-trust-authority/v1/service/ref_value`
+**Request Method**: `GET /global-trust-authority/service/v1/ref_value`
 
 ##### Request Parameters
 | Field         | Sub-field | Type | Required | parameter constraint | Description                                 |
@@ -268,7 +268,7 @@
 ###### request url
 
 ```
-http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-6a15-4239-bf68-b1413df538bb
+http(s)://ip:port/global-trust-authority/service/v1/refvalue?ids=2b0ead4b-6a15-4239-bf68-b1413df538bb
 ```
 
 ###### response body
@@ -307,7 +307,9 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/refvalue?ids=2b0ead4b-
 | delete_type | | string | Yes | id, type, all | Delete Type          |
 
 ##### Response Parameters
-empty
+| Field   | Type   | Required | Description   |
+|---------|--------|----------|---------------|
+| message | string | No       | Error message |
 
 ##### Example of request
 
@@ -331,7 +333,7 @@ empty
 #### 3.2.1 Add Certificate
 **Description**: Add certificate
 
-**Request Method**: `POST /global-trust-authority/v1/service/cert`
+**Request Method**: `POST /global-trust-authority/service/v1/cert`
 
 ##### Request Parameters
 | Field | Sub-field | Type | Required | parameter constraint | Description |
@@ -344,15 +346,16 @@ empty
 | crl_content | | string | No       |  | Certificate revocation list |
 
 ##### Response Parameters
-| Field | Sub-field           | Type | Required | Description                      |
-|------|---------------------|------|----------|----------------------------------|
-| cert |                     | object | No       | Certificate                      |
-| | cert_id             | string | YES       | Certificate ID                   |
-| | cert_name           | string | YES       | Certificate name                 |
-| | version             | string | YES       | Certificate version number       |
-| crl |                     | object |          |                                  |
-| | crl_id              | string | YES       | Certificate revocation list id   |
-| | crl_name   | string | YES      | Certificate revocation list name |
+| Field   | Sub-field | Type   | Required | Description                      |
+|---------|-----------|--------|----------|----------------------------------|
+| message |           | string | No       | Error message                    |
+| cert    |           | object | No       | Certificate                      |
+|         | cert_id   | string | YES      | Certificate ID                   |
+|         | cert_name | string | YES      | Certificate name                 |
+|         | version   | string | YES      | Certificate version number       |
+| crl     |           | object |          |                                  |
+|         | crl_id    | string | YES      | Certificate revocation list id   |
+|         | crl_name  | string | YES      | Certificate revocation list name |
 
 ##### Example of request
 
@@ -406,7 +409,7 @@ empty
 
 **Description**: Update certificate
 
-**Request Method**: `PUT /global-trust-authority/v1/service/cert`
+**Request Method**: `PUT /global-trust-authority/service/v1/cert`
 
 ##### Request Parameters
 | Field | Type | Required | parameter constraint | Description |
@@ -418,12 +421,13 @@ empty
 | is_default | boolean | No       | true or false | Whether it's default certificate, defaults to false |
 
 ##### Response Parameters
-| Field | Sub-field | Type | Required | Description |
-|-------|-----------|------|----------|-------------|
-| cert | | object | Yes | |
-| | cert_id | string | Yes | Certificate ID |
-| | cert_name | string | Yes | Certificate name |
-| | version | string | Yes | Certificate update version number |
+| Field   | Sub-field | Type   | Required | Description                       |
+|---------|-----------|--------|----------|-----------------------------------|
+| message |           | string | No       | Error message                     |
+| cert    |           | object | Yes      |                                   |
+|         | cert_id   | string | Yes      | Certificate ID                    |
+|         | cert_name | string | Yes      | Certificate name                  |
+|         | version   | string | Yes      | Certificate update version number |
 
 ##### Example of request
 
@@ -455,7 +459,7 @@ empty
 
 **Description**: Query certificate
 
-**Request Method**: `GET /global-trust-authority/v1/service/cert`
+**Request Method**: `GET /global-trust-authority/service/v1/cert`
 
 ##### Request Parameters
 Note: To query revoked certificates, type must specify crl.
@@ -466,25 +470,26 @@ Note: To query revoked certificates, type must specify crl.
 | ids       | | List of String | No |  | Certificate ID, maximum 100             |
 
 ##### Response Parameters
-| Field      | Sub-field           | Type           | Required | Description |
-|------------|---------------------|----------------|----------|-------------|
-| certs      |                     | List of Object | No | Certificate information |
-|            | cert_id             | string         | Yes | Certificate ID |
-|            | cert_name           | string         | Yes | Certificate name |
-|            | description         | string         | No | Certificate description |
-|            | content             | string         | No | Certificate content |
-|            | cert_type           | List of String | No | Certificate purpose |
-|            | is_default          | boolean        | No | Whether it's default certificate |
-|            | version             | int            | Yes | Certificate version |
-|            | create_time         | long           | No | Creation timestamp |
-|            | update_time         | long           | No | Update timestamp |
-|            | valid_code          | int            | No | 0-Normal; 1-Signature verification failed; 2-Revoked |
-|            | cert_revoked_date   | long           | No | Certificate revocation time, optional when type is crl |
-|            | cert_revoked_reason | string         | No | Certificate revocation reason, optional when type is crl |
-| crls       |                     | List of Object | No | Certificate revocation list information |
-|            | crl_id              | string         | Yes | Certificate revocation list ID |
-|            | crl_name            | string         | Yes | Certificate revocation list name |
-|            | crl_content         | string         | Yes | Certificate revocation list content |
+| Field   | Sub-field           | Type           | Required | Description                                              |
+|---------|---------------------|----------------|----------|----------------------------------------------------------|
+| message |                     | string         | No       | Error message                                            |
+| certs   |                     | List of Object | No       | Certificate information                                  |
+|         | cert_id             | string         | Yes      | Certificate ID                                           |
+|         | cert_name           | string         | Yes      | Certificate name                                         |
+|         | description         | string         | No       | Certificate description                                  |
+|         | content             | string         | No       | Certificate content                                      |
+|         | cert_type           | List of String | No       | Certificate purpose                                      |
+|         | is_default          | boolean        | No       | Whether it's default certificate                         |
+|         | version             | int            | Yes      | Certificate version                                      |
+|         | create_time         | long           | No       | Creation timestamp                                       |
+|         | update_time         | long           | No       | Update timestamp                                         |
+|         | valid_code          | int            | No       | 0-Normal; 1-Signature verification failed; 2-Revoked     |
+|         | cert_revoked_date   | long           | No       | Certificate revocation time, optional when type is crl   |
+|         | cert_revoked_reason | string         | No       | Certificate revocation reason, optional when type is crl |
+| crls    |                     | List of Object | No       | Certificate revocation list information                  |
+|         | crl_id              | string         | Yes      | Certificate revocation list ID                           |
+|         | crl_name            | string         | Yes      | Certificate revocation list name                         |
+|         | crl_content         | string         | Yes      | Certificate revocation list content                      |
 
 
 
@@ -493,7 +498,7 @@ Note: To query revoked certificates, type must specify crl.
 ###### query cert request url
 
 ```
-http://10.10.0.102:8080/global-trust-authority/v1/service/cert?ids=4740ac7fb9c659e5a1cafad301e1ed00
+http(s)://ip:port/global-trust-authority/service/v1/cert?ids=4740ac7fb9c659e5a1cafad301e1ed00
 ```
 
 ###### query cert response body
@@ -521,7 +526,7 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/cert?ids=4740ac7fb9c65
 ###### query crl request url
 
 ```
-http://10.10.0.102:8080/global-trust-authority/v1/service/cert?cert_type=crl
+http(s)://ip:port/global-trust-authority/service/v1/cert?cert_type=crl
 ```
 
 ###### query crl response body
@@ -542,7 +547,7 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/cert?cert_type=crl
 
 **Description**: Delete certificate
 
-**Request Method**: `DELETE /global-trust-authority/v1/service/cert`
+**Request Method**: `DELETE /global-trust-authority/service/v1/cert`
 
 ##### Request Parameters
 Note: To delete revoked certificates, type must specify crl.
@@ -554,7 +559,9 @@ Note: To delete revoked certificates, type must specify crl.
 | type | | string | No       | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, refvalue/policy/tpm_boot/tpm_ima/crl |
 
 ##### Response Parameters
-empty
+| Field   | Type   | Required | Description   |
+|---------|--------|----------|---------------|
+| message | string | No       | Error message |
 
 ###### delete cert request body
 
@@ -579,13 +586,13 @@ empty
 #### 3.3.1 Request Nonce
 **Description**: Request nonce
 
-**Request Method**: `POST /global-trust-authority/v1/service/challenge`
+**Request Method**: `POST /global-trust-authority/service/v1/challenge`
 
 ##### Request Parameters
 | Field | Type | Required | parameter constraint | Description | Note |
 |-------|------|----------|-------------|------|------|
-| agent_version | string | Yes | Length 1-50 characters | Client version number | Format is x.x.x, e.g., 1.0.0 |
-| attester_type | list of string | Yes | "tpm_boot","tpm_ima" | Plugin type, server returns error if not supported | Only supports "tpm_boot","tpm_ima" |
+| agent_version | string | No       | Length 1-50 characters | Client version number | Format is x.x.x, e.g., 1.0.0 |
+| attester_type | list of string | Yes      | "tpm_boot","tpm_ima" | Plugin type, server returns error if not supported | Only supports "tpm_boot","tpm_ima" |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description | Note |
@@ -625,25 +632,25 @@ empty
 
 **Description**: Report evidence for remote attestation
 
-**Request Method**: `POST /global-trust-authority/v1/service/attest`
+**Request Method**: `POST /global-trust-authority/service/v1/attest`
 
 ##### Request Parameters
 | Field | Sub-field | Second-level Sub-field | Type | Required | parameter constraint | Description |
 |-------|-----------|------------------------|------|----------|-------------|-------------|
-| agent_version | | | string | Yes | Length 1-50 characters | Client version number |
-| nonce_type | | | string | No |  | ignore/user/default (default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
-| user_nonce | | | string | No |  | Filled when nonce_type is user, 64~1024BYTE, base64 encoded |
-| measurements | | | list of objects | Yes |  | Measurement data |
-| | node_id | | string | No | Length 1-255 characters | Node ID, corresponds to uied, recommended 32~128 characters, based on actual device |
-| | nonce | | object | No |  | Nonce object |
-| | | iat | long | No |  | Issue time |
-| | | value | string | Yes |  | Nonce value |
-| | | signature | string | No |  | Signature value |
-| | attester_data | | object | No |  | User-defined data to be passed through, must be placed in token as-is |
-| | evidences | | list of objects | Yes |  | Challenge report |
-| | | attester_type | string | Yes |  | Challenge type, see attester_type specification |
-| | | evidence | object | Yes |  | Specific evidence |
-| | | policy_ids | list of string | No | Length 1-36 characters | Policy ID list to verify, maximum 10 |
+| agent_version | | | string | No       | Length 1-50 characters | Client version number |
+| nonce_type | | | string | No       |  | ignore/user/default (default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
+| user_nonce | | | string | No       |  | Filled when nonce_type is user, 64~1024BYTE, base64 encoded |
+| measurements | | | list of objects | Yes      |  | Measurement data |
+| | node_id | | string | No       | Length 1-255 characters | Node ID, corresponds to uied, recommended 32~128 characters, based on actual device |
+| | nonce | | object | No       |  | Nonce object |
+| | | iat | long | No       |  | Issue time |
+| | | value | string | Yes      |  | Nonce value |
+| | | signature | string | No       |  | Signature value |
+| | attester_data | | object | No       |  | User-defined data to be passed through, must be placed in token as-is |
+| | evidences | | list of objects | Yes      |  | Challenge report |
+| | | attester_type | string | Yes      |  | Challenge type, see attester_type specification |
+| | | evidence | object | Yes      |  | Specific evidence |
+| | | policy_ids | list of string | No       | Length 1-36 characters | Policy ID list to verify, maximum 10 |
 
 ##### Response Parameters
 | Field | Sub-field | Type | Required | Description |
@@ -778,7 +785,7 @@ empty
 #### 3.4.1 Add Policy
 **Description**: Add policy
 
-**Request Method**: `POST /global-trust-authority/v1/service/policy`
+**Request Method**: `POST /global-trust-authority/service/v1/policy`
 
 ##### Request Parameters
 | Field         | Type           | Required | parameter constraint                           | Description                                                                     |
@@ -840,7 +847,7 @@ When content_type is jwt, jwt content:
 
 **Description**: Update policy
 
-**Request Method**: `PUT /global-trust-authority/v1/service/policy`
+**Request Method**: `PUT /global-trust-authority/service/v1/policy`
 
 ##### Request Parameters
 | Field         | Type           | Required | parameter constraint                           | Description                                    |
@@ -892,7 +899,7 @@ When content_type is jwt, jwt content:
 
 **Description**: Delete policy
 
-**Request Method**: `DELETE /global-trust-authority/v1/service/policy`
+**Request Method**: `DELETE /global-trust-authority/service/v1/policy`
 
 ##### Request Parameters
 | Field | Type | Required | parameter constraint | Description |
@@ -926,7 +933,7 @@ empty
 #### 3.4.4 Query Policy
 **Description**: Query policy
 
-**Request Method**: `GET /global-trust-authority/v1/service/policy`
+**Request Method**: `GET /global-trust-authority/service/v1/policy`
 
 ##### Request Parameters
 | Field         | Type | Required | Description |
@@ -956,7 +963,7 @@ empty
 ###### request url
 
 ```
-http://10.10.0.102:8080/global-trust-authority/v1/service/policy?ids=2b0ead4b-6a15-4239-bf68-b1413df538bb
+http(s)://ip:port/global-trust-authority/service/v1/policy?ids=2b0ead4b-6a15-4239-bf68-b1413df538bb
 ```
 
 ###### response body
@@ -986,7 +993,7 @@ http://10.10.0.102:8080/global-trust-authority/v1/service/policy?ids=2b0ead4b-6a
 #### 3.5.1 Validate Token
 **Description**: Validate Token
 
-**Request Method**: `POST /global-trust-authority/v1/service/token/verify`
+**Request Method**: `POST /global-trust-authority/service/v1/token/verify`
 
 ##### Request Parameters
 | Field | Type | Required | Description |
