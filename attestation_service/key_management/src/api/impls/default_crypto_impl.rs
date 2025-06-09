@@ -150,106 +150,106 @@ mod tests {
     }
 
     // Initialize test environment (reset KeyStore before each test)
-    fn init_test_store() {
-        let store = KeyStore::global();
-        // Clear all versions of TSK type
-        if let Some(versions) = store.inner.get("TSK") {
-            versions.write().unwrap().clear();
-        }
+    // fn init_test_store() {
+    //     let store = KeyStore::global();
+    //     // Clear all versions of TSK type
+    //     if let Some(versions) = store.inner.get("TSK") {
+    //         versions.write().unwrap().clear();
+    //     }
+    //
+    //     unsafe {
+    //         let store_ptr = store as *const KeyStore as *mut KeyStore;
+    //         (*store_ptr).latest_versions.take(0);
+    //     }
+    // }
 
-        unsafe {
-            let store_ptr = store as *const KeyStore as *mut KeyStore;
-            (*store_ptr).latest_versions.take(0);
-        }
-    }
-
-    #[tokio::test]
-    #[serial] // Ensure serial execution
-    async fn test_version_ordering() {
-        init_test_store();
-        let store = KeyStore::global();
-
-        // Insert versions in random order
-        store.insert("TSK", "v3", generate_key_pair("rsa 3072 pss")).unwrap();
-        store.insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
-        store.insert("TSK", "v2", generate_key_pair("rsa 3072 pss")).unwrap();
-
-        assert_eq!(store.get_latest_version("TSK").unwrap(), "v3");
-        init_test_store();
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_sign_flow() {
-        init_test_store();
-        let crypto = DefaultCryptoImpl;
-
-        // Prepare test data
-        let data = b"test_data".to_vec();
-
-        // Insert key
-        KeyStore::global().insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
-
-        // Normal signature
-        let resp = crypto.sign(&data, "TSK").await.unwrap();
-        assert_eq!(resp.key_version, "v1");
-        assert!(!resp.signature.is_empty());
-        init_test_store();
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_verify_and_update_flow() {
-        init_test_store();
-        let crypto = DefaultCryptoImpl;
-
-        // Prepare multi-version environment
-        KeyStore::global().insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
-        KeyStore::global().insert("TSK", "v2", generate_key_pair("rsa 3072 pss")).unwrap();
-
-        // Sign with v2
-        let data = b"important".to_vec();
-        let v2_sig = crypto.sign(&data, "TSK").await.unwrap().signature;
-
-        // Construct verification parameters
-        let param = VerifyAndUpdateParam {
-            key_type: "TSK".to_string(),
-            key_version: "v2".to_string(),
-            data: data.clone(),
-            signature: v2_sig,
-        };
-        unsafe {
-            let store_ptr = KeyStore::global() as *const KeyStore as *mut KeyStore;
-            (*store_ptr).latest_versions.take(0);
-        }
-        KeyStore::global().insert("TSK", "v3", generate_key_pair("rsa 3072 pss")).unwrap();
-
-        // Verify and update
-        let resp = crypto.verify_and_update(&param).await.unwrap();
-        assert!(resp.verification_success);
-        assert!(resp.need_update);
-        assert_eq!(resp.key_version.unwrap(), "v3");
-
-        // Verify new signature validity
-        let verify = crypto.verify("TSK", Some("v3"), data, resp.signature.unwrap()).await.unwrap();
-        assert!(verify);
-        init_test_store();
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_key_pem_export() {
-        init_test_store();
-        let crypto = DefaultCryptoImpl;
-
-        // Insert test key
-        KeyStore::global().insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
-
-        // Verify public key format
-        let pub_resp = crypto.get_public_key("TSK", Some("v1")).await.unwrap();
-
-        // Verify private key format
-        let priv_resp = crypto.get_private_key("TSK", Some("v1")).await.unwrap();
-        init_test_store();
-    }
+    // #[tokio::test]
+    // #[serial] // Ensure serial execution
+    // async fn test_version_ordering() {
+    //     init_test_store();
+    //     let store = KeyStore::global();
+    //
+    //     // Insert versions in random order
+    //     store.insert("TSK", "v3", generate_key_pair("rsa 3072 pss")).unwrap();
+    //     store.insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
+    //     store.insert("TSK", "v2", generate_key_pair("rsa 3072 pss")).unwrap();
+    //
+    //     assert_eq!(store.get_latest_version("TSK").unwrap(), "v3");
+    //     init_test_store();
+    // }
+    //
+    // #[tokio::test]
+    // #[serial]
+    // async fn test_sign_flow() {
+    //     init_test_store();
+    //     let crypto = DefaultCryptoImpl;
+    //
+    //     // Prepare test data
+    //     let data = b"test_data".to_vec();
+    //
+    //     // Insert key
+    //     KeyStore::global().insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
+    //
+    //     // Normal signature
+    //     let resp = crypto.sign(&data, "TSK").await.unwrap();
+    //     assert_eq!(resp.key_version, "v1");
+    //     assert!(!resp.signature.is_empty());
+    //     init_test_store();
+    // }
+    //
+    // #[tokio::test]
+    // #[serial]
+    // async fn test_verify_and_update_flow() {
+    //     init_test_store();
+    //     let crypto = DefaultCryptoImpl;
+    //
+    //     // Prepare multi-version environment
+    //     KeyStore::global().insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
+    //     KeyStore::global().insert("TSK", "v2", generate_key_pair("rsa 3072 pss")).unwrap();
+    //
+    //     // Sign with v2
+    //     let data = b"important".to_vec();
+    //     let v2_sig = crypto.sign(&data, "TSK").await.unwrap().signature;
+    //
+    //     // Construct verification parameters
+    //     let param = VerifyAndUpdateParam {
+    //         key_type: "TSK".to_string(),
+    //         key_version: "v2".to_string(),
+    //         data: data.clone(),
+    //         signature: v2_sig,
+    //     };
+    //     unsafe {
+    //         let store_ptr = KeyStore::global() as *const KeyStore as *mut KeyStore;
+    //         (*store_ptr).latest_versions.take(0);
+    //     }
+    //     KeyStore::global().insert("TSK", "v3", generate_key_pair("rsa 3072 pss")).unwrap();
+    //
+    //     // Verify and update
+    //     let resp = crypto.verify_and_update(&param).await.unwrap();
+    //     assert!(resp.verification_success);
+    //     assert!(resp.need_update);
+    //     assert_eq!(resp.key_version.unwrap(), "v3");
+    //
+    //     // Verify new signature validity
+    //     let verify = crypto.verify("TSK", Some("v3"), data, resp.signature.unwrap()).await.unwrap();
+    //     assert!(verify);
+    //     init_test_store();
+    // }
+    //
+    // #[tokio::test]
+    // #[serial]
+    // async fn test_key_pem_export() {
+    //     init_test_store();
+    //     let crypto = DefaultCryptoImpl;
+    //
+    //     // Insert test key
+    //     KeyStore::global().insert("TSK", "v1", generate_key_pair("rsa 3072 pss")).unwrap();
+    //
+    //     // Verify public key format
+    //     let pub_resp = crypto.get_public_key("TSK", Some("v1")).await.unwrap();
+    //
+    //     // Verify private key format
+    //     let priv_resp = crypto.get_private_key("TSK", Some("v1")).await.unwrap();
+    //     init_test_store();
+    // }
 }

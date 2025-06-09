@@ -34,3 +34,4 @@ cache.workspace = true
 redis.workspace = true
 config_manager.workspace = true
 uuid.workspace = true
+tokio.workspace = true

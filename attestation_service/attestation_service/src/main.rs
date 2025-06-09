@@ -17,7 +17,11 @@ mod utils;
 
 use crate::middlewares::mq::create_mq_topics;
 use crate::routes::routes::configure_user_routes;
-use crate::utils::env_setting_center::{get_cert_path, get_env_by_key, get_env_value_or_default, get_key_path, load_env};
+use crate::utils::env_setting_center::{
+    get_cert_path, get_env_by_key, get_env_value_or_default, get_key_path, load_env,
+};
+use actix_web::body::BoxBody;
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse};
 use actix_web::{middleware, web, App, HttpServer};
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use ratelimit::{create_challenge_governor, create_management_governor};
@@ -31,11 +35,14 @@ use server_config::{
     init_chain::handlers::plugin_init_handler::PluginInitHandler,
 };
 use std::env;
+use std::future::Future;
 use utils::env_setting_center::{default_not_found_page, get_address, get_https_address};
 
 const MAX_JSON_SIZE_DEFAULT: usize = 10 * 1024 * 1024; // 10MB
 const HTTPS_SWITCH_ON: u32 = 1;
 const HTTPS_SWITCH_OFF: u32 = 0;
+const USER_ID: &str = "User-Id";
+const USER_ID_MAX_LENGTH: usize = 36;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -74,6 +81,7 @@ async fn main() -> std::io::Result<()> {
                         // Enable form error handling
                         actix_web::error::ErrorBadRequest(format!("Form payload too large: {}", err))
                     }))
+                    .wrap_fn(|req, srv| validate_user_id_header(req, srv))
                     .wrap(middleware::Logger::default())
                     .configure(|cfg| {
                         configure_user_routes(cfg, challenge_governor.clone(), management_governor.clone())
@@ -100,4 +108,20 @@ async fn main() -> std::io::Result<()> {
     };
 
     server.run().await
+}
+
+fn validate_user_id_header(
+    req: ServiceRequest,
+    srv: &impl Service<ServiceRequest, Response = ServiceResponse<BoxBody>, Error = actix_web::Error>,
+) -> impl Future<Output = Result<ServiceResponse<BoxBody>, actix_web::Error>> {
+    let is_valid =
+        req.headers().get(USER_ID).map(|id| !id.is_empty() && id.len() <= USER_ID_MAX_LENGTH).unwrap_or(false);
+    let fut = srv.call(req);
+    async move {
+        if !is_valid {
+            Err(actix_web::error::ErrorBadRequest("User-Id header is required and must be 1-36 characters"))
+        } else {
+            fut.await
+        }
+    }
 }

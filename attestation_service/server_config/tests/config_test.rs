@@ -43,7 +43,7 @@ mod tests {
         // Verify attestation_service structure
         assert_eq!(config.attestation_service.token_management.jku, "jku");
         assert_eq!(config.attestation_service.token_management.kid, "kid");
-        assert_eq!(config.attestation_service.token_management.exist_time, "600000");
+        assert_eq!(config.attestation_service.token_management.exist_time, 600000);
         assert_eq!(config.attestation_service.token_management.iss, "iss");
         assert_eq!(config.attestation_service.token_management.eat_profile, "eat_profile");
         
