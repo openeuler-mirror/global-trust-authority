@@ -93,18 +93,25 @@ attestation_common:
   yaml_parse_support: "current support yaml parse"
 attestation_service:
   key_management:
-    vault_get_key_url: "http://attestation_mock:8082/v1/vault/get_signing_keys"
+    vault_get_key_url: "http://attestation_mock:8081/v1/vault/get_signing_keys"
     is_require_sign: true
+    key_ca_cert_path: "/etc/attestation_server/certs/km_cert.pem"
+    key_cli_key_path: "/etc/attestation_server/certs/ra_client_key.pem"
+    key_cli_cert_path: "/etc/attestation_server/certs/ra_client_cert.pem"
   token_management:
     jku: "jku"
     kid: "kid"
-    exist_time: "600000"
+    exist_time: 600000
     iss: "iss"
     eat_profile: "eat_profile"
+    mq_enabled: false
+    token_topic: "ra_token_topic"
   policy:
     export_policy_file:
       - name: "tpm_boot"
-        path: "/opt/tpm_boot"
+        path: "/var/test_docker/app/export_policy/tpm_boot.rego"
+      - name: "tpm_ima"
+        path: "/var/test_docker/app/export_policy/tpm_ima.rego"
     is_verify_policy_signature: false
     single_user_policy_limit: 30
     policy_content_size_limit: 500
@@ -113,11 +120,12 @@ attestation_service:
     single_user_cert_limit: 10
   nonce:
     nonce_valid_period: 120
+    nonce_bytes: 64
   plugins:
     - name: "tpm_boot"
-      path: "/opt/project/target/debug/libtpm_boot_verifier.so"
+      path: "/opt/0422/target/release/libtpm_boot_verifier.so"
     - name: "tpm_ima"
-      path: "/opt/project/target/debug/libtpm_ima_verifier.so"
+      path: "/opt/0422/target/release/libtpm_ima_verifier.so"
 "#.to_string();
         let mut file = File::create("server_config.yaml").unwrap();
         let _ = file.write_all(yaml_content.as_bytes());
