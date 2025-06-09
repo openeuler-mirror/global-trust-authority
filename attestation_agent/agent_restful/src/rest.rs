@@ -32,6 +32,7 @@ use validator::Validate;
 /// Constants used for rate limiting and connection control
 const DEFAULT_PAYLOAD_SIZE: usize = 1024 * 1024 * 10; // 10MB
 const MAX_CONNECTIONS: usize = 3; // Maximum concurrent connections
+const DEFAULT_WORKERS: usize = 1;
 
 #[derive(Validate)]
 #[derive(Clone, Debug)]
@@ -619,6 +620,7 @@ impl RestService {
 
         let server = HttpServer::new(move || create_app(&config, &routes))
             .max_connections(MAX_CONNECTIONS)
+            .workers(DEFAULT_WORKERS)
             .bind_openssl(&https_addr, ssl_builder)
             .map_err(|e| AgentError::NetworkError(format!("HTTPS server binding failed {}: {}", https_addr, e)))?
             .run();
@@ -746,6 +748,7 @@ impl RestService {
         tokio::spawn(async move {
             let server = HttpServer::new(move || create_app(&config, &routes))
                 .max_connections(MAX_CONNECTIONS)
+                .workers(DEFAULT_WORKERS)
                 .bind(&http_addr)
                 .map_err(|e| AgentError::NetworkError(format!("HTTP server binding failed {}: {}", http_addr, e)))?
                 .run();
