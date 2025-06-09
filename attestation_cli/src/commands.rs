@@ -284,7 +284,7 @@ pub enum EvidenceCommands {
 
         /// User data, reserved fields
         #[clap(short, long)]
-        attester_data: Option<String>,
+        attester_data: Option<serde_json::Value>,
     },
 }
 
