@@ -307,7 +307,9 @@ http(s)://ip:port/global-trust-authority/service/v1/refvalue?ids=2b0ead4b-6a15-4
 | delete_type | | string | Yes | id, type, all | Delete Type          |
 
 ##### Response Parameters
-empty
+| Field   | Type   | Required | Description   |
+|---------|--------|----------|---------------|
+| message | string | No       | Error message |
 
 ##### Example of request
 
@@ -344,15 +346,16 @@ empty
 | crl_content | | string | No       |  | Certificate revocation list |
 
 ##### Response Parameters
-| Field | Sub-field           | Type | Required | Description                      |
-|------|---------------------|------|----------|----------------------------------|
-| cert |                     | object | No       | Certificate                      |
-| | cert_id             | string | YES       | Certificate ID                   |
-| | cert_name           | string | YES       | Certificate name                 |
-| | version             | string | YES       | Certificate version number       |
-| crl |                     | object |          |                                  |
-| | crl_id              | string | YES       | Certificate revocation list id   |
-| | crl_name   | string | YES      | Certificate revocation list name |
+| Field   | Sub-field | Type   | Required | Description                      |
+|---------|-----------|--------|----------|----------------------------------|
+| message |           | string | No       | Error message                    |
+| cert    |           | object | No       | Certificate                      |
+|         | cert_id   | string | YES      | Certificate ID                   |
+|         | cert_name | string | YES      | Certificate name                 |
+|         | version   | string | YES      | Certificate version number       |
+| crl     |           | object |          |                                  |
+|         | crl_id    | string | YES      | Certificate revocation list id   |
+|         | crl_name  | string | YES      | Certificate revocation list name |
 
 ##### Example of request
 
@@ -418,12 +421,13 @@ empty
 | is_default | boolean | No       | true or false | Whether it's default certificate, defaults to false |
 
 ##### Response Parameters
-| Field | Sub-field | Type | Required | Description |
-|-------|-----------|------|----------|-------------|
-| cert | | object | Yes | |
-| | cert_id | string | Yes | Certificate ID |
-| | cert_name | string | Yes | Certificate name |
-| | version | string | Yes | Certificate update version number |
+| Field   | Sub-field | Type   | Required | Description                       |
+|---------|-----------|--------|----------|-----------------------------------|
+| message |           | string | No       | Error message                     |
+| cert    |           | object | Yes      |                                   |
+|         | cert_id   | string | Yes      | Certificate ID                    |
+|         | cert_name | string | Yes      | Certificate name                  |
+|         | version   | string | Yes      | Certificate update version number |
 
 ##### Example of request
 
@@ -466,25 +470,26 @@ Note: To query revoked certificates, type must specify crl.
 | ids       | | List of String | No |  | Certificate ID, maximum 100             |
 
 ##### Response Parameters
-| Field      | Sub-field           | Type           | Required | Description |
-|------------|---------------------|----------------|----------|-------------|
-| certs      |                     | List of Object | No | Certificate information |
-|            | cert_id             | string         | Yes | Certificate ID |
-|            | cert_name           | string         | Yes | Certificate name |
-|            | description         | string         | No | Certificate description |
-|            | content             | string         | No | Certificate content |
-|            | cert_type           | List of String | No | Certificate purpose |
-|            | is_default          | boolean        | No | Whether it's default certificate |
-|            | version             | int            | Yes | Certificate version |
-|            | create_time         | long           | No | Creation timestamp |
-|            | update_time         | long           | No | Update timestamp |
-|            | valid_code          | int            | No | 0-Normal; 1-Signature verification failed; 2-Revoked |
-|            | cert_revoked_date   | long           | No | Certificate revocation time, optional when type is crl |
-|            | cert_revoked_reason | string         | No | Certificate revocation reason, optional when type is crl |
-| crls       |                     | List of Object | No | Certificate revocation list information |
-|            | crl_id              | string         | Yes | Certificate revocation list ID |
-|            | crl_name            | string         | Yes | Certificate revocation list name |
-|            | crl_content         | string         | Yes | Certificate revocation list content |
+| Field   | Sub-field           | Type           | Required | Description                                              |
+|---------|---------------------|----------------|----------|----------------------------------------------------------|
+| message |                     | string         | No       | Error message                                            |
+| certs   |                     | List of Object | No       | Certificate information                                  |
+|         | cert_id             | string         | Yes      | Certificate ID                                           |
+|         | cert_name           | string         | Yes      | Certificate name                                         |
+|         | description         | string         | No       | Certificate description                                  |
+|         | content             | string         | No       | Certificate content                                      |
+|         | cert_type           | List of String | No       | Certificate purpose                                      |
+|         | is_default          | boolean        | No       | Whether it's default certificate                         |
+|         | version             | int            | Yes      | Certificate version                                      |
+|         | create_time         | long           | No       | Creation timestamp                                       |
+|         | update_time         | long           | No       | Update timestamp                                         |
+|         | valid_code          | int            | No       | 0-Normal; 1-Signature verification failed; 2-Revoked     |
+|         | cert_revoked_date   | long           | No       | Certificate revocation time, optional when type is crl   |
+|         | cert_revoked_reason | string         | No       | Certificate revocation reason, optional when type is crl |
+| crls    |                     | List of Object | No       | Certificate revocation list information                  |
+|         | crl_id              | string         | Yes      | Certificate revocation list ID                           |
+|         | crl_name            | string         | Yes      | Certificate revocation list name                         |
+|         | crl_content         | string         | Yes      | Certificate revocation list content                      |
 
 
 
@@ -554,7 +559,9 @@ Note: To delete revoked certificates, type must specify crl.
 | type | | string | No       | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, refvalue/policy/tpm_boot/tpm_ima/crl |
 
 ##### Response Parameters
-empty
+| Field   | Type   | Required | Description   |
+|---------|--------|----------|---------------|
+| message | string | No       | Error message |
 
 ###### delete cert request body
 
