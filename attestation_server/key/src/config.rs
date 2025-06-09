@@ -124,12 +124,44 @@ mod tests {
 
         // Create mock config file
         let config_content = r#"
-        attestation_service:
-          attestation_verifier:
-            vault_get_key_url: "https://mock.vault.com/api"
+attestation_service:
+  key_management:
+    vault_get_key_url: "https://mock.vault.com/api"
+    is_require_sign: true
+    key_ca_cert_path: "test"
+    key_cli_key_path: "test"
+    key_cli_cert_path: "test"
+  token_management:
+    jku: "jku"
+    kid: "kid"
+    exist_time: 600000
+    iss: "iss"
+    eat_profile: "test"
+    mq_enabled: false
+    token_topic: "test"
+  policy:
+    export_policy_file:
+      - name: "tpm_boot"
+        path: "/var/test_docker/app/export_policy/tpm_boot.rego"
+      - name: "tpm_ima"
+        path: "test"
+    is_verify_policy_signature: false
+    single_user_policy_limit: 30
+    policy_content_size_limit: 500
+    query_user_policy_limit: 10
+  cert:
+    single_user_cert_limit: 10
+  nonce:
+    nonce_valid_period: 130
+    nonce_bytes: 64
+  plugins:
+    - name: "tpm_boot"
+      path: "test"
+    - name: "tpm_ima"
+      path: "/usr/local/lib/libtpm_ima_verifier.so"
         "#;
         std::fs::write(yml_dir.join("server_config.yaml"), config_content).unwrap();
-
+        CONFIG.initialize(yml_dir.join("server_config.yaml")).unwrap();
         // Set current executable path environment
         let loader = YamlConfigLoader;
 

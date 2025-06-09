@@ -14,8 +14,8 @@ use key_management::key_manager::error::KeyManagerError;
 use mockall::predicate::*;
 use mockall::*;
 use serde_json::json;
-use token_management::token_manager;
-use token_manager::TokenManager;
+use token_management::manager;
+use manager::TokenManager;
 use tokio;
 
 
