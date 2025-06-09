@@ -23,7 +23,11 @@ pub struct SecretManagerFactory;
 #[async_trait]
 pub trait SecretManager : Send + Sync{
     async fn get_all_secret(&mut self) -> Result<HashMap<String, Vec<PrivateKey>>, AppError>;
+    /// desc: import secret to secret manager comp
+    /// param: 
+    ///     cipher: secret manager comp need param and config 
     fn import_secret(&mut self, cipher: &PutCipherReq) -> Result<String, AppError>;
+    /// desc: init secret manager comp, contain create init config 
     fn init_system(&mut self) -> Result<(), AppError>;
 }
 

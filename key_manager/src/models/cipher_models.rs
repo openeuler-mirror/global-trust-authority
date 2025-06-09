@@ -20,6 +20,7 @@ use openssl::nid::Nid;
 use openssl::pkey::PKey;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::ops::Mul;
 use validator::{Validate, ValidationError};
 
 #[derive(Serialize, Deserialize, Validate, Debug)]
@@ -119,7 +120,7 @@ fn validate_private_key_format(req: &PutCipherReq) -> Result<(), ValidationError
 fn validate_rsa(pem_data: &[u8], size: u32) -> Result<(), ErrorStack> {
     let pkey = PKey::private_key_from_pem(pem_data)?;
     let rsa = pkey.rsa()?;
-    if rsa.size() * 8 == size {
+    if rsa.size().mul(8) == size {
         Ok(())
     } else {
         log::error!("RSA {} key validation failed: Incorrect key size", size);

@@ -65,5 +65,5 @@ rm -rf /var/log/key_manager
 /usr/local/key_manager/bin/.env
 
 %changelog
-* Mon Apr 28 2025 fantonghe<fantonghe@huawei.com> - 0.1.0-1
+* Mon Apr 28 2025 Build - 0.1.0-1
 - Package init

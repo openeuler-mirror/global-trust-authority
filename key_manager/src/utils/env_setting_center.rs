@@ -56,6 +56,7 @@ impl Environment {
         }
     }
 
+    /// desc: check .env config is existed
     pub fn check() -> Result<(), AppError> {
         get_port()?;
         get_cert()?;
@@ -68,59 +69,67 @@ impl Environment {
         Ok(())
     }
 
+    /// desc: set env value to global static params 
     pub fn global() -> &'static Environment {
         ENVIRONMENT_CONFIG.get_or_init(|| {
             let mut environment = Environment::default();
-            environment.port = get_port().unwrap();
-            environment.cert = get_cert().unwrap();
-            environment.private_key = get_key().unwrap();
-            environment.root_ca_cert = get_root_ca_cert().unwrap();
-            environment.log_level = get_log_level().unwrap();
-            environment.log_path = get_log_path().unwrap();
-            environment.root_token = get_root_token().unwrap();
-            environment.addr = get_addr().unwrap();
+            environment.port = get_port().expect("failed to get port number");
+            environment.cert = get_cert().expect("failed to get cert string");
+            environment.private_key = get_key().expect("failed to get private key string");
+            environment.root_ca_cert = get_root_ca_cert().expect("failed to get root_ca_cert string");
+            environment.log_level = get_log_level().expect("failed to get log level");
+            environment.log_path = get_log_path().expect("failed to get log path");
+            environment.root_token = get_root_token().expect("failed to get root_token string");
+            environment.addr = get_addr().expect("failed to get addr string");
             environment
         })
     }
 }
 
-
+/// desc: get port from .env config
 pub fn get_port() -> Result<u16, AppError> {
     let port_str = env::var(KEY_MANAGER_PORT).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_PORT)))?;
     let port = port_str.parse::<u16>().map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_PORT)))?;
     Ok(port)
 }
 
+/// desc: get cert path from .env config
 pub fn get_cert() -> Result<String, AppError> {
     let cert = env::var(KEY_MANAGER_CERT_PATH).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_CERT_PATH)))?;
     Ok(cert)
 }
 
+/// desc: get private key path from .env config
 pub fn get_key() -> Result<String, AppError> {
     let key = env::var(KEY_MANAGER_KEY_PATH).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_KEY_PATH)))?;
     Ok(key)
 }
 
+/// desc: get log level from .env config
 pub fn get_log_level() -> Result<String, AppError> {
     let log_level = env::var(KEY_MANAGER_LOG_LEVEL).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_LOG_LEVEL)))?;
     Ok(log_level)
 }
 
+/// desc: get log path from .env config
 pub fn get_log_path() -> Result<String, AppError> {
     let log_path = env::var(KEY_MANAGER_LOG_PATH).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_LOG_PATH)))?;
     Ok(log_path)
 }
 
+/// desc: get openbao root token from .env config
 pub fn get_root_token() -> Result<String, AppError> {
     let root_token = env::var(KEY_MANAGER_ROOT_TOKEN).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_ROOT_TOKEN)))?;
     Ok(root_token)
 }
 
+/// desc: get openbao addr from .env config
 pub fn get_addr() -> Result<String, AppError> {
     let addr = env::var(KEY_MANAGER_SECRET_ADDR).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_SECRET_ADDR)))?;
     Ok(addr)
 }
 
+/// desc: get root ca cert from .env config
 pub fn get_root_ca_cert() -> Result<String, AppError> {
     let ca_cert = env::var(ROOT_CA_CERT_PATH).map_err(|_| AppError::EnvConfigError(String::from(ROOT_CA_CERT_PATH)))?;
     Ok(ca_cert)

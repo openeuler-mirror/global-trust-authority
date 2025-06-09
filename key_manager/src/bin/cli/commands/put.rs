@@ -44,6 +44,10 @@ pub struct PutArgs {
     pub key_file: Option<String>,
 }
 
+/// Params:
+///      args: param for bin
+/// Errors 
+///     execute error
 pub fn handle_put(args: PutArgs) -> Result<(), AppError> {
     let put_cipher = PutCipherReq {
         key_name: args.key_name.to_uppercase(),

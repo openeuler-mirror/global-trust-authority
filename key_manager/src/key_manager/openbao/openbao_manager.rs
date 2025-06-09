@@ -86,6 +86,7 @@ impl SecretManager for OpenBaoManager {
 }
 
 impl OpenBaoManager {
+    /// desc: create single secrets in openbao, only contain a map
     fn create_secrets(&mut self) -> Result<(), AppError> {
         self.clean().secrets().enable().path(config::SECRET_PATH).kv_v2();
         let result = get_command_service().execute(self.get_command(), self.get_args(), self.get_envs());
@@ -104,6 +105,7 @@ impl OpenBaoManager {
         Ok(())
     }
 
+    /// desc: check current secrets has been created, select all secrets to check
     pub fn check_secrets(&mut self) -> Result<bool, AppError> {
         // 创建密钥路径
         self.clean().secrets().list().detailed().format_json();
@@ -119,7 +121,7 @@ impl OpenBaoManager {
                     log::error!("select secrets error, err: {}", String::from_utf8_lossy(&output.stderr));
                     return Err(AppError::OpenbaoCommandExecuteError(String::new()));
                 }
-                Ok(json.as_object().unwrap().contains_key(format!("{}/", config::SECRET_PATH).as_str()))
+                Ok(json.as_object().map_or(false, | itme| itme.contains_key(format!("{}/", config::SECRET_PATH).as_str())))
             },
             Err(err) => {
                 log::error!("failed to enable secrets, err: {}", err);
@@ -142,6 +144,9 @@ impl OpenBaoManager {
         }
     }
 
+    /// desc: create single metadata, this metadata is openbao v2 path
+    /// param: 
+    ///     item: metadata name 
     pub fn create_metadata(&mut self, item: &str) -> Result<(), AppError> {
         self.clean().kv().metadata().put().mount(config::SECRET_PATH).max_versions(&u32::MAX).map_name(item);
         let result = get_command_service().execute(self.get_command(), self.get_args(), self.get_envs());
@@ -189,12 +194,16 @@ async fn get_single_private_key(key_name: &str) -> Result<Vec<PrivateKey>, AppEr
         log::error!("json[data] or json[data][versions] is error");
         return Err(AppError::OpenbaoJsonError(String::new()));
     }
-    let versions = json["data"]["versions"].as_object().unwrap();
-    let mut version_vec = Vec::<i32>::new();
+    let versions = if let Some(obj) = json["data"]["versions"].as_object() {
+        obj
+    } else { 
+        return Err(AppError::OpenbaoJsonError(String::new())); 
+    };
+    let mut version_vec = Vec::<u32>::new();
     for (key, value) in versions {
-        let info: Version = from_value(value.clone()).unwrap();
+        let info: Version = from_value(value.clone()).unwrap_or(Version::default());
         if info.deletion_time.is_empty() && !info.destroyed {
-            version_vec.push(key.parse::<i32>().unwrap());
+            version_vec.push(key.parse::<u32>().unwrap_or_else(|_| 0));
         }
     }
     let mut tasks = Vec::new();
@@ -219,7 +228,7 @@ async fn get_single_private_key(key_name: &str) -> Result<Vec<PrivateKey>, AppEr
     Ok(vec)
 }
 
-async fn get_version_data(key_name: &str, item: &i32) -> Result<PrivateKey, AppError> {
+async fn get_version_data(key_name: &str, item: &u32) -> Result<PrivateKey, AppError> {
     let mut openbao =  OpenBaoManager::default();
     let private_key;
     openbao.clean().kv().get().format_json().version(&item).mount(&config::SECRET_PATH).map_name(key_name);
@@ -230,7 +239,7 @@ async fn get_version_data(key_name: &str, item: &i32) -> Result<PrivateKey, AppE
                 log::error!("{} private key version[{}] select error", key_name, item);
                 return Err(AppError::OpenbaoCommandExecuteError(String::new()));
             }
-            let mut detail_info: Value = from_str(&String::from_utf8(info.stdout).unwrap()).unwrap();
+            let mut detail_info: Value = from_str(&String::from_utf8(info.stdout).unwrap_or("{}".to_string())).unwrap_or(Value::Null);
             if !detail_info.is_object() || detail_info.get("data").is_none() {
                 log::error!("json or json[data] is error");
                 return Err(AppError::OpenbaoJsonError(String::new()));
