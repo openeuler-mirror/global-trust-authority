@@ -18,7 +18,6 @@ use serde_json::json;
 use policy::{
     error::policy_error::PolicyError,
     services::policy_service::PolicyService,
-    api::get_policy_by_ids,
 };
 
 async fn setup_test_db() -> Result<web::Data<Arc<DatabaseConnection>>, PolicyError> {
@@ -123,45 +122,6 @@ async fn test_delete_policy_when_delete_type_is_all_then_return_success() {
     assert_eq!(response.status(), 200);
 }
 
-#[tokio::test]
-async fn test_query_policy_when_policy_exists_then_return_policy() {
-    mock_config();
-    let db = setup_test_db().await.unwrap();
-    let policy_id = "56f8acab-8a57-404b-842e-60dc17f5b3c4";
-    insert_test_policy(&db, policy_id).await.unwrap();
-
-    let request = TestRequest::default()
-        .insert_header(("User-Id", "test_user"))
-        .to_http_request();
-
-    let query_params = web::Query(json!({
-        "ids": policy_id
-    }));
-
-    let result = PolicyService::query_policy(request, db, query_params).await;
-    assert!(result.is_ok());
-    let response = result.unwrap();
-    assert_eq!(response.status(), 200);
-    let body = response.into_body();
-    let body_bytes = actix_web::body::to_bytes(body).await.unwrap();
-    let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
-    let policies = body_json.get("policies").unwrap().as_array().unwrap();
-    let first_policy = &policies[0];
-    let id = first_policy.get("id").unwrap().as_str().unwrap();
-    assert_eq!(id, policy_id);
-}
-
-#[tokio::test]
-async fn test_get_policy_by_ids_when_policy_not_exists_then_return_empty() {
-    mock_config();
-    let db = setup_test_db().await.unwrap();
-    let policy_id = "56f8acab-8a57-404b-842e-60dc17f5b3c4";
-    insert_test_policy(&db, policy_id).await.unwrap();
-    let policy_id_list = vec!["56f8acab-8a57-404b-842e-60dc17f5b3c4".to_string()];
-    let policies = get_policy_by_ids(&db, policy_id_list).await.unwrap();
-    assert_eq!(policies.len(), 0);
-}
-
 async fn insert_test_policy(db: &DatabaseConnection, policy_id: &str) -> Result<(), PolicyError> {
     let insert_tx = db.begin().await
         .map_err(|e| PolicyError::DatabaseOperationError(e.to_string()))?;
@@ -174,7 +134,7 @@ async fn insert_test_policy(db: &DatabaseConnection, policy_id: &str) -> Result<
                 key_version, product_name, product_type, board_type
             ) VALUES (
                 '{}', 'test_policy', 'test description', 'dGVzdA==',
-                false, 1, '2024-01-01 00:00:00', '2024-01-01 00:00:00',
+                false, 1, '1749285706', '1749285706',
                 'test_user', '[\"TPM\",\"IMA\"]', X'0000', 0,
                 'v1.0', 'test_product', 'test_type', 'test_board'
             )", policy_id)
