@@ -66,26 +66,28 @@ impl TpmPluginBase for TpmImaPlugin {
             PluginError::InternalError(format!("Failed to open IMA log file: {}", e))
         })?;
         
-        // Check the number of lines in the file
-        let line_count = BufReader::new(&file).lines().count();
-        if line_count > MAX_IMA_LOG_LINES {
-            return Err(PluginError::InternalError(
-                format!("IMA log file exceeds maximum allowed lines: {} > {}", line_count, MAX_IMA_LOG_LINES)
-            ));
-        }
-        
-        // Reopen the file to read its contents
-        let mut file = File::open(&self.config.log_file_path).map_err(|e| {
-            PluginError::InternalError(format!("Failed to reopen IMA log file: {}", e))
-        })?;
-        
-        // Read file contents into a buffer
+        let mut reader = BufReader::new(file);
+        let mut line_count = 0;
         let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer).map_err(|e| {
+
+        // Read the file line by line to count lines and collect content
+        let mut line = String::new();
+        while reader.read_line(&mut line).map_err(|e| {
             PluginError::InternalError(format!("Failed to read IMA log file: {}", e))
-        })?;
-        
-        // Encode the binary data as base64 string using the new API
+        })? > 0 {
+            line_count += 1;
+
+            // Check line count after reading
+            if line_count > MAX_IMA_LOG_LINES {
+                return Err(PluginError::InternalError(
+                    format!("IMA log file exceeds maximum allowed lines: {} > {}", line_count, MAX_IMA_LOG_LINES)
+                ));
+            }
+            buffer.extend_from_slice(line.as_bytes());
+            line.clear(); // Clear the buffer for the next line
+        }
+
+        // Encode the binary data as base64 string
         let log_data = STANDARD.encode(&buffer);
         
         Ok(vec![Log {
