@@ -36,7 +36,11 @@ pub static GLOBAL_TOKENS: Lazy<Mutex<Vec<NodeToken>>> = Lazy::new(|| Mutex::new(
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 /// Information about an attester, including type and policy IDs
 pub struct AttesterInfo {
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub attester_type: Option<String>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub policy_ids: Option<Vec<String>>,
 }
 
@@ -53,6 +57,8 @@ pub struct Nonce {
 pub struct EvidenceWithPolicy {
     pub attester_type: String,
     pub evidence: serde_json::Value,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub policy_ids: Option<Vec<String>>,
 }
 
@@ -60,7 +66,11 @@ pub struct EvidenceWithPolicy {
 /// Measurement structure containing node and evidence info
 pub struct Measurement {
     pub node_id: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<Nonce>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub attester_data: Option<serde_json::Value>,
     pub evidences: Vec<EvidenceWithPolicy>,
 }
@@ -70,6 +80,8 @@ pub struct Measurement {
 pub struct GetEvidenceResponse {
     pub agent_version: String,
     pub nonce_type: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_nonce: Option<String>,
     pub measurements: Vec<Measurement>,
 }
