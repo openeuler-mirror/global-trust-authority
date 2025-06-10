@@ -61,7 +61,7 @@ pub struct EvidenceWithPolicy {
 pub struct Measurement {
     pub node_id: String,
     pub nonce: Option<Nonce>,
-    pub attester_data: Option<String>,
+    pub attester_data: Option<serde_json::Value>,
     pub evidences: Vec<EvidenceWithPolicy>,
 }
 
@@ -80,7 +80,7 @@ impl GetEvidenceResponse {
         nonce_type: &str,
         user_nonce: Option<&String>,
         nonce: Option<&Nonce>,
-        attester_data: Option<&String>,
+        attester_data: Option<&serde_json::Value>,
         node_id: &str,
         evidences: Vec<EvidenceWithPolicy>,
     ) -> Self {
@@ -537,7 +537,7 @@ async fn get_tokens_from_server(
 /// Main entry for the attestation challenge process
 pub async fn do_challenge(
     attester_info: &Option<Vec<AttesterInfo>>,
-    attester_data: &Option<String>,
+    attester_data: &Option<serde_json::Value>,
 ) -> Result<serde_json::Value, ChallengeError> {
     log::info!("Starting challenge request.");
 

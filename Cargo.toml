@@ -7,19 +7,19 @@ members = [
     "attestation_agent/utils",
     "attestation_agent/attester/tpm/ima",
     "attestation_agent/attester/tpm/boot",
-    "attestation_service/policy",
-    "attestation_service/ref_value",
-    "attestation_service/endorserment",
-    "attestation_service/attestation_service",
-    "attestation_service/nonce",
-    "attestation_service/token_management",
-    "attestation_service/policy_engine",
-    "attestation_service/key_management",
-    "attestation_service/attestation",
-    "attestation_service/server_config",
-    "attestation_service/resource_provider",
-    "attestation_service/verifier/tpm/boot",
-    "attestation_service/verifier/tpm/ima",
+    "attestation_server/policy",
+    "attestation_server/ref_value",
+    "attestation_server/endorserment",
+    "attestation_server/api",
+    "attestation_server/nonce",
+    "attestation_server/token",
+    "attestation_server/policy_engine",
+    "attestation_server/key",
+    "attestation_server/attestation",
+    "attestation_server/server_config",
+    "attestation_server/resource_provider",
+    "attestation_server/verifier/tpm/boot",
+    "attestation_server/verifier/tpm/ima",
     "attestation_common/cache",
     "attestation_common/config_manager",
     "attestation_common/distributed_lock",
@@ -64,14 +64,14 @@ libsm = "0.6.0"
 encoding = "0.2.33"
 futures = "0.3.31"
 plugin_manager = { path = "./plugin_manager" }
-attestation = { path = "./attestation_service/attestation" }
-key_management = { path = "attestation_service/key_management" }
-nonce = { path = "./attestation_service/nonce" }
-policy = { path = "./attestation_service/policy" }
-endorserment = { path = "./attestation_service/endorserment" }
-rv = { path = "./attestation_service/ref_value" }
-resource_provider = {path = "attestation_service/resource_provider" }
-policy_engine = { path = "./attestation_service/policy_engine" }
+attestation = { path = "attestation_server/attestation" }
+key_management = { path = "attestation_server/key" }
+nonce = { path = "attestation_server/nonce" }
+policy = { path = "attestation_server/policy" }
+endorserment = { path = "attestation_server/endorserment" }
+rv = { path = "attestation_server/ref_value" }
+resource_provider = {path = "attestation_server/resource_provider" }
+policy_engine = { path = "attestation_server/policy_engine" }
 rand = "0.8.4"
 rand_chacha = "0.3.1"
 base64 = "0.22.1"
@@ -79,7 +79,7 @@ regex = "1.9.1"
 regorus = "0.2.8"
 mockall = "0.10.1"
 fmt = "0.8"
-token_management = { path = "attestation_service/token_management" }
+token_management = { path = "attestation_server/token" }
 jsonwebtoken = "9"
 uuid = { version = "1.13.1", features = ["v4", "v5"] }
 libloading = "0.8.6"
@@ -103,6 +103,6 @@ jwt = {path = "attestation_common/jwt"}
 schedule_job = {path = "attestation_common/schedule_job"}
 ratelimit = {path = "attestation_common/ratelimit"}
 common_log = {path = "attestation_common/common_log"}
-server_config = {path = "attestation_service/server_config" }
+server_config = {path = "attestation_server/server_config" }
 scopeguard = "1.2.0"
 clap = { version = "4.5.32", features = ["derive"] }

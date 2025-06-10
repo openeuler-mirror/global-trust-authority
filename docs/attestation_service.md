@@ -20,18 +20,18 @@ Attestation Service is the server-side component of the remote attestation syste
 
 ## 3. Directory Structure
 ```plaintext
-attestation_service/
+attestation_server/
 ├── attestation/        # Core attestation functionality
-├── attestation_service/# Main attestation service implementation
+├── api/                # Main attestation service implementation
 ├── endorserment/      # Certificate management
-├── key_management/    # Key management
+├── key/              # Key management
 ├── nonce/            # Random number generation and management
 ├── policy/           # Policy definition and management
 ├── policy_engine/    # Policy engine implementation
 ├── resource_provider/ # Resource provider
 ├── ref_value/        # reference value management
 ├── server_config/    # Server configuration
-├── token_management/ # Token management
+├── token/            # Token management
 ├── verifier/         # Verifier implementation
 ```
 

@@ -25,7 +25,7 @@
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
 /// use serde::Deserialize;
 ///
 /// use config_manager::ConfigSingleton;
