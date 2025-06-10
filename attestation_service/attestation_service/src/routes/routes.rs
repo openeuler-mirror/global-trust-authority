@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use crate::controllers::{token_controller, test_controller, attestation_controller};
+use crate::controllers::{token_controller, attestation_controller};
 use actix_web::web;
 use actix_web::web::ServiceConfig;
 use resource_provider::routes::register::get_route_configurator;
@@ -19,17 +19,6 @@ use ratelimit::Governor;
 
 /// configure routes
 pub fn configure_user_routes(cfg: &mut web::ServiceConfig, challenge_governor:Governor, management_governor:Governor) {
-    cfg.service(
-        web::scope("/nonce")
-            .wrap(challenge_governor.clone())
-            .route("/getnonce", web::get().to(test_controller::get_nonce))
-    );
-
-    cfg.service(
-        web::scope("/user")
-            .wrap(management_governor.clone())
-            .route("/all", web::get().to(test_controller::get_all_users))
-    );
     cfg.service(
         web::scope("/token")
             .wrap(management_governor.clone())

@@ -10,6 +10,5 @@
  * See the Mulan PSL v2 for more details.
  */
 
-pub mod test_controller;
 pub mod token_controller;
 pub mod attestation_controller;
