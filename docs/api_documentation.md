@@ -148,13 +148,13 @@
 | is_default | | boolean | No | true or false | Whether it's default reference value, defaults to false |
 
 ##### Response Parameters
-| Field | Sub-field | Type | Required | Description |
-|-------|-----------|------|----------|-------------|
-| message | | string | No | Error message |
-| refvalue | | object | Yes | Reference value information |
-| | id | string | Yes | Reference value ID |
-| | name | string | Yes | Reference value name |
-| | version | string | Yes | Reference value version number |
+| Field     | Sub-field | Type   | Required | Description                    |
+|-----------|-----------|--------|----------|--------------------------------|
+| message   |           | string | No       | Error message                  |
+| ref_value |           | object | No       | Reference value information    |
+|           | id        | string | Yes      | Reference value ID             |
+|           | name      | string | Yes      | Reference value name           |
+|           | version   | string | Yes      | Reference value version number |
 
 ##### Example of request
 
@@ -201,13 +201,13 @@
 | attester_type | | string | No | only support tpm_ima | Applicable challenge plugin type |
 
 ##### Response Parameters
-| Field | Sub-field | Type | Required | Description |
-|-------|-----------|------|----------|-------------|
-| message | | string | No | Error message |
-| refvalue | | object | Yes | Reference value information |
-| | id | string | Yes | Reference value ID |
-| | name | string | Yes | Reference value name |
-| | version | string | Yes | Reference value update version number |
+| Field     | Sub-field | Type | Required | Description |
+|-----------|-----------|------|----------|-------------|
+| message   | | string | No | Error message |
+| ref_value | | object | Yes | Reference value information |
+|           | id | string | Yes | Reference value ID |
+|           | name | string | Yes | Reference value name |
+|           | version | string | Yes | Reference value update version number |
 
 ##### Example of request
 
@@ -242,26 +242,28 @@
 **Request Method**: `GET /global-trust-authority/service/v1/ref_value`
 
 ##### Request Parameters
-| Field         | Sub-field | Type | Required | parameter constraint | Description                                 |
-|---------------|-----------|------|----------|-------------|---------------------------------------------|
-| attester_type | | string | Yes | tpm_ima | Query reference value for specified purpose |
-| ids           | | List of String | Yes | Length 1-32 characters | Reference value name, if empty, input 10    |
+| Field         | Sub-field | Type           | Required | parameter constraint   | Description                                 |
+|---------------|-----------|----------------|----------|------------------------|---------------------------------------------|
+| attester_type |           | string         | No       | tpm_ima                | Query reference value for specified purpose |
+| ids           |           | List of String | No       | Length 1-32 characters | Reference value name, if empty, input 10    |
 
 ##### Response Parameters
-| Field | Sub-field | Type | Required | Description                                             |
-|-------|-----------|------|----------|---------------------------------------------------------|
-| message | | string | No | Error message                                           |
-| ref_values | | list of objects | Yes | Reference value information                             |
-| | id | string | Yes | Reference value ID                                      |
-| | name | string | No | Reference value name                                    |
-| | uid | string | Yes | User ID                                                 |
-| | description | string | No | Reference value description                             |
-| | content | string | No | Reference value content                                 |
-| | attester_type | string | Yes | Applicable challenge plugin type                        |
-| | is_default | boolean | No | Whether it's default reference value, defaults to false |
-| | version | int | No | Reference value version                                 |
-| | create_time | Long | Yes | Creation time                                           |
-| | update_time | Long | Yes | Update time                                             |
+| Field      | Sub-field     | Type            | Required | Description                                             |
+|------------|---------------|-----------------|----------|---------------------------------------------------------|
+| message    |               | string          | No       | Error message                                           |
+| ref_values |               | list of objects | No       | Reference value information                             |
+|            | id            | string          | Yes      | Reference value ID                                      |
+|            | name          | string          | No       | Reference value name                                    |
+|            | uid           | string          | Yes      | User ID                                                 |
+|            | description   | string          | No       | Reference value description                             |
+|            | content       | string          | No       | Reference value content                                 |
+|            | attester_type | string          | Yes      | Applicable challenge plugin type                        |
+|            | is_default    | boolean         | No       | Whether it's default reference value, defaults to false |
+|            | version       | int             | No       | Reference value version                                 |
+|            | create_time   | Long            | Yes      | Creation time                                           |
+|            | update_time   | Long            | Yes      | Update time                                             |
+
+> Note: When querying with ids, returns all fields of entries filtered by id; without ids, only returns required fields like id, name, version, etc., does not return specific content (entries filtered by type, if type not filled returns all for that user)
 
 ##### Example of request
 
@@ -364,11 +366,8 @@ empty
 ```
 {
 	"name": "root.crt",
-	"description": null,
 	"type": ["tpm_ima", "tpm_boot"],
 	"content": "-----BEGIN CERTIFICATE-----\nxxxxx\n-----END CERTIFICATE-----",
-	"is_default": null,
-	"cert_revoked_list": null
 }
 ```
 
@@ -436,10 +435,8 @@ empty
 ```
 {
 	"name": "root.crt.refvalue",
-	"description": null,
 	"type": ["tpm_ima", "tpm_boot"],
 	"is_default": true,
-	"cert_revoked_list": null
 }
 ```
 
@@ -464,10 +461,10 @@ empty
 ##### Request Parameters
 Note: To query revoked certificates, type must specify crl.
 
-| Field     | Sub-field | Type | Required | parameter constraint | Description                             |
-|-----------|-----------|------|----------|-------------|-----------------------------------------|
-| cert_type | | string | No | refvalue/policy/tpm_boot/tpm_ima/crl | Query certificate for specified purpose |
-| ids       | | List of String | No |  | Certificate ID, maximum 100             |
+| Field     | Sub-field | Type           | Required | parameter constraint                 | Description                             |
+|-----------|-----------|----------------|----------|--------------------------------------|-----------------------------------------|
+| cert_type |           | string         | No       | refvalue/policy/tpm_boot/tpm_ima/crl | Query certificate for specified purpose |
+| ids       |           | List of String | No       |                                      | Certificate ID, maximum 100             |
 
 ##### Response Parameters
 | Field   | Sub-field           | Type           | Required | Description                                              |
@@ -491,6 +488,7 @@ Note: To query revoked certificates, type must specify crl.
 |         | crl_name            | string         | Yes      | Certificate revocation list name                         |
 |         | crl_content         | string         | Yes      | Certificate revocation list content                      |
 
+> Note: When querying with ids, returns all fields of entries filtered by id; without ids, only returns required fields like id, name, version, etc., does not return specific content (entries filtered by type, if type not filled returns all for that user)
 
 
 ##### Example of request
@@ -699,12 +697,9 @@ Note: To delete revoked certificates, type must specify crl.
 {
     "agent_version": "0.1.0",
     "nonce_type": "ignore",
-    "user_nonce": null,
     "measurements": [
         {
             "node_id": "TPM AK",
-            "nonce": null,
-            "attester_data": null,
             "evidences": [
                 {
                     "attester_type": "tpm_boot",
@@ -757,8 +752,7 @@ Note: To delete revoked certificates, type must specify crl.
                                 "log_data": "xxxxx"
                             }
                         ]
-                    },
-                    "policy_ids": null
+                    }
                 }
             ]
         }
@@ -942,19 +936,19 @@ empty
 | attester_type | string | No | Policy type |
 
 ##### Response Parameters
-| Field | Sub-field | Type | Required | Description |
-|-------|-----------|------|----------|-------------|
-| message | | string | No | Error message |
-| policies | | list of objects | Yes | Policy information |
-| | id | string | Yes | Policy ID |
-| | name | string | Yes | Policy name |
-| | description | string | No | Policy description |
-| | content | string | No | Policy content |
-| | attester_type | list of string | No | Applicable challenge plugin type |
-| | is_default | boolean | No | Whether it's default policy, defaults to false |
-| | valide_code | u8 | No | Signature verification result, 0-pass, 1-fail |
-| | version | u64 | No | Policy version |
-| | update_time | u64 | Yes | Creation time |
+| Field    | Sub-field     | Type            | Required | Description                                    |
+|----------|---------------|-----------------|----------|------------------------------------------------|
+| message  |               | string          | No       | Error message                                  |
+| policies |               | list of objects | No       | Policy information                             |
+|          | id            | string          | Yes      | Policy ID                                      |
+|          | name          | string          | Yes      | Policy name                                    |
+|          | description   | string          | No       | Policy description                             |
+|          | content       | string          | No       | Policy content                                 |
+|          | attester_type | list of string  | No       | Applicable challenge plugin type               |
+|          | is_default    | boolean         | No       | Whether it's default policy, defaults to false |
+|          | valide_code   | u8              | No       | Signature verification result, 0-pass, 1-fail  |
+|          | version       | u64             | No       | Policy version                                 |
+|          | update_time   | u64             | Yes      | Creation time                                  |
 
 > Note: When querying with ids, returns all fields of entries filtered by id; without ids, only returns required fields like id, name, version, etc., does not return specific content (entries filtered by type, if type not filled returns all for that user)
 
@@ -1001,15 +995,13 @@ http(s)://ip:port/global-trust-authority/service/v1/policy?ids=2b0ead4b-6a15-423
 | token | string | Yes | Token to be validated and parsed |
 
 ##### Response Parameters
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| verification_pass | boolean | Yes | Whether signature verification passed |
-| token_body | object | No | Required when verification passes, returns parsed token body |
-| token_header | object | No | Required when verification passes, returns parsed token header |
+| Field             | Type    | Required | Description                                                    |
+|-------------------|---------|----------|----------------------------------------------------------------|
+| message           | string  | No       | Error message                                                  |
+| verification_pass | boolean | No       | Whether signature verification passed                          |
+| token_body        | object  | No       | Required when verification passes, returns parsed token body   |
+| token_header      | object  | No       | Required when verification passes, returns parsed token header |
 
-> Note:
-> 1. When querying with ids, returns all fields of entries filtered by id
-> 2. Without ids, only returns required fields like id, name, version, etc., does not return specific content (entries filtered by type, returns all for that user if type not filled)
 
 ##### Example of request
 
@@ -1025,12 +1017,7 @@ http(s)://ip:port/global-trust-authority/service/v1/policy?ids=2b0ead4b-6a15-423
 
  ```
 {
-    "verification_pass": false,
-    "token_body": null,
-    "token_header": {
-        "typ": "JWT",
-        "alg": "HS256"
-    }
+    "verification_pass": false
 }
  ```
 
