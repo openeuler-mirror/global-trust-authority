@@ -5,11 +5,11 @@ agent:
   user_id: "test_01" # Unique user identifier
 
 server:
-  server_url: "http://127.0.0.1:8080"  # Base URL, API paths will be automatically appended
+  server_url: "https://127.0.0.1:8443"  # Base URL, API paths will be automatically appended
   tls:
-    cert_path: "/path/to/cert.pem"
-    key_path: "/path/to/key.pem"
-    ca_path: "/path/to/key.pem"
+    cert_path: "/etc/attestation_agent/certs/client.crt"
+    key_path: "/etc/attestation_agent/certs/client.key"
+    ca_path: "/etc/attestation_server/certs/ca.crt"
 
 logging:
   level: "info"  # Available values: trace, debug, info, warn, error
