@@ -23,7 +23,19 @@ use common_log::info;
 use crate::key_manager::cache::entity::key_pair::KeyPair;
 use crate::key_manager::model::PrivateKey;
 
-// factory function
+/// factory function
+/// 
+/// # Arguments
+/// 
+/// * `algorithm_str` - algorithm string
+/// 
+/// # Returns
+/// 
+/// * `Result<Box<dyn KeyAlgorithm>, KeyManagerError>` - Success or error
+/// 
+/// # Errors
+/// 
+/// * `KeyManagerError` - If the algorithm is not supported. 
 pub fn create_algorithm(algorithm_str: &str) -> Result<Box<dyn KeyAlgorithm>, KeyManagerError> {
     info!("create_algorithm: {}", algorithm_str);
     let parts: Vec<&str> = algorithm_str.split("_").collect();
@@ -46,8 +58,52 @@ pub(crate) static ALGORITHM_REGISTRY: Lazy<Mutex<HashMap<&'static str, Algorithm
 
 #[automock]
 pub trait KeyAlgorithm {
+    /// Generate a key pair
+    /// 
+    /// # Arguments
+    /// 
+    /// * `args` - arguments
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<KeyPair, KeyManagerError>` - Success or error
+    /// 
+    /// # Errors
+    /// 
+    /// * `KeyManagerError` - If the algorithm is not supported.
     fn derive_public(&self, private: &PrivateKey) -> Result<KeyPair, KeyManagerError>;
+
+    /// Sign data
+    ///
+    /// # Arguments
+    /// 
+    /// * `private` - private key
+    /// * `data` - data to sign
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<Vec<u8>, KeyManagerError>` - Success or error
+    /// 
+    /// # Errors
+    /// 
+    /// * `KeyManagerError` - If the algorithm is not supported.
     fn sign(&self, private: &PKey<Private>, data: Vec<u8>) -> Result<Vec<u8>, KeyManagerError>;
+
+    /// Verify signature
+    ///
+    /// # Arguments
+    /// 
+    /// * `public` - public key
+    /// * `data` - data to verify
+    /// * `signature` - signature to verify
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<bool, KeyManagerError>` - Success or error
+    /// 
+    /// # Errors
+    /// 
+    /// * `KeyManagerError` - If the algorithm is not supported.
     fn verify(
         &self,
         public: &PKey<Public>,

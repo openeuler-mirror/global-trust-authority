@@ -162,6 +162,10 @@ impl PolicyHandler {
     /// * `IncorrectFormatError` - If the content cannot be decoded or has invalid format
     /// * `PolicyExistError` - If a policy with the same ID or name already exists
     /// * `DatabaseOperationError` - If there is an error during database operation
+    /// 
+    /// # Panics
+    /// 
+    /// 1. If the user ID is not found in the headers
     pub async fn create_policy(
         headers: &actix_web::http::header::HeaderMap,
         request_body: &Value,
@@ -396,6 +400,10 @@ impl PolicyHandler {
     /// * `PolicySignatureFailure` - If the existing policy signature verification fails
     /// * `DatabasePolicySignatureError` - If there is an error during signature verification
     /// * `InternalError` - If there is an error during signature verification
+    /// 
+    /// # Panics
+    /// 
+    /// 1. If the attestation service is configured to require signing but the key management service is not configured to require signing.
     pub async fn verify_and_sign_policy(
         db: &DatabaseConnection,
         policy: &Model,
@@ -442,6 +450,10 @@ impl PolicyHandler {
     /// # Error
     /// * `PolicySignatureFailure` - If the signing operation fails
     /// * `InternalError` - If there is an error during signing
+    /// 
+    /// # Panics
+    /// 
+    /// 1. If the attestation service is configured to require signing but the key management service is not configured to require signing.
     pub async fn sign_policy(mut policy_model: ActiveModel) -> Result<ActiveModel, PolicyError> {
         info!("Start to sign policy!");
         let policy_sign_model: SignaturePolicy = policy_model.clone().try_into_model().unwrap().into();
@@ -476,6 +488,10 @@ impl PolicyHandler {
     /// * `DatabaseOperationError` - If there is an error during database operation
     /// *  `DatabasePolicySignatureError` - If there is an error during signature verification
     /// * `InternalError` - If there is an error during signature verification
+    /// 
+    /// # Panics
+    /// 
+    /// 1. If the attestation service is configured to require signing but the key management service is not configured to require signing.
     pub async fn get_all_policies(
         db: &DatabaseConnection,
         user_id: String,

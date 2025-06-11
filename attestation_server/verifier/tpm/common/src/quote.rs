@@ -45,6 +45,10 @@ impl QuoteVerifier {
     /// let signature = "base64 encoded signature data";
     /// let quote_verifier = QuoteVerifier::new(&quote, &signature).unwrap();
     /// ```
+    /// 
+    /// # Error
+    /// 
+    /// * `PluginError::InputError` - Failed to parse Quote or signature data
     pub fn new(quote: &Vec<u8>, signature: &Vec<u8>) -> Result<Self, PluginError> {
         let tpm_signature = TpmtSignature::deserialize(signature)
             .map_err(|e| PluginError::InputError(format!("Failed to parse signature data: {}", e)))?;
@@ -75,6 +79,10 @@ impl QuoteVerifier {
     /// let nonce = Some("base64 encoded nonce data");
     /// let result = quote_verifier.verify(&quote_data, &public_ak, nonce).unwrap();
     /// ```
+    /// 
+    /// # Error
+    /// 
+    /// * `PluginError::InputError` - Failed to verify signature or Quote data
     pub fn verify(
         &self,
         quote_data: &Vec<u8>,
@@ -87,6 +95,20 @@ impl QuoteVerifier {
         Ok(())
     }
 
+    /// Verify the signature of the Quote data
+    ///
+    /// # Arguments
+    /// 
+    /// * `quote_data` - Raw quote data bytes to verify
+    /// * `public_ak` - Public attestation key for signature verification
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<(), PluginError>` - Success or error
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - Failed to verify signature
     pub fn verify_signature(&self, quote_data: &Vec<u8>, public_ak: &PKey<Public>) -> Result<(), PluginError> {
         // 1. Get signature type
         let sig_type = self.get_signature_type()?;
@@ -141,6 +163,19 @@ impl QuoteVerifier {
         Ok(der)
     }
 
+    /// Verify the Quote data
+    ///
+    /// # Arguments
+    /// 
+    /// * `nonce` - Optional nonce value to verify against Quote
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<(), PluginError>` - Success or error
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - Failed to verify Quote data
     pub fn verify_quote_data(&self, nonce: Option<&[u8]>) -> Result<(), PluginError> {
         // 1. Verify magic value
         if self.quote_data.magic != crate::structure::TPM2_GENERATED_VALUE {
@@ -186,6 +221,10 @@ impl QuoteVerifier {
     ///
     /// # Returns
     /// * `AlgorithmId` - Hash algorithm identifier
+    /// 
+    /// # Panics
+    /// 
+    /// * If the PCR selection is empty
     pub fn get_hash_algorithm(&self) -> AlgorithmId {
         self.quote_data.attested.pcr_select.first().unwrap().hash_alg
     }

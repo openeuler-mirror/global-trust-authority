@@ -125,6 +125,10 @@ impl Evidence {
     /// // In actual code, Evidence would be properly imported
     /// let evidence = Evidence::from_json_value(&evidence_json).unwrap();
     /// ```
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the JSON value is missing required fields or has invalid data.
     pub fn from_json_value(json_value: &Value) -> Result<Self, PluginError> {
         let required_fields = &["quote", "pcrs", "logs", "ak_cert"];
         Self::validate_json_fields(json_value, required_fields)
@@ -294,6 +298,10 @@ impl Evidence {
     ///     &verifier
     /// );
     /// ```
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the certificate chain validation fails or the node_id does not match the certificate's common name.
     pub async fn verify(
         &mut self,
         user_id: &str,

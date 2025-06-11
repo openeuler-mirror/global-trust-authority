@@ -22,12 +22,28 @@ pub struct UserLock {
 }
 
 impl UserLock {
+    /// Create a new UserLock.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `key` - The key of the lock.
+    /// * `value` - The value of the lock.
+    /// * `ttl` - The TTL of the lock.
+    /// 
+    /// # Returns
+    /// 
+    /// * `UserLock` - The UserLock.
     pub fn new(key: String, value: String, ttl: u64, timeout: u64) -> Self {
         Self {
             lock: Lock::new(&key, &value, ttl, timeout).unwrap(),
         }
     }
 
+    /// Acquire the lock.
+    ///
+    /// # Returns
+    /// 
+    /// * `Result<(), DistributedLockError>` - The result of the operation.
     pub fn acquire(&self) -> Result<(), DistributedLockError> {
         let mut retries = 0;
         while retries < 3 {

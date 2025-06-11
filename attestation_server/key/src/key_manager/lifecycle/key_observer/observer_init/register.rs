@@ -18,6 +18,11 @@ use std::sync::Mutex;
 pub static OBSERVER_REGISTRY: OnceCell<Mutex<Vec<Arc<dyn KeyLifecycleObserver + Send + Sync>>>> =
     OnceCell::new();
 
+/// Register observer
+/// 
+/// # Arguments
+/// 
+/// * `observer` - Observer    
 pub fn register_observer(observer: Arc<dyn KeyLifecycleObserver + Send + Sync>) {
     let registry = OBSERVER_REGISTRY.get_or_init(|| Mutex::new(Vec::new()));
     registry.lock().unwrap().push(observer);

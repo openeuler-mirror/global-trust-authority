@@ -14,13 +14,33 @@ use std::collections::HashMap;
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
-
+/// Reads a configuration file and returns the value associated with a specific key.
+///
+/// # Arguments
+///
+/// * `filename` - The path to the configuration file.
+/// * `key` - The key whose value is to be retrieved.
+///
+/// # Returns
+///
+/// Returns `Ok(Some(value))` if the key is found, `Ok(None)` if the key is not found,
+/// or `Err(String)` if there is an error reading or parsing the file.
 pub async fn get_config_value(filename: &str, key: &str) -> Result<Option<String>, String> {
     let file_maps = parse_file(filename).await?;
     let value = file_maps.get(key).cloned();
     Ok(value)
 }
 
+/// Reads a configuration file and returns all key-value pairs.
+///
+/// # Arguments
+///
+/// * `filename` - The path to the configuration file.
+///
+/// # Returns
+///
+/// Returns `Ok(HashMap<String, String>)` containing all key-value pairs,
+/// or `Err(String)` if there is an error reading or parsing the file.
 pub async fn get_config_values(filename: &str) -> Result<HashMap<String, String>, String> {
     let file_maps = parse_file(filename).await?;
     Ok(file_maps)

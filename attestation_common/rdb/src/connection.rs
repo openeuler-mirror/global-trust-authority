@@ -43,6 +43,9 @@ static DB_CONN: OnceCell<Arc<DatabaseConnection>> = OnceCell::const_new();
 ///     // Use connection for database operations
 /// }
 /// ```
+/// # Errors
+/// 
+/// This function may return an error if the database connection cannot be initialized.
 pub async fn get_connection() -> Result<Arc<DatabaseConnection>, DbError> {
     let conn = DB_CONN
     .get_or_init(|| async {
@@ -89,6 +92,20 @@ pub async fn get_connection() -> Result<Arc<DatabaseConnection>, DbError> {
     Ok(conn.clone())
 }
 
+/// Execute SQL file
+///
+/// # Arguments
+/// 
+/// * `db` - The database connection.
+/// * `db_version` - The database version.
+/// 
+/// # Returns
+/// 
+/// Returns `Ok(())` on success, or a `Box<dyn Error>` on failure.
+/// 
+/// # Errors
+/// 
+/// * `DbError` - If there is an error executing the SQL file.
 pub async fn execute_sql_file(db: &DatabaseConnection, db_version: &str) -> Result<(), Box<dyn Error>> {
     let sql_file = match db.get_database_backend() {
         DatabaseBackend::Postgres => get_postgresql_sql_file(db_version),

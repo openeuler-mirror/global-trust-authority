@@ -51,6 +51,19 @@ pub struct TpmsClockInfo {
 }
 
 impl TpmsClockInfo {
+    /// Deserialize a TpmsClockInfo object from a byte buffer
+    /// 
+    /// # Arguments
+    /// 
+    /// * `buffer` - The byte buffer to deserialize from
+    /// 
+    /// # Returns
+    /// 
+    /// * `Ok(TpmsClockInfo)` - If the deserialization is successful
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the deserialization fails
     pub fn deserialize(buffer: &mut Cursor<&[u8]>) -> Result<Self, PluginError> {
         let clock = buffer.read_u64::<BigEndian>()
             .map_err(|e| PluginError::InputError(format!("Failed to deserialize clock: {}", e)))?;
@@ -97,6 +110,19 @@ impl From<u16> for AlgorithmId {
 }
 
 impl AlgorithmId {
+    /// Convert a string to an AlgorithmId
+    /// 
+    /// # Arguments
+    /// 
+    /// * `s` - The string to convert
+    /// 
+    /// # Returns
+    /// 
+    /// * `Ok(AlgorithmId)` - If the string is valid
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the string is invalid
     pub fn from_str(s: &str) -> Result<Self, PluginError> {
         match s {
             "sha1" => Ok(AlgorithmId::Sha1),
@@ -108,6 +134,15 @@ impl AlgorithmId {
         }
     }
 
+    /// Convert an AlgorithmId to a string
+    /// 
+    /// # Arguments
+    /// 
+    /// * `self` - The AlgorithmId to convert
+    /// 
+    /// # Returns
+    /// 
+    /// * `String` - The string representation of the AlgorithmId
     pub fn to_string(&self) -> String {
         match self {
             AlgorithmId::Sha1 => "sha1".to_string(),
@@ -119,6 +154,15 @@ impl AlgorithmId {
         }
     }
 
+    /// Get the digest size of the algorithm
+    /// 
+    /// # Arguments
+    /// 
+    /// * `self` - The AlgorithmId
+    /// 
+    /// # Returns
+    /// 
+    /// * `u16` - The digest size of the algorithm
     pub fn digest_size(&self) -> u16 {
         match self {
             AlgorithmId::Sha1 => 20,

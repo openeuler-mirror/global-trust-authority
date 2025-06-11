@@ -18,6 +18,19 @@ use crate::jwt_error::JwtError;
 pub struct JwtParser {}
 
 impl JwtParser {
+    /// Get the algorithm used in the JWT.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `content` - The JWT content.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<MessageDigest, JwtError>` - The algorithm used in the JWT.
+    /// 
+    /// # Errors
+    /// 
+    /// * `JwtError::IncorrectFormatError` - If the JWT content is not in the correct format.
     pub fn get_alg(content: &str) -> Result<MessageDigest, JwtError> {
         let data_vec: Vec<&str> = content.split('.').collect();
         let header_str = BASE64_URL_SAFE_NO_PAD
@@ -38,6 +51,19 @@ impl JwtParser {
         }
     }
 
+    /// Get the signature used in the JWT.
+    ///
+    /// # Arguments
+    /// 
+    /// * `content` - The JWT content.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<Vec<u8>, JwtError>` - The signature used in the JWT.
+    /// 
+    /// # Errors
+    /// 
+    /// * `JwtError::IncorrectFormatError` - If the JWT content is not in the correct format.
     pub fn get_signature(content: &str) -> Result<Vec<u8>, JwtError> {
         let data_vec: Vec<&str> = content.split('.').collect();
         BASE64_URL_SAFE_NO_PAD
@@ -45,6 +71,19 @@ impl JwtParser {
             .map_err(|e| JwtError::IncorrectFormatError(e.to_string()))
     }
     
+    /// Get the payload used in the JWT.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `content` - The JWT content.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<String, JwtError>` - The payload used in the JWT.
+    /// 
+    /// # Errors
+    /// 
+    /// * `JwtError::IncorrectFormatError` - If the JWT content is not in the correct format.
     pub fn get_payload(content: &str) -> Result<String, JwtError> {
         let data_vec: Vec<&str> = content.split('.').collect();
         BASE64_URL_SAFE_NO_PAD
@@ -56,6 +95,15 @@ impl JwtParser {
             })
     }
 
+    /// Get the base data used in the JWT.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `content` - The JWT content.
+    /// 
+    /// # Returns
+    /// 
+    /// * `String` - The base data used in the JWT.
     pub fn get_base_data(content: &str) -> String {
         let data_vec: Vec<&str> = content.split('.').collect();
         format!("{}.{}", data_vec[0], data_vec[1])

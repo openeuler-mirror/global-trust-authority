@@ -35,6 +35,18 @@ pub struct Task {
 }
 
 impl Task {
+    /// Create a new task
+    /// 
+    /// # Arguments
+    /// 
+    /// * `id` - Task ID
+    /// * `cron_expr` - Cron expression
+    /// * `task_fn` - Task function
+    /// * `exec_count` - Execution count limit
+    /// 
+    /// # Returns
+    /// 
+    /// * `Self` - New task
     pub fn new(
         id: String,
         cron_expr: String,
@@ -80,6 +92,15 @@ impl Task {
     }
 
     /// Check if the task should be executed
+    /// 
+    /// # Arguments
+    /// 
+    /// * `last` - Last execution time
+    /// * `now` - Current time
+    /// 
+    /// # Returns
+    /// 
+    /// * `bool` - True if the task should be executed, false otherwise    
     fn should_run(&self, last: SystemTime, now: SystemTime) -> bool {
         // Convert SystemTime to DateTime
         let last_dt: chrono::DateTime<chrono::Local> = chrono::DateTime::from(last);

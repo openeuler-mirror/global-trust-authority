@@ -38,6 +38,19 @@ pub struct ImaLog {
 
 impl ImaLog {
     /// Create ImaLog from base64 encoded ima log data
+    /// 
+    /// # Arguments
+    /// 
+    /// * `log_data` - Base64 encoded ima log data
+    /// * template_hash_alg - Hash algorithm for template hash calculation
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<ImaLog, PluginError>` - ImaLog on success, error on failure
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the log data is not valid
     pub fn new(log_data: &str, template_hash_alg: &str) -> Result<Self, PluginError> {
         let log_data = match BASE64.decode(log_data) {
             Ok(data) => data,
@@ -156,6 +169,21 @@ impl ImaLog {
         bytes
     }
 
+    /// Verify the IMA log against PCR values and reference values
+    ///
+    /// # Arguments
+    /// 
+    /// * `pcr_values` - PCR values to verify against
+    /// * `service_host_functions` - Service host functions
+    /// * `user_id` - User ID
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<bool, PluginError>` - Success or error
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InternalError` - Failed to get unmatched measurements
     pub async fn verify(&mut self, pcr_values: &mut PcrValues, service_host_functions: &ServiceHostFunctions, user_id: &str) -> Result<bool, PluginError> {
         // First, replay using template_hash values to update PCR replay values
         self.replay_pcr_values(pcr_values)?;
@@ -189,6 +217,15 @@ impl ImaLog {
         Ok(pcr_match_result)
     }
 
+    /// Convert ImaLog to JSON Value
+    ///
+    /// # Returns
+    /// 
+    /// * `Result<Value, PluginError>` - JSON Value on success, error on failure
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InternalError` - Failed to convert to JSON Value
     pub fn to_json_value(&self) -> Result<Value, PluginError> {
         serde_json::to_value(self).map_err(|e| PluginError::InternalError(e.to_string()))
     }
@@ -203,6 +240,10 @@ impl ImaLog {
     ///
     /// # Returns
     /// * `Result<(), PluginError>` - Success or error
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the hash algorithm is not supported
     pub fn replay_pcr_values(&self, pcr_values: &mut PcrValues) -> Result<(), PluginError> {
         // First, check if there are any logs to process
         if self.logs.is_empty() {

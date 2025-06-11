@@ -25,6 +25,11 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
+    /// Create a new scheduler
+    /// 
+    /// # Returns
+    /// 
+    /// A new scheduler
     pub fn new() -> Self {
         Scheduler {
             tasks: HashMap::new(),
@@ -56,6 +61,14 @@ impl Scheduler {
     }
 
     /// Add task
+    /// 
+    /// # Arguments
+    /// 
+    /// - `task`: Task to add
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok`: Task added successfully
     pub fn add_task(&mut self, task: Task) -> Result<(), String> {
         if self.tasks.contains_key(&task.id) {
             return Err(format!("Task ID {} already exists", task.id));
@@ -70,6 +83,21 @@ impl Scheduler {
     }
 
     /// Update task
+    /// 
+    /// # Arguments
+    /// 
+    /// - `task_id`: Task ID
+    /// - `cron_expr`: Cron expression
+    /// - `task_fn`: Task function
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok`: Task updated successfully
+    /// - `Err`: Task ID does not exist
+    /// 
+    /// # Errors    
+    /// 
+    /// - `Err`: Task ID does not exist
     pub fn update_task(
         &mut self,
         task_id: String,

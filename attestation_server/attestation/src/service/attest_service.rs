@@ -33,6 +33,10 @@ impl AttestationService {
     ///
     /// # Returns
     /// * `Result<HttpResponse, AttestationError>` - Returns HTTP response with tokens on success, or error on failure
+    /// 
+    /// # Errors
+    /// 
+    /// * `AttestationError` - If the request is invalid or an error occurs during processing
     pub async fn process_default_attestation(
         request: &web::Json<AttestRequest>,
         user_id: String,

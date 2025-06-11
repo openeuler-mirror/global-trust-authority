@@ -17,6 +17,20 @@ use crate::client::RedisClient;
 use crate::error::RedisError;
 
 impl RedisClient {
+    /// Sets the value for a given key in Redis.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key to set.
+    /// * `value` - The value to store.
+    /// * `ttl` - An optional duration for the key's expiration.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or a `RedisError` on failure.
+    /// 
+    /// # Errors
+    /// * `RedisError::ConnectionError` - If there is an error connecting to Redis.
     pub fn set(&self, key: &str, value: &str, ttl: Option<Duration>) -> Result<(), RedisError> {
         let mut conn = self.client.get_connection()
             .map_err(RedisError::ConnectionError)?;
@@ -31,6 +45,19 @@ impl RedisClient {
         Ok(())
     }
 
+    /// Gets the value for a given key from Redis.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key whose value is to be retrieved.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(String)` containing the value on success, `RedisError::KeyNotFound`
+    /// if the key does not exist, or `RedisError::ConnectionError` on other failures.
+    /// 
+    /// # Errors
+    /// * `RedisError::KeyNotFound` - If the key does not exist.
     pub fn get(&self, key: &str) -> Result<String, RedisError> {
         let mut conn = self.client.get_connection()
             .map_err(RedisError::ConnectionError)?;
@@ -42,6 +69,18 @@ impl RedisClient {
         Ok(value)
     }
 
+    /// Deletes a key from Redis.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `key` - The key to delete.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Ok(())` on success, or `RedisError` on failure.
+    /// 
+    ///  #Errors
+    ///  * `RedisError::KeyNotFound` - If the key does not exist.
     pub fn del(&self, key: &str) -> Result<(), RedisError> {
         let mut conn = self.client.get_connection()
             .map_err(RedisError::ConnectionError)?;
@@ -49,6 +88,18 @@ impl RedisClient {
             .map_err(RedisError::ConnectionError)
     }
 
+    /// Checks if a key exists in Redis.
+    /// 
+    /// #Arguments
+    /// 
+    /// * `key` - The key to check.
+    /// 
+    /// #Returns
+    /// 
+    /// Returns `Ok(bool)` indicating whether the key exists, or `RedisError` on failure.
+    /// 
+    /// #Errors
+    /// * `RedisError::KeyNotFound` - If the key does not exist.
     pub fn exists(&self, key: &str) -> Result<bool, RedisError> {
         let mut conn = self.client.get_connection()
             .map_err(RedisError::ConnectionError)?;
@@ -56,6 +107,20 @@ impl RedisClient {
             .map_err(RedisError::ConnectionError)
     }
 
+    /// Sets the expiration time for a key in Redis.
+    ///
+    /// # Arguments
+    /// 
+    /// * `key` - The key to set the expiration for.
+    /// * `ttl` - The expiration time in seconds.
+    /// 
+    /// # Returns
+    ///     
+    /// Returns `Ok(bool)` indicating whether the expiration was set successfully,
+    /// 
+    /// # Errors
+    /// 
+    /// * `RedisError::KeyNotFound` - If the key does not exist.
     pub fn expire(&self, key: &str, ttl: Duration) -> Result<bool, RedisError> {
         let mut conn = self.client.get_connection()
             .map_err(RedisError::ConnectionError)?;
@@ -63,6 +128,19 @@ impl RedisClient {
             .map_err(RedisError::ConnectionError)
     }
 
+    /// Gets the remaining time to live for a key in Redis.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `key` - The key to get the TTL for.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Ok(i64)` containing the remaining TTL in seconds, or `RedisError` on failure.
+    /// 
+    /// # Errors
+    ///     
+    /// * `RedisError::KeyNotFound` - If the key does not exist.
     pub fn ttl(&self, key: &str) -> Result<i64, RedisError> {
         let mut conn = self.client.get_connection()
             .map_err(RedisError::ConnectionError)?;
@@ -70,6 +148,21 @@ impl RedisClient {
             .map_err(RedisError::ConnectionError)
     }
 
+    /// Sets a key in Redis if it does not already exist.
+    ///
+    /// # Arguments
+    /// 
+    /// * `key` - The key to set.
+    /// * `value` - The value to store.
+    /// * `ttl` - An optional duration for the key's expiration.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Ok(bool)` indicating whether the key was set successfully,
+    /// 
+    /// # Errors
+    /// 
+    /// * `RedisError::KeyNotFound` - If the key does not exist. 
     pub fn set_nx(&self, key: &str, value: &str, ttl: Option<Duration>) -> Result<bool, RedisError> {
         let mut conn = self.client.get_connection()
             .map_err(RedisError::ConnectionError)?;

@@ -33,6 +33,15 @@ pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
 
+/// KeyManagerKeyVersion
+/// 
+/// # Returns
+/// 
+/// * `Result<Version, DbErr>` - Success or error
+/// 
+/// # Errors
+/// 
+/// * `DbErr` - If the database operation fails.
 pub async fn get_current_key_version() -> Result<Version, DbErr> {
     info!("KeyManagerKeyVersion: Getting current key version");
     let db = get_connection().await.map_err(|e| {
@@ -47,6 +56,20 @@ pub async fn get_current_key_version() -> Result<Version, DbErr> {
         .ok_or(DbErr::RecordNotFound("No version".into()))
 }
 
+/// KeyManagerKeyVersion
+///
+/// # Arguments
+/// 
+/// * `new_version` - New version
+/// * tx - Transaction
+/// 
+/// # Returns
+/// 
+/// * `Result<(), DbErr>` - Success or error
+/// 
+/// # Errors
+/// 
+/// * `DbErr` - If the database operation fails.
 pub async fn update_key_version(
     new_version: String,
     tx: &DatabaseTransaction,
