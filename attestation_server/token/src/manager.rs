@@ -160,11 +160,11 @@ impl TokenManager {
         match decode::<Value>(&token, &public_key, &Validation::new(Algorithm::RS256)) {
             Ok(token_data) => {
                 info!("Token verified successfully");
-                Ok(VerifyTokenResponse::new(true, token_data.claims, token_data.header))
+                Ok(VerifyTokenResponse::new(true, Some(token_data.claims), Some(token_data.header)))
             },
             Err(e) => {
                 error!("Token verification failed: {}", e);
-                Ok(VerifyTokenResponse::new(false, Value::Null, Header::default()))
+                Ok(VerifyTokenResponse::new(false, None, None))
             },
         }
     }
