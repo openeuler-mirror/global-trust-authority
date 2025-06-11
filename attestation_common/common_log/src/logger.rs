@@ -22,6 +22,7 @@ use log4rs::{
     Config, Handle,
 };
 use std::env;
+use std::error::Error;
 use std::path::PathBuf;
 use std::fs::Permissions;
 use std::os::unix::fs::PermissionsExt;
@@ -33,8 +34,16 @@ pub struct Logger {
 }
 
 impl Logger {
-    pub fn new(config_path: impl Into<PathBuf>) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new_from_config(config: LogConfig) -> Result<Self, Box<dyn std::error::Error>> {
+        Self::new(config)
+    }
+
+    pub fn new_from_yaml(config_path: impl Into<PathBuf>) -> Result<Self, Box<dyn std::error::Error>> {
         let config = LogConfig::from_yaml(config_path)?;
+        Self::new(config)
+    }
+
+    pub fn new(config: LogConfig) -> Result<Self, Box<dyn std::error::Error>> {
         let mut log4rs_config = Config::builder();
 
         // Create appenders for each logger configuration
