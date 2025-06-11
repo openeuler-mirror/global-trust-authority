@@ -28,7 +28,7 @@ static LOGGER: OnceLock<logger::Logger> = OnceLock::new();
 /// }
 /// ```
 pub fn init() -> Result<(), Box<dyn std::error::Error>> {
-    init_with_config("logging.yaml")
+    init_with_yaml("logging.yaml")
 }
 
 pub fn init_docker() -> Result<(), Box<dyn std::error::Error>> {
@@ -37,14 +37,14 @@ pub fn init_docker() -> Result<(), Box<dyn std::error::Error>> {
             let path = path_buf.to_str().unwrap();
             path.to_string()
         }).expect(&format!("Failed to find logging file: logging.yaml"));
-    init_with_config(file)
+    init_with_yaml(file)
 }
 
 pub fn init_rpm() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(debug_assertions))]
     {
         let file = String::from("/etc/attestation_server/logging.yaml");
-        init_with_config(file)
+        init_with_yaml(file)
     }
     #[cfg(debug_assertions)]
     {
@@ -54,7 +54,7 @@ pub fn init_rpm() -> Result<(), Box<dyn std::error::Error>> {
                 path.to_string()
             })
             .unwrap_or_else(|_| "logging.yaml".to_string());
-        init_with_config(file)
+        init_with_yaml(file)
     }
 }
 
@@ -68,12 +68,49 @@ pub fn init_rpm() -> Result<(), Box<dyn std::error::Error>> {
 /// ```
 ///
 /// fn main() {
-///     common_log::init_with_config("logging.yaml").expect("Failed to initialize logger");
+///     common_log::init_with_yaml("logging.yaml").expect("Failed to initialize logger");
 ///     log::info!("Logger initialized");
 /// }
 /// ```
-pub fn init_with_config(config_path: impl Into<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
-    let logger = logger::Logger::new(config_path)?;
+pub fn init_with_yaml(config_path: impl Into<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
+    let logger = logger::Logger::new_from_yaml(config_path)?;
+    if LOGGER.set(logger).is_err() {
+        return Err("Logger already initialized".into());
+    }
+    Ok(())
+}
+
+/// Initialize logging system with config
+///
+/// # Arguments
+/// * `config` - LogConfig info
+///
+/// # Example
+/// ```
+///
+/// fn main() {
+///     use common_log::config::LoggerConfig;
+///     use common_log::init_with_config;
+///     let mut loggers = Vec::new();
+///     let log = LoggerConfig {
+///                 path_prefix: "root".to_string(),
+///                 log_directory: "logs".to_string(),
+///                 log_file_name: "root-ra.log".to_string(),
+///                 max_file_size: 10480,
+///                 max_zip_count: 6,
+///                 level: "info".to_string(),
+///     };
+///     loggers.push(log);
+///     let config = LogConfig {
+///         loggers
+///         };
+///    init_with_config(config).expect("Failed to initialize logger");
+///    log::info!("Logger initialized");
+/// }
+/// ```
+
+pub fn init_with_config(config: LogConfig) -> Result<(), Box<dyn std::error::Error>> {
+    let logger = logger::Logger::new_from_config(config)?;
     if LOGGER.set(logger).is_err() {
         return Err("Logger already initialized".into());
     }
@@ -83,3 +120,4 @@ pub fn init_with_config(config_path: impl Into<PathBuf>) -> Result<(), Box<dyn s
 // Re-export log macros for convenient use in other modules
 use env_config_parse::find_file;
 pub use log::{debug, error, info, trace, warn};
+use crate::config::LogConfig;
