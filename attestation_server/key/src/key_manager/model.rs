@@ -144,8 +144,6 @@ impl VaultResponse {
         // Using Iterator: :chain merges three Vec into one iterator
         self.fsk
             .iter()
-            .chain(self.nsk.iter())
-            .chain(self.tsk.iter())
             .map(|key| key.version.clone())
             // Use the Ord trait implemented by Version for comparison
             .max()
