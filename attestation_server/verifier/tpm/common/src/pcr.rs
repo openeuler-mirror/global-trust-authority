@@ -68,6 +68,10 @@ impl PcrValues {
     /// });
     /// let pcr_values = PcrValues::from_json(&json_value).unwrap();
     /// ```
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the JSON is invalid or missing required fields.
     pub fn from_json(json: &serde_json::Value) -> Result<Self, PluginError> {
         let bank: PcrValues = serde_json::from_value(json.clone())
             .map_err(|e| PluginError::InputError(
@@ -77,12 +81,30 @@ impl PcrValues {
         Ok(Self { hash_alg: bank.hash_alg, pcr_values: bank.pcr_values })
     }
 
+    /// Get the PCR value for a specific index
+    ///
+    /// # Arguments
+    /// 
+    /// * `index` - PCR index to retrieve
+    /// 
+    /// # Returns
+    /// 
+    /// * `Option<&str>` - PCR value as a string, or `None` if not found
     pub fn get_pcr_value(&self, index: u32) -> Option<&str> {
         self.pcr_values.iter()
             .find(|entry| entry.pcr_index == index)
             .map(|entry| entry.pcr_value.as_str())
     }
 
+    /// Get the replay value for a specific index
+    ///
+    /// # Arguments
+    /// 
+    /// * `index` - PCR index to retrieve
+    /// 
+    /// # Returns
+    /// 
+    /// * `Option<&str>` - Replay value as a string, or `None` if not found
     pub fn get_pcr_indices(&self) -> Vec<u32> {
         self.pcr_values.iter()
             .map(|entry| entry.pcr_index)
@@ -138,6 +160,10 @@ impl PcrValues {
     /// let quote_verifier = QuoteVerifier::new(&quote_bytes, &signature_bytes).unwrap();
     /// let result = pcr_values.verify(&quote_verifier).unwrap();
     /// ```
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the PCR values are invalid or missing required fields.
     pub fn verify(&self, quote_verifier: &QuoteVerifier) -> Result<bool, PluginError> {
         // Calculate PCR digest
         let calculated_digest = self.calculate_bank_digest()?;
@@ -171,6 +197,19 @@ impl PcrValues {
         &self.hash_alg
     }
 
+    /// Get the PCR value for a specific PCR index
+    ///
+    /// # Arguments
+    /// 
+    /// * `index` - PCR index to retrieve
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<String, PluginError>` - PCR value as a string, or error if not found
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the PCR value is not found.
     pub fn get_pcr_digest(&self, index: u32) -> Result<String, PluginError> {
         self.pcr_values.iter()
             .find(|e| e.pcr_index == index)
@@ -178,6 +217,19 @@ impl PcrValues {
             .ok_or_else(|| PluginError::InputError("PCR value not found".to_string()))
     }
 
+    /// Get the replay value for a specific PCR index
+    ///
+    /// # Arguments
+    /// 
+    /// * `index` - PCR index to retrieve
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<Option<String>, PluginError>` - Replay value as a string, or error if not found
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the replay value is not found.
     pub fn get_pcr_replay_value(&self, index: u32) -> Result<Option<String>, PluginError> {
         Ok(self.pcr_values
             .iter()
@@ -185,6 +237,19 @@ impl PcrValues {
             .and_then(|entry| entry.replay_value.clone()))
     }
 
+    /// Get the match status for a specific PCR index
+    ///
+    /// # Arguments
+    /// 
+    /// * `index` - PCR index to retrieve
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<Option<bool>, PluginError>` - Match status as a boolean, or error if not found
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the match status is not found.
     pub fn check_is_matched(&mut self) -> Result<bool, PluginError> {
         let mut all_matched = true;
 
@@ -209,6 +274,20 @@ impl PcrValues {
     }
 
     /// Calculates the final PCR value by extending log entries according to TPM's PCR extension logic
+    /// 
+    /// # Arguments
+    /// 
+    /// * `algorithm` - Hash algorithm name (e.g., "sha256", "sm3")
+    /// * `initial_value` - Initial PCR value
+    /// * `log_values` - Vector of log values to extend
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<String, PluginError>` - Final PCR value as a string, or error if calculation fails
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the input values are invalid or missing required fields.
     pub fn replay(
         algorithm: &str,
         initial_value: &str,
@@ -241,6 +320,21 @@ impl PcrValues {
     }
 
     /// Calculates the final PCR value by extending log entries according to TPM's PCR extension logic
+    /// 
+    /// # Arguments
+    /// 
+    /// * `algorithm` - Hash algorithm name (e.g., "sha256", "sm3")
+    /// * `initial_value` - Initial PCR value
+    /// * `target_value` - Target PCR value
+    /// * `log_values` - Vector of log values to extend
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<String, PluginError>` - Final PCR value as a string, or error if calculation fails
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the input values are invalid or missing required fields.
     pub fn replay_with_target(
         algorithm: &str,
         initial_value: &str,

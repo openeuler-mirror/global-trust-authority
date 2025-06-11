@@ -33,7 +33,27 @@ pub struct DbConfig {
 }
 
 impl DbConfig {
-    /// get env
+    /// Loads database configuration from environment variables.
+    ///
+    /// In debug mode, it attempts to load variables from a `.env.dev` file
+    /// located by `env_config_parse::find_file`.
+    ///
+    /// It requires the `DB_TYPE` environment variable to be set to either "mysql" or "postgres".
+    /// Based on `DB_TYPE`, it requires either `MYSQL_DATABASE_URL` or `POSTGRESQL_DATABASE_URL`.
+    ///
+    /// Optional environment variables `DATABASE_MAX_CONNECTIONS` and `DATABASE_TIMEOUT`
+    /// are used for connection pool settings, defaulting to 20 and 30 seconds respectively
+    /// if not set or invalid.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Self)` containing the loaded `DbConfig` on success.
+    /// Returns `Err(DbError)` if required environment variables are missing,
+    /// cannot be parsed, or if `DB_TYPE` is unsupported.
+    /// 
+    /// # Errors
+    /// 
+    /// * `DbError::InvalidDatabaseType` - If `DB_TYPE` is unsupported.
     pub fn from_env() -> Result<Self, DbError> {
         info!("get db config from env");
         #[cfg(debug_assertions)]

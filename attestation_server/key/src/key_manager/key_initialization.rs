@@ -33,11 +33,11 @@ fn set_initialized() {
     *flag = true;
 }
 
-/**
- * Check if already initialized
- *
- * @return Whether already initialized
- */
+ /// Check if already initialized
+ /// 
+ /// # Returns
+ /// 
+ /// * `bool` - Whether already initialized
 pub fn is_initialized() -> bool {
     *IS_INITIALIZED.lock().unwrap()
 }
@@ -104,6 +104,11 @@ impl KeyInitialization for DefaultKeyInitialization {
     }
 }
 
+/// Initialize keys
+/// 
+/// # Returns
+/// 
+/// * `Result<(), KeyManagerError>` - The result of the initialization.
 pub async fn init_keys() -> Result<(), KeyManagerError> {
     let yaml_config_loader = Box::new(YamlConfigLoader);
     let key_api_client = Box::new(KeyApiClient::new());

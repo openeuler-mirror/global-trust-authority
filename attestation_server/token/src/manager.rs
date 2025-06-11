@@ -43,10 +43,14 @@ impl TokenManager {
     ///   or a `GenerateTokenError` if an error occurs during key retrieval, configuration,
     ///   time calculation, or encoding.
     ///
-    /// # Error
+    /// # Errors
     /// * `GenerateTokenError` - If the key is not initialized, fails to retrieve keys,
     ///   invalid key algorithm, fails to get config, fails to get system time,
     ///   token expiration time calculation overflowed, or fails to encode the token.
+    /// 
+    /// # Panics
+    /// 
+    /// * If the token size exceeds the maximum size of 5MB.
     pub async fn generate_token(json_body: &mut Value) -> Result<String, GenerateTokenError> {
         if !is_initialized() {
             error!("Attempted to generate token with uninitialized key.");
@@ -134,9 +138,13 @@ impl TokenManager {
     ///   indicating the verification result and containing the claims and header if successful,
     ///   or a `VerifyTokenError` if an error occurs during key retrieval or verification.
     ///
-    /// # Error
+    /// # Errors
     /// * `VerifyTokenError` - If fails to retrieve public key, invalid key algorithm,
     ///   fails to decode or verify the token.
+    /// 
+    /// # Panics
+    /// 
+    /// * If the token is not a valid JWT.
     pub async fn verify_token(token: &str) -> Result<VerifyTokenResponse, VerifyTokenError> {
         // get_public_key
         let key_info_resp = DefaultCryptoImpl.get_public_key("TSK", None).await.map_err(|e: KeyManagerError| {

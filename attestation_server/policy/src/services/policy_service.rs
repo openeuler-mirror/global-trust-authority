@@ -52,6 +52,11 @@ impl PolicyService {
     /// * `PolicyError::IncorrectFormatError` - If the JSON body is not valid
     /// * `PolicyError::PolicyLimitReached` - If the user has reached the policy limit
     /// * `PolicyError::TooManyRequestsError` - If there's a database error
+    /// 
+    /// # Panics
+    /// 
+    /// 1. If the user ID is not present in the headers
+    /// 2. If the policy ID is not a valid UUID
     pub async fn add_policy(
         req: HttpRequest,
         db: web::Data<Arc<DatabaseConnection>>,
@@ -278,6 +283,10 @@ impl PolicyService {
     /// * `PolicyError::InternalError` - If there's an issue with the configuration
     /// * `PolicyError::IncorrectFormatError` - If the query parameters are invalid
     /// * `PolicyError::DatabaseOperationError` - If there's a database error
+    /// 
+    /// # Panics 
+    /// 
+    /// This function will panic if the user_policy_query_limit configuration is not set
     pub async fn query_policy(
         req: HttpRequest,
         db: web::Data<Arc<DatabaseConnection>>,

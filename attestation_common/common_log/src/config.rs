@@ -29,16 +29,43 @@ pub struct LoggerConfig {
 }
 
 impl LogConfig {
+    /// Loads the configuration from a YAML file.
+    ///
+    /// # Arguments
+    /// 
+    /// * `path` - The path to the YAML file.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Ok(LogConfig)` on success, or a `Box<dyn std::error::Error>` on failure.
+    /// 
+    /// #Errors
+    /// 
+    /// * `std::io::Error` - If the file cannot be read.
     pub fn from_yaml(path: impl Into<PathBuf>) -> Result<Self, Box<dyn std::error::Error>> {
         let config_str = std::fs::read_to_string(path.into())?;
         let config: LogConfig = serde_yaml::from_str(&config_str)?;
         Ok(config)
     }
 
+    /// Gets the logger configuration for a given path prefix.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `path_prefix` - The path prefix to match.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Option<&LoggerConfig>` on success, or `None` on failure.
     pub fn get_logger_config(&self, path_prefix: &str) -> Option<&LoggerConfig> {
         self.loggers.iter().find(|l| path_prefix.starts_with(&l.path_prefix))
     }
 
+    /// Gets the root logger configuration.
+    ///
+    /// # Returns
+    /// 
+    /// Returns `Option<&LoggerConfig>` on success, or `None` on failure.
     pub fn get_root_config(&self) -> Option<&LoggerConfig> {
         self.get_logger_config("root")
     }

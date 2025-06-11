@@ -14,6 +14,16 @@ use std::{env, sync};
 use crate::config::config::{KEY_MANAGER_CERT_PATH, KEY_MANAGER_KEY_PATH, KEY_MANAGER_LOG_LEVEL, KEY_MANAGER_LOG_PATH, KEY_MANAGER_PORT, KEY_MANAGER_ROOT_TOKEN, KEY_MANAGER_SECRET_ADDR, ROOT_CA_CERT_PATH};
 use crate::utils::errors::AppError;
 
+/// Loads environment variables from a `.env` file located in the same directory as the executable.
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or a `Box<dyn std::error::Error>` if an error occurs
+/// (e.g., failing to get the current executable path, its parent directory, or loading the `.env` file).
+/// 
+/// #Errors
+/// 
+/// * `AppError::EnvConfigError` - If the environment variable is not found or cannot be parsed.
 pub fn load_env() -> Result<(), Box<dyn std::error::Error>> {
     let exe_path = env::current_exe()?;
     let bin_dir = if let Some(dir) = exe_path.parent() {
@@ -43,6 +53,10 @@ pub struct Environment {
 pub static ENVIRONMENT_CONFIG: sync::OnceLock<Environment> = sync::OnceLock::new();
 
 impl Environment {
+
+    /// Creates a default, empty instance of `Environment`.
+    ///
+    /// All fields are initialized to default values (0 for u16, empty strings for String).
     pub fn default() -> Self {
         Self {
             port : 0,
@@ -56,7 +70,15 @@ impl Environment {
         }
     }
 
-    /// desc: check .env config is existed
+    /// Checks if all required environment variables are set and can be parsed.
+    ///
+    /// This function calls individual `get_*` functions to validate the presence
+    /// and format of each expected environment variable.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if all required environment variables are found and valid,
+    /// or an `AppError::EnvConfigError` if any required variable is missing or invalid.
     pub fn check() -> Result<(), AppError> {
         get_port()?;
         get_cert()?;
@@ -69,7 +91,11 @@ impl Environment {
         Ok(())
     }
 
-    /// desc: set env value to global static params 
+    /// set env value to global static params 
+    /// 
+    /// # Returns
+    /// 
+    /// Returns a reference to the global `Environment` instance.
     pub fn global() -> &'static Environment {
         ENVIRONMENT_CONFIG.get_or_init(|| {
             let mut environment = Environment::default();
@@ -87,6 +113,14 @@ impl Environment {
 }
 
 /// desc: get port from .env config
+/// 
+/// # Returns
+/// 
+/// Returns a `u16` value representing the port number.
+/// 
+/// # Errors
+/// 
+/// * `AppError::EnvConfigError` - If the environment variable is not found or cannot be parsed.
 pub fn get_port() -> Result<u16, AppError> {
     let port_str = env::var(KEY_MANAGER_PORT).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_PORT)))?;
     let port = port_str.parse::<u16>().map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_PORT)))?;
@@ -94,42 +128,98 @@ pub fn get_port() -> Result<u16, AppError> {
 }
 
 /// desc: get cert path from .env config
+/// 
+/// # Returns
+/// 
+/// Returns a `String` value representing the cert path.
+/// 
+/// # Errors
+/// 
+/// * `AppError::EnvConfigError` - If the environment variable is not found or cannot be parsed.
 pub fn get_cert() -> Result<String, AppError> {
     let cert = env::var(KEY_MANAGER_CERT_PATH).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_CERT_PATH)))?;
     Ok(cert)
 }
 
 /// desc: get private key path from .env config
+/// 
+/// # Returns
+/// 
+/// Returns a `String` value representing the private key path.
+/// 
+/// # Errors
+/// 
+/// * `AppError::EnvConfigError` - If the environment variable is not found or cannot be parsed.
 pub fn get_key() -> Result<String, AppError> {
     let key = env::var(KEY_MANAGER_KEY_PATH).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_KEY_PATH)))?;
     Ok(key)
 }
 
 /// desc: get log level from .env config
+/// 
+/// # Returns
+/// 
+/// Returns a `String` value representing the log level.
+/// 
+/// # Errors
+/// 
+/// * `AppError::EnvConfigError` - If the environment variable is not found or cannot be parsed.
 pub fn get_log_level() -> Result<String, AppError> {
     let log_level = env::var(KEY_MANAGER_LOG_LEVEL).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_LOG_LEVEL)))?;
     Ok(log_level)
 }
 
 /// desc: get log path from .env config
+/// 
+/// # Returns
+/// 
+/// Returns a `String` value representing the log path.
+/// 
+/// # Errors
+/// 
+/// * `AppError::EnvConfigError` - If the environment variable is not found or cannot be parsed.
 pub fn get_log_path() -> Result<String, AppError> {
     let log_path = env::var(KEY_MANAGER_LOG_PATH).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_LOG_PATH)))?;
     Ok(log_path)
 }
 
 /// desc: get openbao root token from .env config
+/// 
+/// # Returns
+/// 
+/// Returns a `String` value representing the openbao root token.
+/// 
+/// # Errors
+/// 
+/// * `AppError::EnvConfigError` - If the environment variable is not found or cannot be parsed.
 pub fn get_root_token() -> Result<String, AppError> {
     let root_token = env::var(KEY_MANAGER_ROOT_TOKEN).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_ROOT_TOKEN)))?;
     Ok(root_token)
 }
 
 /// desc: get openbao addr from .env config
+/// 
+/// # Returns
+/// 
+/// Returns a `String` value representing the openbao addr.
+/// 
+/// # Errors
+/// 
+/// * `AppError::EnvConfigError` - If the environment variable is not found or cannot be parsed.
 pub fn get_addr() -> Result<String, AppError> {
     let addr = env::var(KEY_MANAGER_SECRET_ADDR).map_err(|_| AppError::EnvConfigError(String::from(KEY_MANAGER_SECRET_ADDR)))?;
     Ok(addr)
 }
 
 /// desc: get root ca cert from .env config
+/// 
+/// # Returns
+/// 
+/// Returns a `String` value representing the root ca cert.
+/// 
+/// # Errors
+/// 
+/// * `AppError::EnvConfigError` - If the environment variable is not found or cannot be parsed.
 pub fn get_root_ca_cert() -> Result<String, AppError> {
     let ca_cert = env::var(ROOT_CA_CERT_PATH).map_err(|_| AppError::EnvConfigError(String::from(ROOT_CA_CERT_PATH)))?;
     Ok(ca_cert)

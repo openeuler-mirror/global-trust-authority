@@ -14,6 +14,17 @@ use std::env;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
+/// Recursively searches for a file with the given name starting from the current directory.
+///
+/// # Arguments
+///
+/// * `file_name` - The name of the file to search for.
+///
+/// # Returns
+///
+/// Returns `Ok(PathBuf)` containing the canonicalized absolute path of the found file,
+/// or `Err(String)` if the file is not found or an error occurs during directory traversal
+/// or path canonicalization.
 pub fn find_file(file_name: &str) -> Result<PathBuf, String> {
     // Get the absolute path of the current running directory
     let current_dir = env::current_dir()

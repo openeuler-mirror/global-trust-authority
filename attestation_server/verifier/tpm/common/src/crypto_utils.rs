@@ -34,6 +34,20 @@ pub enum SignatureType {
 pub struct CryptoVerifier;
 
 impl CryptoVerifier {
+    /// Converts an `AlgorithmId` enum value to an OpenSSL `MessageDigest`.
+    ///
+    /// # Arguments
+    ///
+    /// * `alg` - The `AlgorithmId` to convert.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(MessageDigest)` on success, or `Err(PluginError::InputError)`
+    /// if the algorithm is not supported.
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the algorithm is not supported.
     pub fn algorithm_to_message_digest(alg: &AlgorithmId) -> Result<MessageDigest, PluginError> {
         match alg {
             AlgorithmId::Sha1 => Ok(MessageDigest::sha1()),
@@ -47,6 +61,21 @@ impl CryptoVerifier {
         }
     }
 
+    /// Converts a hash algorithm name string to an OpenSSL `MessageDigest`.
+    /// The string comparison is case-insensitive.
+    ///
+    /// # Arguments
+    ///
+    /// * `hash_str` - The string name of the hash algorithm (e.g., "sha256", "sm3").
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(MessageDigest)` on success, or `Err(PluginError::InputError)`
+    /// if the algorithm name is not recognized.
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the algorithm name is not recognized.    
     pub fn hash_str_to_message_digest(hash_str: &str) -> Result<MessageDigest, PluginError> {
         match hash_str.to_lowercase().as_str() {
             "sha1" => Ok(MessageDigest::sha1()),
@@ -60,7 +89,27 @@ impl CryptoVerifier {
         }
     }
 
-    /// Generic signature verification method
+    /// Verifies a digital signature against the original data using a public key.
+    /// Supports RSA, RSA-PSS, ECDSA, and SM2 signature types.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The original data that was signed.
+    /// * `signature` - The signature bytes to verify.
+    /// * `hash_alg` - The message digest algorithm used for hashing the data before signing.
+    /// * `public_key` - The public key corresponding to the private key used for signing.
+    /// * `sig_type` - The type of signature (e.g., `SignatureType::Rsa`, `SignatureType::RsaPss`).
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the signature is valid.
+    /// Returns `Err(PluginError::InternalError)` if an internal OpenSSL error occurs
+    /// during verification setup or process.
+    /// Returns `Err(PluginError::InputError)` if the signature does not match the data.
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InternalError` - If an internal OpenSSL error occurs during verification setup or process.
     pub fn verify_signature(
         data: &[u8],
         signature: &[u8],
@@ -72,36 +121,36 @@ impl CryptoVerifier {
             .map_err(|e| PluginError::InternalError(
                 format!("Failed to create verifier: {}", e)
             ))?;
-        
+
         // Set specific parameters based on signature type
         if sig_type == SignatureType::RsaPss {
             verifier.set_rsa_padding(Padding::PKCS1_PSS)
                 .map_err(|e| PluginError::InternalError(
                     format!("Failed to set PSS padding: {}", e)
                 ))?;
-            
+
             verifier.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
                 .map_err(|e| PluginError::InternalError(
                     format!("Failed to set salt length: {}", e)
                 ))?;
         }
-        
+
         verifier.update(data)
             .map_err(|e| PluginError::InternalError(
                 format!("Failed to update verifier: {}", e)
             ))?;
-        
+
         let result = verifier.verify(signature)
             .map_err(|e| PluginError::InternalError(
                 format!("{:?} signature verification failed with error: {}", sig_type, e)
             ))?;
-            
+
         if !result {
             return Err(PluginError::InputError(
                 format!("{:?} signature verification failed - signature does not match data", sig_type)
             ));
         }
-        
+
         Ok(())
     }
 }

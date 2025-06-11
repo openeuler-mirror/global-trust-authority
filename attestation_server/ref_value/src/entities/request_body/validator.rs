@@ -15,6 +15,19 @@ use validator::ValidationError;
 pub struct Validator {}
 
 impl Validator {
+    /// Validate ids
+    /// 
+    /// # Arguments
+    /// 
+    /// * `ids` - ids
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<(), ValidationError>` - Success or error
+    /// 
+    /// # Errors
+    /// 
+    /// * `ValidationError` - Failed to validate ids
     pub fn validate_ids_could_not_none(ids: &Option<Vec<String>>) -> Result<(), ValidationError> {
         match &ids {
             Some(ids) => {
@@ -26,6 +39,19 @@ impl Validator {
         }
     }
     
+    /// Validate ids
+    ///
+    /// # Arguments
+    /// 
+    /// * `ids` - ids
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<(), ValidationError>` - Success or error
+    /// 
+    /// # Errors
+    /// 
+    /// * `ValidationError` - Failed to validate ids
     pub fn validate_ids_could_none(ids: &Option<Vec<String>>) -> Result<(), ValidationError> {
         if let Some(ids) = ids {
             return Self::validate_ids(ids);
@@ -40,6 +66,19 @@ impl Validator {
         Ok(())
     }
 
+    /// Validate attester type
+    ///
+    /// # Arguments
+    /// 
+    /// * `attester_type` - attester type
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<(), ValidationError>` - Success or error
+    /// 
+    /// # Errors
+    /// 
+    /// * `ValidationError` - Failed to validate attester type
     pub fn validate_attester_type_could_none(attester_type: &Option<String>) -> Result<(), ValidationError> {
         if let Some(attester_type) = attester_type {
             return Self::validate_attester_type(attester_type);
@@ -47,6 +86,19 @@ impl Validator {
         Ok(())
     }
 
+    /// Validate attester type
+    ///
+    /// # Arguments
+    /// 
+    /// * `attester_type` - attester type
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<(), ValidationError>` - Success or error
+    /// 
+    /// # Errors
+    /// 
+    /// * `ValidationError` - Failed to validate attester type
     pub fn validate_attester_type_could_not_none(attester_type: &Option<String>) -> Result<(), ValidationError> {
         match &attester_type {
             Some(attester_type) => {

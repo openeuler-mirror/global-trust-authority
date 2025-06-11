@@ -40,6 +40,18 @@ fn parse_level(level: &str) -> LevelFilter {
 }
 
 /// desc: init log config
+/// 
+/// # Arguments
+/// 
+/// * `enable_stdout` - if true, log will output to stdout
+/// 
+/// # Returns
+/// 
+/// * `Result<(), SetLoggerError>` - if success, return Ok(())
+/// 
+/// # Errors
+/// 
+/// * `SetLoggerError` - if failed, return Err(SetLoggerError)
 pub fn init_logger(enable_stdout: bool) -> Result<(), SetLoggerError> {
     let log_level = &Environment::global().log_level;
     let log_path = &Environment::global().log_path;

@@ -136,6 +136,9 @@ impl CertRepository {
     ///
     /// # Error
     /// * `DbErr` - If there is an error during the database operation.
+    /// 
+    /// # Panics
+    /// * If there is an error generating a new CRL ID.
     pub async fn get_user_crl_id(db: &DatabaseConnection, user_id: &str, name: String) -> Result<String, DbErr> {
         let query = CrlInfo::find();
         let crl_info =

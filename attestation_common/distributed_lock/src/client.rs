@@ -23,12 +23,27 @@ pub struct LockRedisClient {
 
 impl LockRedisClient {
     /// Create a RedisClient instance
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Ok(())` on success, or a `RedisError` on failure.
     pub fn new() -> Result<Self> {
         let client = RedisClient::get_instance().unwrap();
         Ok(Self { client })
     }
 
     /// Acquire lock
+    /// 
+    /// # Arguments
+    /// 
+    /// * `key` - The key to set.
+    /// * `value` - The value to store.
+    /// * `ttl` - An optional duration for the key's expiration.
+    /// * `timeout` - An optional duration for the lock's timeout.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Ok(())` on success, or a `RedisError` on failure.
     pub fn acquire_lock(&self, key: &str, value: &str, ttl: u64, timeout: u64) -> Result<bool> {
         let conn = self.client.clone();
         let start = std::time::Instant::now();
@@ -47,6 +62,15 @@ impl LockRedisClient {
     }
 
     /// Release lock
+    /// 
+    /// # Arguments
+    /// 
+    /// * `key` - The key to set.
+    /// * `value` - The value to store.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Ok(())` on success, or a `RedisError` on failure.
     pub fn release_lock(&self, key: &str, value: &str) -> Result<bool> {
         let mut conn = self.client.clone();
         let result: i32 = redis::Script::new(RELEASE_LOCK)
@@ -57,6 +81,14 @@ impl LockRedisClient {
     }
 
     /// Acquire the expiration time of the lock
+    /// 
+    /// # Arguments
+    /// 
+    /// * `key` - The key to set.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Ok(())` on success, or a `RedisError` on failure.
     pub fn get_lock_ttl(&self, key: &str) -> Result<Option<u64>> {
         let conn = self.client.clone();
         let ttl = conn.ttl(key).unwrap();
@@ -68,6 +100,16 @@ impl LockRedisClient {
     }
 
     /// Extend the expiration time of the lock
+    /// 
+    /// # Arguments
+    /// 
+    /// * `key` - The key to set.
+    /// * `value` - The value to store.
+    /// * `ttl` - An optional duration for the key's expiration.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Ok(())` on success, or a `RedisError` on failure.
     pub fn extend_lock_ttl(&self, key: &str, value: &str, ttl: u64) -> Result<bool> {
         let mut conn = self.client.clone();
         let result: i32 = redis::Script::new(EXTEND_LOCK)

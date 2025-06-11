@@ -128,6 +128,19 @@ impl KeyStore {
             .collect()
     }
 
+    /// Retrieves the latest version of a KeyPair from the store for a specific key type.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `key_type` - The type of key (e.g., "FSK", "NSK", "TSK").
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<&str>` containing the latest version string for the given key type if found,
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the internal `RwLock` is poisoned during a read operation.
     pub fn get_latest_version(&self, key_type: &str) -> Option<&str> {
         let latest_version = self.latest_versions.get(key_type)?.get_or_init(|| {
             let versions = self.inner.get(key_type).unwrap();

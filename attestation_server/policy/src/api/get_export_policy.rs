@@ -29,6 +29,10 @@ lazy_static! {
 /// 
 /// # Returns
 /// * `Result<String, PolicyError>` - Returns policy content string on success, error on failure
+/// 
+/// # Error
+/// 
+/// * `PolicyError::InternalError` - Failed to acquire read lock on export policy cache
 pub fn get_export_policy(attester_type: &str) -> Result<String, PolicyError> {
     let cache_lock = &EXPORT_POLICY_CACHE;
     if let Some(content) = ExportPolicyHandler::get_policy_from_cache(attester_type, cache_lock)? {

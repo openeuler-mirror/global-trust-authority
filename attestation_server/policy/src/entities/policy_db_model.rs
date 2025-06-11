@@ -52,7 +52,11 @@ pub struct Model {
 pub enum Relation {}
 
 impl Relation {
-    // Directly panic when attempting to use associated table behavior
+    /// Directly panic when attempting to use associated table behavior
+    /// 
+    /// # Returns
+    /// 
+    /// * `panic` - Panic
     pub fn related_entity() -> RelationDef {
         panic!("Associated table behavior not realized")
     }
