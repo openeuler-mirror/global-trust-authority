@@ -399,7 +399,7 @@ curl -X POST http://localhost:8088/global-trust-authority/agent/v1/tokens -d '{
       }
     ],
     "challenge": true,
-    "attester_data": "test_data"
+    "attester_data": {"test_key": "test_value"}
 }'
 
 curl -X POST http://localhost:8088/global-trust-authority/agent/v1/tokens -d '{
@@ -410,7 +410,7 @@ curl -X POST http://localhost:8088/global-trust-authority/agent/v1/tokens -d '{
       }
     ],
     "challenge": true,
-    "attester_data": "test_data"
+    "attester_data": {"test_key": "test_value"}
 }'
 ```
 
@@ -423,10 +423,10 @@ curl -X POST http://localhost:8088/global-trust-authority/agent/v1/evidences \
     "attester_types": ["tpm_boot", "tpm_ima"],
     "nonce_type": "default",
     "nonce": {
-      "iat": 123456789,
-      "value": "5J7Q3sQbF6Yp6R6T1Qm8k1gX7j9YzvH4l6eQ2J1s8x0a9vT3h2K5z8W0u4x9V7n2b1c6e3w0p8m7u5q9t4r3y2z0v1s6d8a5g",
-      "signature": "Y0t2bGxwR1F6dGJmU1l4N3lBUXk2T2JZc3h5T0l6Z3Z4d2lQd2F6R0ZyZ3l6Z2V4V2V5d2F0Y3l6a2N6d2p6d2x5d2V6d2s="
+      "iat": 1749721474,
+      "value": "ImQiIm+6vwdKhAH6FC58XFxfuQ8TWvGxO6qlYwQK6P11Fi/ole/VMN9+4PJodOGt8E6+sbkfJOmuU96/Wc0JSw==",
+      "signature": "eEZHR66P+wPOuTTJanS0OhjqPLquLlJci2KxdptPz8+yLJpOVsOSUDsdeadv0a3aFStY130NdthZ/aBWQNWusblABhq0uepaS/29UFVUXT9tbSQG2PGhsG1+NQxkNr1/u/zktQLqThk9oxiEF8nwFozZTyaSJAvzV5b/3lIvJxa588OUug6PhurMKxIOx0KqpPxv/sHq74IUjW50r4ZtLUlRUxERLPORuobHaCjmJ9UMby6NZ6xlvjKVb5gAWGcupZS4M1PSAYb3+90MpflFrfu6gGLbe29o5CIWDgrwMYfgFGsJ9GaWdTZ20rbdn60USYPvManw0dkNr4Q4tKhs4VYX+IkByVddfexg9t5en/wC8axVk2zH6C7edoepgZfW2AJo8TKYdb8XEGIBteadlvGohX3w957/uZc3lAcJmNEImYTEzwJu4aj4pcOH54YhOWoIYY3fGaIw5JQ87VslG256VUo0h8QIlYUEtEisFpZzwuInOlNwB9o4TMbPuosd"
     },
-    "attester_data": "custom_data"
+    "attester_data": {"test_key": "test_value"}
   }'
 ```
