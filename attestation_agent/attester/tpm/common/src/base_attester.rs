@@ -24,6 +24,8 @@ use openssl::nid::Nid;
 use tss_esapi::{
     Context,
     structures::{
+        PcrSelection,
+        PcrSelectionList,
         PcrSelectionListBuilder,
         PcrSlot,
         Data,
@@ -46,6 +48,8 @@ use tss_esapi::{
     abstraction::nv,
 };
 use std::io::Error as IoError;
+
+const MAX_QUOTE_NONCE_SIZE: usize = 32;
 
 pub trait TpmPluginBase: PluginBase + AgentPlugin {
     fn config(&self) -> &TpmPluginConfig;
@@ -117,7 +121,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         Ok(ctx)
     }
 
-    fn get_nv_cert_data(context: &mut Context, nv_index: u64) -> Result<Option<Vec<u8>>, PluginError> {
+    fn get_nv_cert_data(context: &mut Context, nv_index: u64) -> Result<Vec<u8>, PluginError> {
         let index: u32 = u32::try_from(nv_index)
             .map_err(|_| PluginError::InternalError("Invalid NV index value".to_string()))?;
         let nv_idx: NvIndexTpmHandle = NvIndexTpmHandle::new(index)
@@ -132,22 +136,13 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
             nv::read_full(ctx, nv_auth_handle, nv_idx)
         })
             .map_err(|e| PluginError::InternalError(format!("Failed to read certificate from NV index: {}", e)))?;
-        Ok(Some(cert_data))
+        Ok(cert_data)
     }
 
     // Read X509 certificate from TPM NV
     fn read_cert_from_nv(ctx: &mut Context, nv_index: u64) -> Result<X509, PluginError> {
-        let cert1_data = Self::get_nv_cert_data(ctx, nv_index)?;
-        let cert2_data = match Self::get_nv_cert_data(ctx, nv_index + 1) {
-            Ok(data) => data,
-            Err(_) => None,
-        };
+        let cert_data = Self::get_nv_cert_data(ctx, nv_index)?;
 
-        // combine cert1_data and cert2_data
-        let mut cert_data = cert1_data.unwrap_or_default();
-        if let Some(data2) = cert2_data {
-            cert_data.extend_from_slice(&data2);
-        }
         // Convert to X509 certificate format
         X509::from_der(&cert_data)
             .map_err(|e| PluginError::InternalError(format!("Invalid certificate format: {}", e)))
@@ -233,21 +228,18 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         // check PCRs for specified algorithm
         match capability_data {
             CapabilityData::AssignedPcr(pcrs_data) => {
-                let mut found_matching_algo = false;
-
-                for pcr_select in pcrs_data.get_selections() {
-                    if pcr_select.hashing_algorithm() == pcr_hash_alg {
-                        found_matching_algo = true;
-                        if pcr_select.selected().is_empty() {
-                            return Err(PluginError::InternalError(
-                                format!("No PCRs available for hash algorithm {:?}", pcr_hash_alg)
-                            ));
-                        }
-                    }
-                }
-                if !found_matching_algo {
-                    return Err(PluginError::InternalError(
+                // Find PCR selection for the specified hash algorithm
+                let pcr_selection: &PcrSelection = pcrs_data.get_selections()
+                    .iter()
+                    .find(|pcr_select| pcr_select.hashing_algorithm() == pcr_hash_alg)
+                    .ok_or_else(|| PluginError::InternalError(
                         format!("Hash algorithm {:?} is not supported by TPM", pcr_hash_alg)
+                    ))?;
+
+                // Check if any PCRs are available for the algorithm
+                if pcr_selection.selected().is_empty() {
+                    return Err(PluginError::InternalError(
+                        format!("No PCRs available for hash algorithm {:?}", pcr_hash_alg)
                     ));
                 }
             },
@@ -305,70 +297,87 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         Ok(pem_cert)
     }
 
-    fn collect_pcrs(&self) -> Result<Pcrs, PluginError> {
-        // Implementation of collect_pcrs (same for all plugins)
-        // Create a new TPM context
-        let mut context = self.context_new()?;
-        let pcr_hash_alg = Self::hash_alg_from_str(self.config().pcr_selection.hash_alg.as_str())?;
+    fn collect_pcrs_quote(&self, nonce: &[u8]) -> Result<(Quote, Pcrs), PluginError> {
+        let mut context: Context = self.context_new()?;
+        let pcr_hash_alg: HashingAlgorithm = Self::hash_alg_from_str(self.config().pcr_selection.hash_alg.as_str())?;
 
         // Check if PCRs exist for the specified hash algorithm
         Self::check_pcr_availability(&mut context, pcr_hash_alg)?;
+        let pcr_banks: &Vec<i32> = &self.config().pcr_selection.banks;
 
-        // Build PCR selection list based on configured PCR selections
-        let mut pcr_selection_builder = PcrSelectionListBuilder::new();
-
-        let pcr_banks = self.config().pcr_selection.banks.clone();
         // Check if any PCR bank index is out of valid range (0-23)
         if let Some(invalid_pcr) = pcr_banks.iter().find(|&&pcr| !(0..=23).contains(&pcr)) {
             return Err(PluginError::InternalError(
                 format!("Invalid PCR bank index {} in configuration. PCR indices must be between 0 and 23", invalid_pcr)
             ));
         }
-        let pcr_slots: Vec<PcrSlot> = Self::pcr_slots_from_indices(&pcr_banks);
-        // Add the PCR selection to the builder
-        pcr_selection_builder = pcr_selection_builder.with_selection(pcr_hash_alg, &pcr_slots);
 
         // Build the PCR selection list
-        let pcr_selection_list = pcr_selection_builder.build()
+        let pcr_slots: Vec<PcrSlot> = Self::pcr_slots_from_indices(pcr_banks);
+        let pcr_selection_list: PcrSelectionList = PcrSelectionListBuilder::new()
+            .with_selection(pcr_hash_alg, &pcr_slots)
+            .build()
             .map_err(|e| PluginError::InternalError(format!("Failed to create PCR selection list: {}", e)))?;
 
-        let (_, _, pcr_digests) = context.pcr_read(pcr_selection_list)
+        let quote: Quote = self.collect_quote(&mut context, pcr_selection_list.clone(), nonce)?;
+        let pcrs: Pcrs = self.collect_pcrs(&mut context, pcr_selection_list, pcr_banks)?;
+
+        Ok((quote, pcrs))
+    }
+
+    fn collect_pcrs(
+        &self,
+        context: &mut Context,
+        pcr_selection_list: PcrSelectionList,
+        pcr_banks: &[i32]
+    ) -> Result<Pcrs, PluginError> {
+        let (_, pcr_selection_out, pcr_digests) = context.pcr_read(pcr_selection_list)
             .map_err(|e| PluginError::InternalError(format!("Failed to read PCR values: {}", e)))?;
 
-        // Get the selected PCR indices
-        let pcr_indices = self.config().pcr_selection.banks.clone();
+        // Get the first PCR selection (currently only one selection is supported)
+        let pcr_selection: &PcrSelection = pcr_selection_out.get_selections().first()
+            .ok_or_else(|| PluginError::InternalError("No PCR selection found".to_string()))?;
 
-        // Convert PCR values to hex format and associate with correct PCR indices
-        let mut pcr_values: Vec<PcrValue> = Vec::new();
-        
-        // Iterate through the PCR digests
-        let values = pcr_digests.value();
-        for (i, digest) in values.iter().enumerate() {
-            // Use the corresponding PCR index if available, otherwise use the position
-            let pcr_index = if i < pcr_indices.len() {
-                pcr_indices[i]
-            } else {
-                (i as i32).try_into().unwrap()
-            };
-            
-            pcr_values.push(PcrValue {
-                pcr_index: pcr_index,
-                pcr_value: hex::encode(digest.value()),
-            });
+        // Validate PCR selection results
+        let selected_count: usize = pcr_selection.selected().len();
+        let expected_count: usize = pcr_banks.len();
+        let digest_count: usize = pcr_digests.value().len();
+
+        if selected_count != expected_count || selected_count != digest_count {
+            return Err(PluginError::InternalError(format!(
+                "PCR selection mismatch - expected: {}, selected: {}, digests: {}",
+                expected_count, selected_count, digest_count
+            )));
         }
+
+        // Build PCR values list
+        let pcr_values: Vec<PcrValue> = pcr_selection
+            .selected()
+            .iter()
+            .zip(pcr_digests.value())
+            .zip(pcr_banks.iter())
+            .map(|((_selection, digest), &bank_index)| PcrValue {
+                pcr_index: bank_index,
+                pcr_value: hex::encode(digest.value()),
+            })
+            .collect();
+
         // Return the Pcrs struct
         Ok(Pcrs {
             hash_alg: self.config().pcr_selection.hash_alg.clone(),
             pcr_values,
         })
     }
-    
-    fn collect_quote(&self, nonce: &[u8]) -> Result<Quote, PluginError> {
-        // Trim the nonce to 32 bytes if it exceeds 32 bytes
-        let nonce = &nonce[..std::cmp::min(nonce.len(), 32)];
 
-        // Create a new TPM context
-        let mut context = self.context_new()?;
+    fn collect_quote(
+        &self,
+        context: &mut Context,
+        pcr_selection_list: PcrSelectionList,
+        nonce: &[u8]
+    ) -> Result<Quote, PluginError> {
+        // Trim the nonce to 32 bytes if it exceeds 32 bytes
+        let nonce: &[u8] = &nonce[..std::cmp::min(nonce.len(), MAX_QUOTE_NONCE_SIZE)];
+
         // Get the persistent AK handle and convert it to KeyHandle
         let persistent_handle = PersistentTpmHandle::new(self.config().ak_handle as u32)
             .map_err(|e| PluginError::InternalError(format!("Invalid AK handle value: {}", e)))?;
@@ -376,29 +385,6 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         let ak_handle: KeyHandle = context.tr_from_tpm_public(tpm_handle)
             .map_err(|e| PluginError::InternalError(format!("Failed to get AK handle from TPM: {}", e)))?
             .into();
-
-        // Build PCR selection list based on configured PCR selections
-        let mut pcr_selection_builder = PcrSelectionListBuilder::new();
-        
-        // Convert the hash algorithm string to HashingAlgorithm
-        let pcr_hash_alg = Self::hash_alg_from_str(self.config().pcr_selection.hash_alg.as_str())?;
-
-        let pcr_banks = self.config().pcr_selection.banks.clone();
-        // Check if any PCR bank index is out of valid range (0-23)
-        if let Some(invalid_pcr) = pcr_banks.iter().find(|&&pcr| !(0..=23).contains(&pcr)) {
-            return Err(PluginError::InternalError(
-                format!("Invalid PCR bank index {} in configuration. PCR indices must be between 0 and 23", invalid_pcr)
-            ));
-        }
-        // Convert the PCR selections to PcrSlot values
-        let pcr_slots: Vec<PcrSlot> = Self::pcr_slots_from_indices(&pcr_banks);
-        
-        // Add the PCR selection to the builder
-        pcr_selection_builder = pcr_selection_builder.with_selection(pcr_hash_alg, &pcr_slots);
-        
-        // Build the PCR selection list
-        let pcr_selection_list = pcr_selection_builder.build()
-            .map_err(|e| PluginError::InternalError(format!("Failed to create PCR selection list: {}", e)))?;
 
         // Create qualifying data from nonce
         let qualifying_data = Data::try_from(nonce.to_vec())
@@ -474,12 +460,8 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         // collect ak_cert, validate node_id
         let ak_cert = self.collect_aik(node_id)?;
 
-        // collect quote
-        let quote = self.collect_quote(nonce)?;
-        
-        // collect pcrs
-        let pcrs = self.collect_pcrs()?;
-        
+        let (quote, pcrs) = self.collect_pcrs_quote(nonce)?;
+
         // Use the plugin's own collect_log implementation
         let logs = self.collect_log()?;
 

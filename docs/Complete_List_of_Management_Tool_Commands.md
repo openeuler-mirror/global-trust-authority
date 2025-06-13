@@ -33,7 +33,7 @@ sudo attestation_cli -u "test_01" certificate set \
 	--is-default
 
 #Insert the list of revocations
-sudo attestation_cli -u "test_lyt" certificate set \
+sudo attestation_cli -u "test_01" certificate set \
 	--name "crl.pem" \
 	--cert-type "crl" \
 	--crl-content "-----BEGIN X509 CRL-----
@@ -62,7 +62,7 @@ sudo attestation_cli -u "test_01" certificate delete \
 	--cert-type "policy" 
 	
 #Delete revoked certificate
-sudo attestation_cli -u "test_lyt" certificate delete \
+sudo attestation_cli -u "test_01" certificate delete \
 	--cert-type "crl" \
 	--ids "7763f0a1-385a-43b8-84b8-4e4e448de73f"
 ```
@@ -111,7 +111,7 @@ sudo attestation_cli -u "test_01" certificate get \
 	--ids "id1" "id2"
 	
 # Query Revocation Certificate
-sudo attestation_cli -u "test_lyt" certificate get \
+sudo attestation_cli -u "test_01" certificate get \
 	--cert-type "crl" 
 ```
 
