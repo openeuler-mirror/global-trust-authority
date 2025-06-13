@@ -52,7 +52,11 @@ impl TokenRequest {
 pub struct TokenManager;
 
 impl TokenManager {
-    /// Main function to get a token, using cache if possible or performing a challenge if needed
+    /// Gets a token based on the provided request.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the token cannot be retrieved.
     pub async fn get_token(token_request: &TokenRequest) -> Result<serde_json::Value, TokenError> {
         if !token_request.challenge.unwrap_or(false) {
             if let Some(token) = get_cached_token_for_current_node() {

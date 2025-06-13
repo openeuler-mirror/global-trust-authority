@@ -19,6 +19,11 @@ pub trait LockGuard {}
 
 /// Cross-platform process lock trait
 pub trait TpmLock: Send + Sync {
+    /// Acquires a lock with the specified timeout.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the lock cannot be acquired.
     fn acquire(&self, timeout: Duration) -> Result<Box<dyn LockGuard>, ChallengeError>;
 }
 
@@ -58,6 +63,15 @@ pub mod platform {
     }
 
     impl GlibcSemaphoreLock {
+        /// Creates a new instance of the process lock.
+        ///
+        /// # Errors
+        ///
+        /// Returns an error if the process lock cannot be created.
+        ///
+        /// # Panics
+        ///
+        /// This function may panic if the lock name cannot be created.
         pub fn new() -> Result<Self, ChallengeError> {
             let c_name = CString::new("/tpm_lock").unwrap();
             let sem = unsafe { sem_open(c_name.as_ptr(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, 1 as c_uint) };
@@ -70,6 +84,11 @@ pub mod platform {
     }
 
     impl TpmLock for GlibcSemaphoreLock {
+        /// Acquires a lock with the specified timeout.
+        ///
+        /// # Errors
+        ///
+        /// Returns an error if the lock cannot be acquired.
         fn acquire(&self, timeout: Duration) -> Result<Box<dyn LockGuard>, ChallengeError> {
             let start = Instant::now();
             while start.elapsed() < timeout {
@@ -88,6 +107,11 @@ pub mod platform {
         }
     }
 
+    /// Acquires the process lock.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the process lock cannot be acquired.
     pub fn acquire_process_lock() -> Result<Box<dyn LockGuard>, ChallengeError> {
         GlibcSemaphoreLock::new()?.acquire(Duration::from_secs(120))
     }

@@ -110,20 +110,32 @@ impl GetEvidenceResponse {
     }
 }
 
-/// Set the global cached tokens (async)
+/// Sets the cached tokens for the current node.
+///
+/// # Panics
+///
+/// This function may panic if the lock cannot be acquired.
 pub fn set_cached_tokens(tokens: &[NodeToken]) {
     let mut global = GLOBAL_TOKENS.lock().unwrap();
     *global = tokens.to_vec();
 }
 
-/// Get the cached token for current `node_id` as `serde_json::Value` (sync)
+/// Gets the cached token for the current node.
+///
+/// # Panics
+///
+/// This function may panic if the lock cannot be acquired.
 pub fn get_cached_token_for_current_node() -> Option<Value> {
     let node_id = get_node_id().ok()?;
     let global = GLOBAL_TOKENS.lock().unwrap();
     global.iter().find(|nt| nt.node_id == node_id).map(|nt| nt.token.clone())
 }
 
-/// Get the node ID (UUID) from configuration
+/// Gets the node ID.
+///
+/// # Errors
+///
+/// Returns an error if the node ID cannot be retrieved.
 pub fn get_node_id() -> Result<String, ChallengeError> {
     let config = AGENT_CONFIG.get_instance().map_err(|e| {
         log::error!("Failed to get AGENT_CONFIG instance: {}", e);
@@ -368,7 +380,15 @@ fn collect_from_enabled_plugins(nonce_value: &Option<String>) -> Result<Vec<Evid
     collect_evidences_for_types(attester_iter, nonce_value, false, true)
 }
 
-/// Core function to collect evidences from attester info or enabled plugins
+/// Collects evidence based on the provided attester information and nonce value.
+///
+/// # Errors
+///
+/// Returns an error if the evidence collection fails.
+///
+/// # Panics
+///
+/// This function may panic if the attester type is not set or is empty.
 pub fn collect_evidences_core(
     attester_info: &Option<Vec<AttesterInfo>>,
     nonce_value: &Option<String>,
@@ -398,7 +418,11 @@ pub fn collect_evidences_core(
     }
 }
 
-/// Validate Nonce fields, return `ChallengeError` if invalid
+/// Validates the nonce fields.
+///
+/// # Errors
+///
+/// Returns an error if the nonce fields are invalid.
 pub fn validate_nonce_fields(nonce: &Nonce) -> Result<(), ChallengeError> {
     if nonce.value.trim().is_empty() || nonce.signature.trim().is_empty() || nonce.iat == 0 {
         return Err(ChallengeError::NonceInvalid("One or more nonce fields are empty".to_string()));
@@ -525,7 +549,11 @@ async fn get_tokens_from_server(evidence: &GetEvidenceResponse) -> Result<Vec<No
     Ok(node_tokens)
 }
 
-/// Main entry for the attestation challenge process
+/// Performs the challenge based on the provided attester information and data.
+///
+/// # Errors
+///
+/// Returns an error if the challenge fails.
 pub async fn do_challenge(
     attester_info: &Option<Vec<AttesterInfo>>,
     attester_data: &Option<serde_json::Value>,

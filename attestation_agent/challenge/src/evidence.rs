@@ -120,7 +120,11 @@ impl EvidenceManager {
         Ok((nonce_type, nonce_value))
     }
 
-    /// Main function to collect evidence based on the request
+    /// Gets the evidence based on the provided request.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the evidence cannot be retrieved.
     pub fn get_evidence(request: &GetEvidenceRequest) -> Result<GetEvidenceResponse, ChallengeError> {
         log::info!("Starting evidence collection");
 
