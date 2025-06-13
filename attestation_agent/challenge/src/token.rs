@@ -52,7 +52,7 @@ impl TokenRequest {
 pub struct TokenManager;
 
 impl TokenManager {
-    /// Gets a token based on the provided request.
+    /// Main function to get a token, using cache if possible or performing a challenge if needed
     ///
     /// # Errors
     ///

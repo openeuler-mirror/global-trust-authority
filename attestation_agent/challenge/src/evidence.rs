@@ -120,7 +120,7 @@ impl EvidenceManager {
         Ok((nonce_type, nonce_value))
     }
 
-    /// Gets the evidence based on the provided request.
+    /// Main function to collect evidence based on the request
     ///
     /// # Errors
     ///
