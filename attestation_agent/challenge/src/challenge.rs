@@ -10,7 +10,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use crate::acquire_process_lock;
 use crate::challenge_error::ChallengeError;
 use agent_utils::Client;
 use config::{PluginConfig, AGENT_CONFIG};
@@ -22,7 +21,10 @@ use plugin_manager::{AgentHostFunctions, AgentPlugin, PluginManager, PluginManag
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex as StdMutex};
+use parking_lot::{Mutex, MutexGuard};
+
+const TIME_OUT: u64 = 120;
 
 #[derive(Debug, Clone)]
 pub struct NodeToken {
@@ -30,8 +32,10 @@ pub struct NodeToken {
     token: Value,
 }
 
+static GLOBAL_TPM: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
 // Global cached tokens for reuse between requests (sync Mutex)
-pub static GLOBAL_TOKENS: Lazy<Mutex<Vec<NodeToken>>> = Lazy::new(|| Mutex::new(Vec::new()));
+pub static GLOBAL_TOKENS: Lazy<StdMutex<Vec<NodeToken>>> = Lazy::new(|| StdMutex::new(Vec::new()));
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 /// Information about an attester, including type and policy IDs
@@ -108,6 +112,12 @@ impl GetEvidenceResponse {
             }],
         }
     }
+}
+
+/// Acquire a global thread lock to protect TPM access, with 120s timeout
+fn acquire_thread_lock() -> Result<MutexGuard<'static, ()>, ChallengeError> {
+    GLOBAL_TPM.try_lock_for(std::time::Duration::from_secs(TIME_OUT))
+        .ok_or_else(|| ChallengeError::InternalError("TPM mutex lock acquire timeout".to_string()))
 }
 
 /// Set the global cached tokens (async)
@@ -233,7 +243,7 @@ fn collect_evidence(attester_type: &str, nonce_value: Option<String>) -> Result<
         })
     }).transpose()?;
 
-    let _tpm_lock = acquire_process_lock()?;
+    let _lock_guard = acquire_thread_lock()?;
     match plugin.collect_evidence(Some(&node_id), nonce_bytes.as_deref()) {
         Ok(evidence_value) => {
             log::info!("Evidence collected for attester_type: {}", attester_type);

@@ -15,7 +15,6 @@ use actix_web::{http::StatusCode, HttpResponse};
 use challenge::evidence::{EvidenceManager, GetEvidenceRequest};
 use log::info;
 use serde_json::Value;
-
 use std::thread;
 
 /// Main entry point for evidence collection requests
