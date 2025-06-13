@@ -2,7 +2,7 @@
 set -e
 
 CURRENT_DIR="$(cd "$(dirname "$0")"; pwd)"
-ROOT_DIR="$(cd "${CURRENT_DIR}/../"; pwd)"
+ROOT_DIR="$(cd "${CURRENT_DIR}/../../"; pwd)"
 RPM_SOURCE_DIR="$HOME/rpmbuild/SOURCES"
 RPM_SPEC_DIR="$HOME/rpmbuild/SPECS"
 SOURCE_DIR_NAME=$(basename ${ROOT_DIR})
@@ -10,9 +10,12 @@ SOURCE_DIR_NAME=$(basename ${ROOT_DIR})
 VERSION=$(grep "^version:" "${ROOT_DIR}/config/common.yaml" | awk '{print $2}')
 RELEASE=$(grep "^release:" "${ROOT_DIR}/config/common.yaml" | awk '{print $2}')
 
+SUPPORTED_OS=("openEuler")
+
 ENABLE_AGENT_RPM=false
 ENABLE_SERVER_RPM=false
 ENABLE_CLI_RPM=false
+OS_NAME=$(cat /etc/os-release | grep "^ID=" | awk -F '=' '{print $2}' | tr -d '"')
 
 show_help() {
     echo "Usage: $0 [options]"
@@ -20,6 +23,7 @@ show_help() {
     echo "  -a    Build agent RPM package"
     echo "  -s    Build server RPM package"
     echo "  -c    Build cli RPM package"
+    echo "  -o    Build RPM package for specific OS"
     echo "  -h    Show this help message"
     echo ""
     echo "Examples:"
@@ -27,15 +31,21 @@ show_help() {
     echo "  $0 -s       # Build server RPM package only"
 }
 
-while getopts "asch" opt; do
+while getopts "ascho:" opt; do
     case $opt in
         a) ENABLE_AGENT_RPM=true ;;
         s) ENABLE_SERVER_RPM=true ;;
         c) ENABLE_CLI_RPM=true ;;
+        o) OS_NAME=$OPTARG ;;
         h) show_help; exit 0 ;;
         ?) show_help; exit 1 ;;
     esac
 done
+
+if ! [[ " ${SUPPORTED_OS[@]} " =~ " ${OS_NAME} " ]]; then
+    echo "Error: RPM package for ${OS_NAME} is not supported"
+    exit 1
+fi
 
 if [ "$ENABLE_AGENT_RPM" = false ] && [ "$ENABLE_SERVER_RPM" = false ] && [ "$ENABLE_CLI_RPM" = false ]; then
     echo "Error: Please specify at least one RPM package type to build"
@@ -64,7 +74,7 @@ tar -zcf vendor.tar.gz vendor
 mv vendor.tar.gz $RPM_SOURCE_DIR
 
 rm -rf $RPM_SPEC_DIR/*
-cd ./script
+cd ./rpm/spec/${OS_NAME}
 if [ "$ENABLE_AGENT_RPM" = true ]; then
     cp agent.spec $RPM_SPEC_DIR
     rpmbuild -bb --clean $RPM_SPEC_DIR/agent.spec --define "_ra_version ${VERSION}" --define "_ra_release ${RELEASE}" --define "_source_dir ${SOURCE_DIR_NAME}"

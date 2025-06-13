@@ -47,7 +47,7 @@ install -d %{buildroot}%{agent_systemd_dir}
 install -d %{buildroot}%{_sysconfdir}/attestation_agent
 
 install -pm 550 %{agent_output_dir}/attestation_agent         %{buildroot}%{_bindir}
-install -pm 640 config/attestation_agent.service              %{buildroot}%{agent_systemd_dir}
+install -pm 640 service/attestation_agent.service             %{buildroot}%{agent_systemd_dir}
 install -pm 640 config/agent_config.yaml                      %{buildroot}%{_sysconfdir}/attestation_agent/agent_config.yaml
 
 install -pm 550 %{agent_output_dir}/libtpm_boot_attester.so   %{buildroot}%{_libdir}
