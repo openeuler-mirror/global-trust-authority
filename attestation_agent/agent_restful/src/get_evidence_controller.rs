@@ -10,11 +10,11 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use actix_web::{HttpResponse, http::StatusCode};
+use crate::response_error::create_error_response;
+use actix_web::{http::StatusCode, HttpResponse};
+use challenge::evidence::{EvidenceManager, GetEvidenceRequest};
 use log::info;
 use serde_json::Value;
-use crate::response_error::create_error_response;
-use challenge::evidence::{EvidenceManager, GetEvidenceRequest};
 
 use std::thread;
 
@@ -29,14 +29,12 @@ pub fn get_evidence(body: Option<Value>) -> HttpResponse {
             Ok(req) => req.sanitize(),
             Err(e) => {
                 return create_error_response(e, StatusCode::BAD_REQUEST);
-            }
+            },
         },
         None => GetEvidenceRequest::default(),
     };
 
-    let handle = thread::spawn(move || {
-        EvidenceManager::get_evidence(&evidence_request)
-    });
+    let handle = thread::spawn(move || EvidenceManager::get_evidence(&evidence_request));
 
     match handle.join() {
         Ok(result) => match result {

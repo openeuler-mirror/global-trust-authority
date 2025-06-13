@@ -33,6 +33,12 @@ impl RequestLogger {
     }
 }
 
+impl Default for RequestLogger {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<S, B> Transform<S, ServiceRequest> for RequestLogger
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,

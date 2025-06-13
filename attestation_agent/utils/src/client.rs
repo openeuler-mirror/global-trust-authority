@@ -36,20 +36,13 @@ pub struct CertConfig {
 }
 
 // Client configuration struct, containing base configuration and optional certificate configuration
-#[derive(Validate)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Validate, Default)]
 pub struct ClientConfig {
     #[validate(url)]
     base_url: String,
     #[validate(url)]
     proxy: Option<String>,
     cert_config: Option<CertConfig>,
-}
-
-impl Default for ClientConfig {
-    fn default() -> Self {
-        Self { base_url: String::new(), proxy: None, cert_config: None }
-    }
 }
 
 impl ClientConfig {

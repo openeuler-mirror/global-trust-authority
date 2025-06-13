@@ -10,14 +10,14 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use actix_web::{HttpResponse, http::StatusCode};
+use crate::response_error::create_error_response;
+use actix_web::{http::StatusCode, HttpResponse};
+use challenge::challenge_error::ChallengeError;
+use challenge::token::{TokenManager, TokenRequest};
 use log::{error, info};
 use serde_json::{json, Value};
-use crate::response_error::create_error_response;
-use challenge::token::{TokenManager, TokenRequest};
-use challenge::challenge_error::ChallengeError;
-use tokio::runtime::Runtime;
 use std::thread;
+use tokio::runtime::Runtime;
 
 // Asynchronous part of token processing
 async fn process_token_request(token_request: TokenRequest) -> Result<serde_json::Value, ChallengeError> {
@@ -26,7 +26,7 @@ async fn process_token_request(token_request: TokenRequest) -> Result<serde_json
         Err(error) => {
             error!("Failed to get token: {}", error);
             Err(ChallengeError::TokenError(error))
-        }
+        },
     }
 }
 
@@ -41,7 +41,7 @@ pub fn get_token(body: Option<Value>) -> HttpResponse {
             Ok(req) => req.sanitize(),
             Err(e) => {
                 return create_error_response(e, StatusCode::BAD_REQUEST);
-            }
+            },
         },
         None => TokenRequest::default(),
     };
@@ -50,7 +50,7 @@ pub fn get_token(body: Option<Value>) -> HttpResponse {
         let rt = Runtime::new().unwrap();
         rt.block_on(process_token_request(token_request))
     });
-    
+
     match handle.join() {
         Ok(result) => match result {
             Ok(token) => HttpResponse::Ok().json(json!({ "token": token })),

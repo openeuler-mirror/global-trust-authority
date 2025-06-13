@@ -74,7 +74,6 @@ async fn main() -> Result<(), AgentError> {
 
     let log_level = match config.logging.level.to_lowercase().as_str() {
         "debug" => LevelFilter::Debug,
-        "info" => LevelFilter::Info,
         "warn" => LevelFilter::Warn,
         "error" => LevelFilter::Error,
         "off" => LevelFilter::Off,
@@ -134,19 +133,19 @@ async fn main() -> Result<(), AgentError> {
 
     Client::configure(client_config)?;
 
-    let challenge_config = match config.schedulers.iter().find(|config| config.name == "challenge".to_string()) {
-        Some(config) => config,
-        None => {
+    let challenge_config =
+        if let Some(config) = config.schedulers.iter().find(|config| config.name == "challenge") {
+            config
+        } else {
             log::error!("Challenge scheduler not found in configuration, skipping challenge initialization");
             if let Err(e) = service.stop_server().await {
                 error!("Failed to stop server: {}", e);
             }
             return Err(AgentError::ConfigError("Challenge scheduler not configured".to_string()));
-        },
-    };
+        };
 
     let initial_delay =
-        challenge_config.initial_delay.clone().unwrap_or_else(|| InitialDelayConfig { min_seconds: 0, max_seconds: 0 });
+        challenge_config.initial_delay.clone().unwrap_or(InitialDelayConfig { min_seconds: 0, max_seconds: 0 });
     let max_retries = challenge_config.max_retries.unwrap_or(1);
     // start scheduler
     let scheduler_config = SchedulerConfig::new()

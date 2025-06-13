@@ -10,21 +10,21 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use actix_web::{HttpResponse, http::StatusCode};
+use actix_web::{http::StatusCode, HttpResponse};
 use log::error;
 use serde_json::json;
 
 /// Creates a standardized error response for HTTP endpoints
-/// 
+///
 /// # Arguments
 /// * `error` - Any error type that implements Display trait
 /// * `status` - HTTP status code for the response
-/// 
+///
 /// # Returns
 /// * `HttpResponse` - JSON formatted error response with message
-/// 
+///
 /// # Behavior
-/// - For BAD_REQUEST (400), logs as request validation failure
+/// - For `BAD_REQUEST` (400), logs as request validation failure
 /// - For other status codes, logs as operation failure
 /// - Returns JSON response with error message and appropriate status code
 pub fn create_error_response(error: impl std::fmt::Display, status: StatusCode) -> HttpResponse {

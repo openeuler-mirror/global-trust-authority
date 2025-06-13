@@ -21,10 +21,10 @@ pub trait HostFunctions: Send + Sync {}
 /// return value: true if the certificate is valid
 pub type ValidateCertChainFn = dyn for<'a> Fn(&'a str, &'a str, &'a [u8]) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + Send + 'a>> + Send + Sync;
 
-/// Function type for getting unmatched measurements, the parameters are measured values, attester_type, returns unmatched measurements
+/// Function type for getting unmatched measurements, the parameters are measured values, `attester_type`, returns unmatched measurements
 /// first parameter: measured values
-/// second parameter: attester_type
-/// third parameter: user_id
+/// second parameter: `attester_type`
+/// third parameter: `user_id`
 /// return value: Result with unmatched measurements or error string
 pub type GetUnmatchedMeasurementsFn = dyn for<'a> Fn(&'a Vec<String>, &'a str, &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<String>, String>> + Send + 'a>> + Send + Sync;
 
@@ -43,7 +43,7 @@ pub struct ServiceHostFunctions {
 impl HostFunctions for ServiceHostFunctions {}
 
 impl ServiceHostFunctions {
-    /// Create a new instance of ServiceHostFunctions
+    /// Create a new instance of `ServiceHostFunctions`
     pub fn new(validate_cert_chain: Box<ValidateCertChainFn>, get_unmatched_measurements: Box<GetUnmatchedMeasurementsFn>, query_configuration: QueryConfigurationFn) -> Self {
         Self {
             validate_cert_chain,
@@ -61,7 +61,7 @@ pub struct AgentHostFunctions {
 impl HostFunctions for AgentHostFunctions {}
 
 impl AgentHostFunctions {
-    /// Create a new instance of AgentHostFunctions
+    /// Create a new instance of `AgentHostFunctions`
     pub fn new(query_configuration: QueryConfigurationFn) -> Self {
         Self {
             query_configuration,

@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-/// Plugin interface library for dynamic plugin loading
+// Plugin interface library for dynamic plugin loading
 
 mod host_functions;
 mod traits;

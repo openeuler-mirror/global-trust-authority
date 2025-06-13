@@ -43,6 +43,7 @@ pub struct CertConfig {
     pub key_path: Option<String>,
 }
 
+#[derive(Default)]
 #[derive(Validate)]
 #[derive(Clone, Debug)]
 pub struct ServiceConfig {
@@ -59,18 +60,6 @@ pub struct ServiceConfig {
     pub trusted_proxies: Vec<String>,
 
     pub cert_config: Option<CertConfig>,
-}
-
-impl Default for ServiceConfig {
-    fn default() -> Self {
-        ServiceConfig {
-            enable_https: false,
-            port: None,
-            bind_address: None,
-            trusted_proxies: Vec::new(),
-            cert_config: None,
-        }
-    }
 }
 
 impl ServiceConfig {
@@ -243,9 +232,9 @@ impl RestService {
         }
     }
 
-    /// Gets or creates the singleton instance of RestService.
+    /// Gets or creates the singleton instance of `RestService`.
     ///
-    /// This method ensures only one instance of RestService exists in the application.
+    /// This method ensures only one instance of `RestService` exists in the application.
     /// The first call creates the instance, subsequent calls return references to the same instance.
     ///
     /// # Returns
@@ -335,8 +324,8 @@ impl RestService {
     ///
     /// * `method` - The HTTP method (GET, POST, PUT, DELETE)
     /// * `path` - The URL path pattern (e.g., "/api/users/{id}")
-    /// * `handler` - A function taking an HttpRequest and optional JSON payload,
-    ///   returning an HttpResponse
+    /// * `handler` - A function taking an `HttpRequest` and optional JSON payload,
+    ///   returning an `HttpResponse`
     ///
     /// # Returns
     ///
@@ -360,12 +349,11 @@ impl RestService {
         F: Fn(HttpRequest, Option<Value>) -> HttpResponse + Send + Sync + 'static,
     {
         let handler = Arc::new(handler);
-        let handler_fn = self.create_method_handler(method.clone(), handler)?;
+        let handler_fn = RestService::create_method_handler(method.clone(), handler)?;
         self.add_route(method.clone(), path, handler_fn)
     }
 
     fn create_method_handler<F>(
-        &self,
         method: Method,
         handler: Arc<F>,
     ) -> Result<Arc<dyn Fn() -> actix_web::Route + Send + Sync>, AgentError>
@@ -373,10 +361,10 @@ impl RestService {
         F: Fn(HttpRequest, Option<Value>) -> HttpResponse + Send + Sync + 'static,
     {
         let handler_fn = match method {
-            Method::GET => self.create_get_handler(handler),
-            Method::POST => self.create_post_handler(handler),
-            Method::PUT => self.create_put_handler(handler),
-            Method::DELETE => self.create_delete_handler(handler),
+            Method::GET => RestService::create_get_handler(handler),
+            Method::POST => RestService::create_post_handler(handler),
+            Method::PUT => RestService::create_put_handler(handler),
+            Method::DELETE => RestService::create_delete_handler(handler),
             _ => {
                 return Err(AgentError::ConfigError(format!("Unsupported method: {}", method)));
             },
@@ -385,7 +373,7 @@ impl RestService {
         Ok(handler_fn)
     }
 
-    fn create_get_handler<F>(&self, handler: Arc<F>) -> Arc<dyn Fn() -> actix_web::Route + Send + Sync>
+    fn create_get_handler<F>(handler: Arc<F>) -> Arc<dyn Fn() -> actix_web::Route + Send + Sync>
     where
         F: Fn(HttpRequest, Option<Value>) -> HttpResponse + Send + Sync + 'static,
     {
@@ -398,7 +386,7 @@ impl RestService {
         })
     }
 
-    fn create_post_handler<F>(&self, handler: Arc<F>) -> Arc<dyn Fn() -> actix_web::Route + Send + Sync>
+    fn create_post_handler<F>(handler: Arc<F>) -> Arc<dyn Fn() -> actix_web::Route + Send + Sync>
     where
         F: Fn(HttpRequest, Option<Value>) -> HttpResponse + Send + Sync + 'static,
     {
@@ -412,7 +400,7 @@ impl RestService {
         })
     }
 
-    fn create_put_handler<F>(&self, handler: Arc<F>) -> Arc<dyn Fn() -> actix_web::Route + Send + Sync>
+    fn create_put_handler<F>(handler: Arc<F>) -> Arc<dyn Fn() -> actix_web::Route + Send + Sync>
     where
         F: Fn(HttpRequest, Option<Value>) -> HttpResponse + Send + Sync + 'static,
     {
@@ -426,7 +414,7 @@ impl RestService {
         })
     }
 
-    fn create_delete_handler<F>(&self, handler: Arc<F>) -> Arc<dyn Fn() -> actix_web::Route + Send + Sync>
+    fn create_delete_handler<F>(handler: Arc<F>) -> Arc<dyn Fn() -> actix_web::Route + Send + Sync>
     where
         F: Fn(HttpRequest, Option<Value>) -> HttpResponse + Send + Sync + 'static,
     {
@@ -475,7 +463,7 @@ impl RestService {
     fn check_route_conflicts(&self, path: &str, method: &Method) -> Result<(), AgentError> {
         if let Ok(routes) = self.get_routes() {
             for route in routes {
-                if self.routes_conflict(&route.path, path) && &route.method == method {
+                if RestService::routes_conflict(&route.path, path) && route.method == method {
                     return Err(AgentError::ConfigError(format!(
                         "Route conflict detected: '{} {}' conflicts with existing route. \
                             Registration rejected.",
@@ -488,7 +476,7 @@ impl RestService {
         Ok(())
     }
 
-    fn routes_conflict(&self, path1: &str, path2: &str) -> bool {
+    fn routes_conflict(path1: &str, path2: &str) -> bool {
         if path1 == path2 {
             return true;
         }
@@ -557,20 +545,14 @@ impl RestService {
             .as_ref()
             .ok_or_else(|| AgentError::ConfigError("Bind address not configured".to_string()))?;
 
-        let routes = self.get_routes()?;
+        let addr = format!("{}:{}", bind_address, config.port.unwrap());
 
         if config.enable_https {
-            let https_addr = format!("{}:{}", bind_address, config.port.unwrap());
-            info!("Starting HTTPS server on {}", https_addr);
-
-            let cert_path = PathBuf::from(config.cert_config.as_ref().unwrap().cert_path.as_ref().unwrap());
-            let key_path = PathBuf::from(config.cert_config.as_ref().unwrap().key_path.as_ref().unwrap());
-
-            self.start_https_server(&https_addr, &cert_path, &key_path, rx, config.clone()).await?;
+            info!("Starting HTTPS server on {}", addr);
+            self.start_https_server(&addr, rx.resubscribe(), config.clone()).await?;
         } else {
-            let http_addr = format!("{}:{}", bind_address, config.port.unwrap());
-            info!("Starting HTTP server on {}", http_addr);
-            self.start_http_server(&http_addr, routes.clone(), rx.resubscribe(), config.clone()).await?;
+            info!("Starting HTTP server on {}", addr);
+            self.start_http_server(&addr, rx.resubscribe(), config.clone()).await?;
         }
 
         self.is_running.store(true, Ordering::SeqCst);
@@ -581,27 +563,20 @@ impl RestService {
     async fn start_https_server(
         &self,
         https_addr: &str,
-        cert_path: &PathBuf,
-        key_path: &PathBuf,
         rx: tokio::sync::broadcast::Receiver<()>,
         config: ServiceConfig,
     ) -> Result<(), AgentError> {
-        let routes = match self.get_routes() {
-            Ok(routes) => routes,
-            Err(e) => {
-                error!("Failed to get routes: {}", e);
-                return Err(e);
-            },
-        };
+        let cert_path = PathBuf::from(config.cert_config.as_ref().unwrap().cert_path.as_ref().unwrap());
+        let key_path = PathBuf::from(config.cert_config.as_ref().unwrap().key_path.as_ref().unwrap());
 
-        let ssl_builder = match self.create_ssl_builder(cert_path, key_path) {
+        let ssl_builder = match RestService::create_ssl_builder(&cert_path, &key_path) {
             Ok(builder) => builder,
             Err(e) => {
                 error!("Failed to create ssl builder: {}", e);
                 return Err(e);
             },
         };
-
+        let routes = self.get_routes()?;
         info!("Starting HTTPS server on {}", https_addr);
 
         self.start_https_server_impl(https_addr, ssl_builder, routes, rx, config)
@@ -645,7 +620,7 @@ impl RestService {
         Ok(())
     }
 
-    fn create_ssl_builder(&self, cert_path: &PathBuf, key_path: &PathBuf) -> Result<SslAcceptorBuilder, AgentError> {
+    fn create_ssl_builder(cert_path: &PathBuf, key_path: &PathBuf) -> Result<SslAcceptorBuilder, AgentError> {
         let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())
             .map_err(|e| AgentError::ConfigError(format!("Failed to create SSL configuration: {}", e)))?;
 
@@ -698,19 +673,16 @@ impl RestService {
             return Ok(());
         }
 
-        match self.take_broadcast_shutdown_sender()? {
-            Some(sender) => {
-                self.is_running.store(false, Ordering::SeqCst);
-                self.send_broadcast_shutdown_signal(sender).await?;
-                info!("Server stopped successfully");
-                Ok(())
-            },
-            None => {
-                let err = AgentError::ServerStateError("Shutdown signal not found".to_string());
-                error!("{}", err);
-                self.is_running.store(false, Ordering::SeqCst);
-                Err(err)
-            },
+        if let Some(sender) = self.take_broadcast_shutdown_sender()? {
+            self.is_running.store(false, Ordering::SeqCst);
+            self.send_broadcast_shutdown_signal(sender).await?;
+            info!("Server stopped successfully");
+            Ok(())
+        } else {
+            let err = AgentError::ServerStateError("Shutdown signal not found".to_string());
+            error!("{}", err);
+            self.is_running.store(false, Ordering::SeqCst);
+            Err(err)
         }
     }
 
@@ -737,13 +709,13 @@ impl RestService {
     async fn start_http_server(
         &self,
         http_addr: &str,
-        routes: Vec<Route>,
         rx: tokio::sync::broadcast::Receiver<()>,
         config: ServiceConfig,
     ) -> Result<(), AgentError> {
         info!("Starting HTTP server on {}", http_addr);
         let http_addr = http_addr.to_string();
         let mut rx = rx;
+        let routes = self.get_routes()?;
 
         tokio::spawn(async move {
             let server = HttpServer::new(move || create_app(&config, &routes))
@@ -1008,13 +980,13 @@ mod tests {
         drop(listener);
 
         let http_addr = format!("127.0.0.1:{}", port);
-        service.start_http_server(&http_addr, routes.clone(), rx, basic_config.clone()).await.unwrap();
+        service.start_http_server(&http_addr, rx, basic_config.clone()).await.unwrap();
 
         let _ = tx.send(());
 
         let (https_tx, https_rx) = tokio::sync::broadcast::channel::<()>(1);
         let (cert_path, key_path, _temp_dir) = generate_test_certificate();
-        let ssl_builder = service.create_ssl_builder(&cert_path, &key_path).unwrap();
+        let ssl_builder = RestService::create_ssl_builder(&cert_path, &key_path).unwrap();
 
         let https_listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let https_addr = format!("127.0.0.1:{}", https_listener.local_addr().unwrap().port());

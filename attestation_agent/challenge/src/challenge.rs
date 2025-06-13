@@ -10,19 +10,19 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use serde::{Deserialize, Serialize};
-use crate::challenge_error::ChallengeError;
 use crate::acquire_process_lock;
-use log;
-use config::{AGENT_CONFIG, PluginConfig};
-use plugin_manager::{PluginManagerInstance, AgentPlugin, AgentHostFunctions, PluginManager};
-use std::sync::{Arc, Mutex};
-use reqwest::Method;
+use crate::challenge_error::ChallengeError;
 use agent_utils::Client;
-use serde_json::Value;
+use config::{PluginConfig, AGENT_CONFIG};
+use log;
 use once_cell::sync::Lazy;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
+use plugin_manager::{AgentHostFunctions, AgentPlugin, PluginManager, PluginManagerInstance};
+use reqwest::Method;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
 pub struct NodeToken {
@@ -116,7 +116,7 @@ pub fn set_cached_tokens(tokens: &[NodeToken]) {
     *global = tokens.to_vec();
 }
 
-/// Get the cached token for current node_id as serde_json::Value (sync)
+/// Get the cached token for current `node_id` as `serde_json::Value` (sync)
 pub fn get_cached_token_for_current_node() -> Option<Value> {
     let node_id = get_node_id().ok()?;
     let global = GLOBAL_TOKENS.lock().unwrap();
@@ -125,24 +125,21 @@ pub fn get_cached_token_for_current_node() -> Option<Value> {
 
 /// Get the node ID (UUID) from configuration
 pub fn get_node_id() -> Result<String, ChallengeError> {
-    let config = AGENT_CONFIG.get_instance()
-        .map_err(|e| {
-            log::error!("Failed to get AGENT_CONFIG instance: {}", e);
-            ChallengeError::ConfigError(e.to_string())
-        })?;
-    
-    config.agent.uuid
-        .clone()
-        .ok_or_else(|| {
-            log::error!("Agent UUID not configured");
-            ChallengeError::ConfigError("Agent UUID not configured".to_string())
-        })
+    let config = AGENT_CONFIG.get_instance().map_err(|e| {
+        log::error!("Failed to get AGENT_CONFIG instance: {}", e);
+        ChallengeError::ConfigError(e.clone())
+    })?;
+
+    config.agent.uuid.clone().ok_or_else(|| {
+        log::error!("Agent UUID not configured");
+        ChallengeError::ConfigError("Agent UUID not configured".to_string())
+    })
 }
 
 /// Get all enabled attester types from the plugin manager and config
 fn get_enabled_attester_types() -> Result<Vec<String>, ChallengeError> {
     let plugin_manager = PluginManager::<dyn AgentPlugin, AgentHostFunctions>::get_instance();
-    
+
     if !plugin_manager.is_initialized() {
         log::error!("Plugin manager not initialized");
         return Err(ChallengeError::InternalError("Plugin manager not initialized".to_string()));
@@ -154,14 +151,13 @@ fn get_enabled_attester_types() -> Result<Vec<String>, ChallengeError> {
         return Err(ChallengeError::NoEnabledPlugins);
     }
 
-    let config = AGENT_CONFIG.get_instance()
-        .map_err(|e| {
-            log::error!("Failed to get AGENT_CONFIG instance: {}", e);
-            ChallengeError::ConfigError(e.to_string())
-        })?;
+    let config = AGENT_CONFIG.get_instance().map_err(|e| {
+        log::error!("Failed to get AGENT_CONFIG instance: {}", e);
+        ChallengeError::ConfigError(e.clone())
+    })?;
 
     let mut enabled_attester_types = Vec::new();
-    
+
     for plugin_name in &enabled_plugins {
         if let Some(plugin_config) = config.plugins.iter().find(|p| &p.name == plugin_name) {
             if let Some(params) = &plugin_config.params {
@@ -182,23 +178,24 @@ fn get_enabled_attester_types() -> Result<Vec<String>, ChallengeError> {
     Ok(enabled_attester_types)
 }
 
-/// Find the plugin and config that matches the given attester_type
-fn find_plugin_for_attester_type(
-    attester_type: &str
-) -> Result<(Arc<dyn AgentPlugin>, PluginConfig), ChallengeError> {
-    let config = AGENT_CONFIG.get_instance()
-        .map_err(|e| {
-            log::error!("Failed to get AGENT_CONFIG instance: {}", e);
-            ChallengeError::ConfigError(e.to_string())
-        })?;
-    let plugin_config = config.plugins.iter()
-        .find(|p| p.enabled && p.params.as_ref().map_or(false, |params| {
-            match (params, attester_type) {
-                (config::PluginParams::TpmBoot(_), "tpm_boot") => true,
-                (config::PluginParams::TpmIma(_), "tpm_ima") => true,
-                _ => false
-            }
-        }))
+/// Find the plugin and config that matches the given `attester_type`
+fn find_plugin_for_attester_type(attester_type: &str) -> Result<(Arc<dyn AgentPlugin>, PluginConfig), ChallengeError> {
+    let config = AGENT_CONFIG.get_instance().map_err(|e| {
+        log::error!("Failed to get AGENT_CONFIG instance: {}", e);
+        ChallengeError::ConfigError(e.clone())
+    })?;
+    let plugin_config = config
+        .plugins
+        .iter()
+        .find(|p| {
+            p.enabled
+                && p.params.as_ref().is_some_and(|params| {
+                    matches!(
+                        (params, attester_type),
+                        (config::PluginParams::TpmBoot(_), "tpm_boot") | (config::PluginParams::TpmIma(_), "tpm_ima")
+                    )
+                })
+        })
         .ok_or_else(|| {
             log::error!("Plugin not found for attester_type: {}", attester_type);
             ChallengeError::PluginNotFound(attester_type.to_string())
@@ -210,16 +207,15 @@ fn find_plugin_for_attester_type(
         log::error!("Plugin manager not initialized");
         return Err(ChallengeError::InternalError("Plugin manager not initialized".to_string()));
     }
-    let plugin = plugin_manager.get_plugin(&plugin_config.name)
-        .ok_or_else(|| {
-            log::error!("Plugin instance not found: {}", plugin_config.name);
-            ChallengeError::PluginNotFound(plugin_config.name.clone())
-        })?;
+    let plugin = plugin_manager.get_plugin(&plugin_config.name).ok_or_else(|| {
+        log::error!("Plugin instance not found: {}", plugin_config.name);
+        ChallengeError::PluginNotFound(plugin_config.name.clone())
+    })?;
 
     Ok((plugin, plugin_config))
 }
 
-/// Validate if the attester_type exists and is enabled
+/// Validate if the `attester_type` exists and is enabled
 fn validate_attester_type(attester_type: &str) -> Result<bool, ChallengeError> {
     // Attempt to fetch the plugin; success confirms it exists and is enabled.
     find_plugin_for_attester_type(attester_type)?;
@@ -227,10 +223,7 @@ fn validate_attester_type(attester_type: &str) -> Result<bool, ChallengeError> {
 }
 
 /// Collect evidence for a specific attester type and nonce
-fn collect_evidence(
-    attester_type: &str,
-    nonce_value: Option<String>,
-) -> Result<serde_json::Value, ChallengeError> {
+fn collect_evidence(attester_type: &str, nonce_value: Option<String>) -> Result<serde_json::Value, ChallengeError> {
     let (plugin, _) = find_plugin_for_attester_type(attester_type)?;
     let node_id = get_node_id()?;
     let nonce_bytes = nonce_value.as_ref().map(|s| {
@@ -249,23 +242,23 @@ fn collect_evidence(
         Err(e) => {
             log::error!("Failed to collect evidence for '{}': {}", attester_type, e);
             Err(ChallengeError::EvidenceCollectionFailed(e.to_string()))
-        }
+        },
     }
 }
 
 /// Get policy IDs based on the calling context
 ///
-/// For collect_from_attester_info scenario:
-/// - If user-provided policy_ids count > 10: error
-/// - If user-provided policy_ids empty: return None
-/// - If user-provided policy_ids count 1-10: use them
-/// - If user didn't provide policy_ids (None): return None directly
+/// For `collect_from_attester_info` scenario:
+/// - If user-provided `policy_ids` count > 10: error
+/// - If user-provided `policy_ids` empty: return None
+/// - If user-provided `policy_ids` count 1-10: use them
+/// - If user didn't provide `policy_ids` (None): return None directly
 ///
-/// For collect_from_enabled_plugins scenario:
-/// - Get policy_ids from config file
-/// - If config policy_ids count > 10: error
-/// - If config policy_ids empty: return None
-/// - If config policy_ids count 1-10: use them
+/// For `collect_from_enabled_plugins` scenario:
+/// - Get `policy_ids` from config file
+/// - If config `policy_ids` count > 10: error
+/// - If config `policy_ids` empty: return None
+/// - If config `policy_ids` count 1-10: use them
 fn get_policy_ids(
     attester_type: &str,
     input_policy_ids: &Option<Vec<String>>,
@@ -276,19 +269,18 @@ fn get_policy_ids(
     // Case: User provided policy_ids
     if let Some(ids) = input_policy_ids {
         if ids.len() > MAX_POLICY_IDS {
-            log::error!("Too many policy_ids for attester_type '{}', max allowed is {}", 
-                attester_type, MAX_POLICY_IDS);
+            log::error!("Too many policy_ids for attester_type '{}', max allowed is {}", attester_type, MAX_POLICY_IDS);
             return Err(ChallengeError::InternalError(format!(
-                "Too many policy_ids for attester_type '{}', max allowed is {}", 
+                "Too many policy_ids for attester_type '{}', max allowed is {}",
                 attester_type, MAX_POLICY_IDS
             )));
         }
-        
+
         // If user provided empty policy_ids, return None
         if ids.is_empty() {
             return Ok(None);
         }
-        
+
         // User provided valid policy_ids (1-10), use them
         return Ok(Some(ids.clone()));
     }
@@ -304,10 +296,13 @@ fn get_policy_ids(
     let (_, plugin_config) = find_plugin_for_attester_type(attester_type)?;
 
     if plugin_config.policy_id.len() > MAX_POLICY_IDS {
-        log::error!("Too many policy_ids in config for attester_type '{}', max allowed is {}", 
-            attester_type, MAX_POLICY_IDS);
+        log::error!(
+            "Too many policy_ids in config for attester_type '{}', max allowed is {}",
+            attester_type,
+            MAX_POLICY_IDS
+        );
         return Err(ChallengeError::InternalError(format!(
-            "Too many policy_ids in config for attester_type '{}', max allowed is {}", 
+            "Too many policy_ids in config for attester_type '{}', max allowed is {}",
             attester_type, MAX_POLICY_IDS
         )));
     }
@@ -329,27 +324,24 @@ fn collect_evidences_for_types<I>(
     use_config: bool,
 ) -> Result<Vec<EvidenceWithPolicy>, ChallengeError>
 where
-    I: IntoIterator<Item = (String, Option<Vec<String>>)> {
+    I: IntoIterator<Item = (String, Option<Vec<String>>)>,
+{
     let mut all_evidences = Vec::new();
     for (attester_type, policy_ids_hint) in attester_iter {
         if need_validate {
             validate_attester_type(&attester_type)?;
         }
 
-        let evidence_value = collect_evidence(&attester_type, nonce_value.clone())
-            .map_err(|e| {
-                log::error!("Failed to collect evidence for '{}': {}", attester_type, e);
-                ChallengeError::EvidenceCollectionFailed(
-                    format!("Failed to collect evidence for '{}': {}", attester_type, e)
-                )
-            })?;
+        let evidence_value = collect_evidence(&attester_type, nonce_value.clone()).map_err(|e| {
+            log::error!("Failed to collect evidence for '{}': {}", attester_type, e);
+            ChallengeError::EvidenceCollectionFailed(format!(
+                "Failed to collect evidence for '{}': {}",
+                attester_type, e
+            ))
+        })?;
 
         let policy_ids = get_policy_ids(&attester_type, &policy_ids_hint, use_config)?;
-        all_evidences.push(EvidenceWithPolicy {
-            attester_type,
-            evidence: evidence_value,
-            policy_ids,
-        });
+        all_evidences.push(EvidenceWithPolicy { attester_type, evidence: evidence_value, policy_ids });
     }
     if all_evidences.is_empty() {
         log::error!("No valid evidence collected for any attester_type");
@@ -361,19 +353,15 @@ where
 /// Collect evidence from provided attester info list
 fn collect_from_attester_info(
     info: &[AttesterInfo],
-    nonce_value: &Option<String>
+    nonce_value: &Option<String>,
 ) -> Result<Vec<EvidenceWithPolicy>, ChallengeError> {
-    let attester_iter = info.iter().filter_map(|a| {
-        a.attester_type.as_ref().map(|t| (t.clone(), a.policy_ids.clone()))
-    });
+    let attester_iter = info.iter().filter_map(|a| a.attester_type.as_ref().map(|t| (t.clone(), a.policy_ids.clone())));
     // For collect_from_attester_info, use_config is false
     collect_evidences_for_types(attester_iter, nonce_value, true, false)
 }
 
 /// Collect evidence from all enabled plugins
-fn collect_from_enabled_plugins(
-    nonce_value: &Option<String>
-) -> Result<Vec<EvidenceWithPolicy>, ChallengeError> {
+fn collect_from_enabled_plugins(nonce_value: &Option<String>) -> Result<Vec<EvidenceWithPolicy>, ChallengeError> {
     let enabled_types = get_enabled_attester_types()?;
     let attester_iter = enabled_types.into_iter().map(|t| (t, None));
     // For collect_from_enabled_plugins, use_config is true
@@ -387,9 +375,10 @@ pub fn collect_evidences_core(
 ) -> Result<Vec<EvidenceWithPolicy>, ChallengeError> {
     match attester_info {
         Some(info) if !info.is_empty() => {
-            let all_types_empty = info.iter()
-                .all(|attester| attester.attester_type.is_none() || attester.attester_type.as_ref().unwrap().is_empty());
-            
+            let all_types_empty = info.iter().all(|attester| {
+                attester.attester_type.is_none() || attester.attester_type.as_ref().unwrap().is_empty()
+            });
+
             if all_types_empty {
                 log::info!("All attester_types empty, collecting from enabled plugins");
                 // Case 1: All attester_types are empty
@@ -405,25 +394,23 @@ pub fn collect_evidences_core(
         _ => {
             log::info!("No attester_info provided, collecting from enabled plugins");
             collect_from_enabled_plugins(nonce_value)
-        }
+        },
     }
 }
 
-/// Validate Nonce fields, return ChallengeError if invalid
+/// Validate Nonce fields, return `ChallengeError` if invalid
 pub fn validate_nonce_fields(nonce: &Nonce) -> Result<(), ChallengeError> {
-    if nonce.value.trim().is_empty() ||
-       nonce.signature.trim().is_empty() ||
-       nonce.iat == 0 {
+    if nonce.value.trim().is_empty() || nonce.signature.trim().is_empty() || nonce.iat == 0 {
         return Err(ChallengeError::NonceInvalid("One or more nonce fields are empty".to_string()));
     }
-    let value_len = nonce.value.as_bytes().len();
-    if value_len < 64 || value_len > 1024 {
+    let value_len = nonce.value.len();
+    if !(64..=1024).contains(&value_len) {
         return Err(ChallengeError::NonceInvalid(format!(
             "nonce.value length must be between 64 and 1024 bytes, got {} bytes",
             value_len
         )));
     }
-    let sig_len = nonce.signature.as_bytes().len();
+    let sig_len = nonce.signature.len();
     if sig_len < 64 {
         return Err(ChallengeError::NonceInvalid(format!(
             "nonce.signature length must be at least 64 bytes, got {} bytes",
@@ -440,10 +427,8 @@ async fn get_nonce_from_server(
 ) -> Result<Nonce, ChallengeError> {
     let attester_types = match attester_info {
         Some(info) if !info.is_empty() => {
-            let filtered: Vec<_> = info.iter()
-                .filter_map(|a| a.attester_type.clone())
-                .filter(|s| !s.trim().is_empty())
-                .collect();
+            let filtered: Vec<_> =
+                info.iter().filter_map(|a| a.attester_type.clone()).filter(|s| !s.trim().is_empty()).collect();
             if filtered.is_empty() {
                 get_enabled_attester_types()?
             } else {
@@ -466,13 +451,10 @@ async fn get_nonce_from_server(
             log::error!("Failed to get nonce from server: {}", e);
             ChallengeError::NetworkError(format!("Failed to get nonce: {}", e))
         })?;
-    let json_value = response
-        .json::<serde_json::Value>()
-        .await
-        .map_err(|e| {
-            log::error!("Failed to parse nonce response: {}", e);
-            ChallengeError::RequestParseError(format!("Failed to parse nonce response: {}", e))
-        })?;
+    let json_value = response.json::<serde_json::Value>().await.map_err(|e| {
+        log::error!("Failed to parse nonce response: {}", e);
+        ChallengeError::RequestParseError(format!("Failed to parse nonce response: {}", e))
+    })?;
     if let Some(msg) = json_value.get("message").and_then(|v| v.as_str()) {
         if !msg.is_empty() {
             log::error!("Server returned error message for nonce: {}", msg);
@@ -480,13 +462,12 @@ async fn get_nonce_from_server(
         }
     }
 
-    let nonce: Nonce = match json_value.get("nonce") {
-        Some(nonce_val) => serde_json::from_value(nonce_val.clone())
-            .map_err(|e| ChallengeError::RequestParseError(format!("Failed to parse nonce: {}", e)))?,
-        None => {
-            log::error!("Failed to get nonce from Server, nonce is null");
-            return Err(ChallengeError::ServerError("Failed to get nonce from Server, nonce is null".to_string()));
-        },
+    let nonce: Nonce = if let Some(nonce_val) = json_value.get("nonce") {
+        serde_json::from_value(nonce_val.clone())
+            .map_err(|e| ChallengeError::RequestParseError(format!("Failed to parse nonce: {}", e)))?
+    } else {
+        log::error!("Failed to get nonce from Server, nonce is not a string");
+        return Err(ChallengeError::ServerError("Failed to get nonce from Server, nonce is not a string".to_string()));
     };
     validate_nonce_fields(&nonce)?;
     log::info!("Successfully obtained and validated nonce from server");
@@ -494,9 +475,7 @@ async fn get_nonce_from_server(
 }
 
 /// Send the evidence to the attestation server and extract all node tokens from the response.
-async fn get_tokens_from_server(
-    evidence: &GetEvidenceResponse
-) -> Result<Vec<NodeToken>, ChallengeError> {
+async fn get_tokens_from_server(evidence: &GetEvidenceResponse) -> Result<Vec<NodeToken>, ChallengeError> {
     let client = Client::instance();
     // Send the evidence to the attestation server
     let response = client
@@ -508,13 +487,10 @@ async fn get_tokens_from_server(
         })?;
     log::info!("Received token response from server");
     // Parse the server's JSON response
-    let json_value = response
-        .json::<serde_json::Value>()
-        .await
-        .map_err(|e| {
-            log::error!("Failed to parse token response: {}", e);
-            ChallengeError::RequestParseError(format!("Failed to parse verify response: {}", e))
-        })?;
+    let json_value = response.json::<serde_json::Value>().await.map_err(|e| {
+        log::error!("Failed to parse token response: {}", e);
+        ChallengeError::RequestParseError(format!("Failed to parse verify response: {}", e))
+    })?;
 
     // Check for error message in the response
     if let Some(msg) = json_value.get("message").and_then(|v| v.as_str()) {
@@ -525,20 +501,23 @@ async fn get_tokens_from_server(
     }
 
     // Extract the tokens array from the response
-    let tokens = match json_value.get("tokens") {
-        Some(val) => val.as_array().ok_or_else(|| {
+    let tokens = if let Some(val) = json_value.get("tokens") {
+        val.as_array().ok_or_else(|| {
             log::error!("tokens field is not array in server response");
             ChallengeError::RequestParseError("tokens field is not array".to_string())
-        })?,
-        None => {
-            log::error!("No tokens field in server response");
-            return Err(ChallengeError::TokenNotReceived);
-        },
+        })?
+    } else {
+        log::error!("No tokens field in server response");
+        return Err(ChallengeError::TokenNotReceived);
     };
     let mut node_tokens = Vec::new();
     // For each token, extract node_id and token value
     for t in tokens {
-        let node_id = t.get("node_id").and_then(|v| v.as_str()).ok_or_else(|| ChallengeError::RequestParseError("token.node_id missing or not string".to_string()))?.to_string();
+        let node_id = t
+            .get("node_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| ChallengeError::RequestParseError("token.node_id missing or not string".to_string()))?
+            .to_string();
         let token_val = t.get("token").cloned().unwrap_or(serde_json::Value::Null);
         node_tokens.push(NodeToken { node_id, token: token_val });
     }
@@ -553,15 +532,9 @@ pub async fn do_challenge(
 ) -> Result<serde_json::Value, ChallengeError> {
     log::info!("Starting challenge request.");
 
-    let nonce = get_nonce_from_server(
-        env!("CARGO_PKG_VERSION"),
-        attester_info,
-    ).await?;
+    let nonce = get_nonce_from_server(env!("CARGO_PKG_VERSION"), attester_info).await?;
 
-    let evidences = match collect_evidences_core(
-        attester_info,
-        &Some(nonce.value.clone()),
-    ) {
+    let evidences = match collect_evidences_core(attester_info, &Some(nonce.value.clone())) {
         Ok(evidences) => {
             log::info!("Successfully collected evidences");
             evidences
@@ -569,7 +542,7 @@ pub async fn do_challenge(
         Err(e) => {
             log::error!("Failed to collect evidences: {}", e);
             return Err(e);
-        }
+        },
     };
 
     let node_id = get_node_id()?;

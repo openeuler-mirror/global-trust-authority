@@ -10,12 +10,12 @@
  * See the Mulan PSL v2 for more details.
  */
 
+use crate::challenge::{do_challenge, get_cached_token_for_current_node, AttesterInfo};
 use crate::challenge_error::TokenError;
-use crate::challenge::{AttesterInfo, do_challenge, get_cached_token_for_current_node};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Request structure for token acquisition, including attester info and challenge flag
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct TokenRequest {
     // Optional vector of attester information for the token request
     #[serde(default)]
@@ -36,23 +36,14 @@ pub struct TokenRequest {
 impl TokenRequest {
     /// Sanitizes the request by removing empty values for robust processing
     /// Sanitizes the request by removing empty values:
-    /// - Converts empty attester_info vector to None
+    /// - Converts empty `attester_info` vector to None
     /// - Keeps challenge flag as is (Option<bool> is already well-handled)
-    /// - Converts empty or whitespace-only attester_data to None
+    /// - Converts empty or whitespace-only `attester_data` to None
     pub fn sanitize(self) -> Self {
         TokenRequest {
             attester_info: self.attester_info.and_then(|info| if info.is_empty() { None } else { Some(info) }),
             challenge: self.challenge,
             attester_data: self.attester_data.and_then(|data| if data.is_null() { None } else { Some(data) }),
-        }
-    }
-
-    /// Creates a default instance with all fields set to None
-    pub fn default() -> Self {
-        Self {
-            attester_info: None,
-            challenge: None,
-            attester_data: None,
         }
     }
 }
@@ -72,10 +63,9 @@ impl TokenManager {
         match do_challenge(&token_request.attester_info, &token_request.attester_data).await {
             Ok(token) => Ok(token),
             Err(e) => {
-                log::error!("Challenge failed, {}", e.to_string());
+                log::error!("Challenge failed, {}", e);
                 Err(TokenError::challenge_error(e.to_string()))
             },
         }
     }
 }
-

@@ -23,12 +23,12 @@ pub enum ChallengeError {
     PluginNotFound(String),
     /// No enabled plugins found in the system
     NoEnabledPlugins,
-    
+
     /// Errors during evidence collection, includes failure reason
     EvidenceCollectionFailed(String),
     /// No valid evidence collected, includes specific reason
     NoValidEvidence(String),
-    
+
     /// Nonce type error, includes invalid nonce type information
     NonceTypeError(String),
     /// Nonce value is empty
@@ -39,17 +39,17 @@ pub enum ChallengeError {
     UserNonceNotProvided,
     /// Nonce is invalid
     NonceInvalid(String),
-    
+
     /// Token not received in server response
     TokenNotReceived,
-    
+
     /// Request parsing error, includes parsing failure reason
     RequestParseError(String),
     /// Network communication error, includes specific error message
     NetworkError(String),
     /// Server-side error, includes server returned error message
     ServerError(String),
-    
+
     /// Internal system error, includes specific error message
     InternalError(String),
 
@@ -95,11 +95,11 @@ impl fmt::Display for ChallengeError {
             Self::ConfigError(msg) => write!(f, "Configuration error: {}", msg),
             Self::PluginNotFound(name) => write!(f, "Plugin not found: {}", name),
             Self::NoEnabledPlugins => write!(f, "No enabled plugins found in configuration"),
-            
+
             // Evidence collection errors
             Self::EvidenceCollectionFailed(msg) => write!(f, "Failed to collect evidence: {}", msg),
             Self::NoValidEvidence(msg) => write!(f, "No valid evidence collected: {}", msg),
-            
+
             // Nonce related errors
             Self::NonceTypeError(msg) => write!(f, "Invalid nonce type: {}", msg),
             Self::NonceValueEmpty => write!(f, "Nonce value cannot be empty"),
@@ -114,7 +114,7 @@ impl fmt::Display for ChallengeError {
             Self::RequestParseError(msg) => write!(f, "Failed to parse request: {}", msg),
             Self::NetworkError(msg) => write!(f, "Network error: {}", msg),
             Self::ServerError(msg) => write!(f, "Server error: {}", msg),
- 
+
             // Other errors
             Self::InternalError(msg) => write!(f, "Internal error: {}", msg),
 

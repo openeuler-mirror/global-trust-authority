@@ -13,9 +13,8 @@
 // TPM IMA plugin implementation
 use tpm_common_attester::{TpmPluginBase, TpmPluginConfig, Log};
 use plugin_manager::{AgentPlugin, PluginError, PluginBase, QueryConfigurationFn, AgentHostFunctions};
-use serde_json;
 use std::fs::File;
-use std::io::{Read, BufRead, BufReader};
+use std::io::{BufRead, BufReader};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 /// Maximum number of lines allowed in an IMA log file

@@ -11,8 +11,8 @@
  */
 
 // Cross-platform process lock trait and Linux implementation (POSIX semaphore). To extend for Windows, add implementation in this file.
-use std::time::Duration;
 use crate::challenge_error::ChallengeError;
+use std::time::Duration;
 
 /// Process lock guard trait
 pub trait LockGuard {}
@@ -26,24 +26,22 @@ pub trait TpmLock: Send + Sync {
 #[cfg(target_os = "linux")]
 pub mod platform {
     use super::*;
+    use libc::{sem_open, sem_post, sem_t, sem_trywait, O_CREAT, O_RDWR, SEM_FAILED, S_IRUSR, S_IWUSR};
     use std::ffi::CString;
     use std::os::raw::c_uint;
     use std::sync::Arc;
-    use std::time::{Duration, Instant};
-    use std::thread::sleep;
-    use libc::{sem_t, sem_open, sem_trywait, sem_post, O_CREAT, O_RDWR, S_IRUSR, S_IWUSR, SEM_FAILED};
     use std::sync::Mutex;
+    use std::thread::sleep;
+    use std::time::{Duration, Instant};
 
     struct SemPtr(*mut sem_t);
     unsafe impl Send for SemPtr {}
     unsafe impl Sync for SemPtr {}
     pub struct GlibcSemaphoreLock {
         sem: Arc<Mutex<SemPtr>>,
-        name: CString,
     }
     pub struct GlibcSemaphoreGuard {
         sem: Arc<Mutex<SemPtr>>,
-        name: CString,
     }
 
     impl LockGuard for GlibcSemaphoreGuard {}
@@ -62,19 +60,12 @@ pub mod platform {
     impl GlibcSemaphoreLock {
         pub fn new() -> Result<Self, ChallengeError> {
             let c_name = CString::new("/tpm_lock").unwrap();
-            let sem = unsafe {
-                sem_open(
-                    c_name.as_ptr(),
-                    O_CREAT | O_RDWR,
-                    S_IRUSR | S_IWUSR,
-                    1 as c_uint,
-                )
-            };
+            let sem = unsafe { sem_open(c_name.as_ptr(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, 1 as c_uint) };
             if sem == SEM_FAILED {
                 log::error!("Failed to open POSIX semaphore");
                 return Err(ChallengeError::InternalError("Failed to open POSIX semaphore".to_string()));
             }
-            Ok(Self { sem: Arc::new(Mutex::new(SemPtr(sem))), name: c_name })
+            Ok(Self { sem: Arc::new(Mutex::new(SemPtr(sem))) })
         }
     }
 
@@ -86,10 +77,7 @@ pub mod platform {
                 let ret = unsafe { sem_trywait(sem.0) };
                 drop(sem);
                 if ret == 0 {
-                    return Ok(Box::new(GlibcSemaphoreGuard {
-                        sem: Arc::clone(&self.sem),
-                        name: self.name.clone(),
-                    }));
+                    return Ok(Box::new(GlibcSemaphoreGuard { sem: Arc::clone(&self.sem) }));
                 } else {
                     sleep(Duration::from_millis(50));
                 }
@@ -111,6 +99,8 @@ pub mod platform {
     use super::*;
     pub fn acquire_process_lock() -> Result<Box<dyn LockGuard>, ChallengeError> {
         log::error!("acquire_process_lock is only supported on Linux platform, not implemented on other platforms!");
-        Err(ChallengeError::InternalError("acquire_process_lock is only supported on Linux platform, not implemented on other platforms!".to_string()))
+        Err(ChallengeError::InternalError(
+            "acquire_process_lock is only supported on Linux platform, not implemented on other platforms!".to_string(),
+        ))
     }
 }

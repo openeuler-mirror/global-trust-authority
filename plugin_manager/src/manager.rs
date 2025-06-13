@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-/// Plugin manager implementation
+// Plugin manager implementation
 
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock, RwLock};
@@ -41,7 +41,7 @@ pub struct PluginManager<T: PluginBase + ?Sized, H: HostFunctions> {
 }
 
 impl<T: PluginBase + ?Sized + 'static, H: HostFunctions> PluginManager<T, H> {
-    /// Create a new PluginManager
+    /// Create a new `PluginManager`
     fn new() -> Self {
         Self {
             plugins: RwLock::new(HashMap::new()),
@@ -76,8 +76,7 @@ impl<T: PluginBase + ?Sized + 'static, H: HostFunctions> PluginManager<T, H> {
     
     /// Check if the manager has been successfully initialized
     pub fn is_initialized(&self) -> bool {
-        let initialized = self.initialized.load(Ordering::Relaxed);
-        initialized
+        self.initialized.load(Ordering::Relaxed)
     }
     
         /// Helper function to load a single plugin
@@ -88,7 +87,7 @@ impl<T: PluginBase + ?Sized + 'static, H: HostFunctions> PluginManager<T, H> {
             .map_err(|e| format!("Failed to load library {}: {}", path, e))?;
         
         // Try to get the create_plugin symbol
-        let constructor = lib.get::<Symbol<CreatePluginFn<T, H>>>(b"create_plugin")
+        let constructor = lib.get::<Symbol<'_, CreatePluginFn<T, H>>>(b"create_plugin")
             .map_err(|e| format!("Failed to find create_plugin symbol: {}", e))?;
         
         // Try to create the plugin
@@ -104,7 +103,7 @@ impl<T: PluginBase + ?Sized + 'static, H: HostFunctions> PluginManager<T, H> {
         Ok(())
     }
 
-    /// Load plugins from a HashMap of plugin names and paths
+    /// Load plugins from a `HashMap` of plugin names and paths
     /// Returns true if all plugins were loaded successfully, false otherwise
     pub fn initialize(&self, plugin_paths: &HashMap<String, String>, host_functions: &H) -> bool {
         info!("Initializing plugin manager with {} plugins", plugin_paths.len());

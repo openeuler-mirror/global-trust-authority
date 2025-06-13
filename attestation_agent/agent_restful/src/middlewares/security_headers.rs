@@ -36,6 +36,12 @@ impl SecurityHeaders {
     }
 }
 
+impl Default for SecurityHeaders {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<S, B> Transform<S, ServiceRequest> for SecurityHeaders
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = actix_web::Error>,
