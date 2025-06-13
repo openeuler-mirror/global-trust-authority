@@ -32,6 +32,10 @@ async fn process_token_request(token_request: TokenRequest) -> Result<serde_json
 
 /// Main entry point for token requests
 /// Handles both JSON request parsing and token generation
+///
+/// # Panics
+///
+/// This function may panic if the runtime cannot be created.
 pub fn get_token(body: Option<Value>) -> HttpResponse {
     info!("Start getting token");
 

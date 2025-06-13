@@ -121,6 +121,10 @@ impl EvidenceManager {
     }
 
     /// Main function to collect evidence based on the request
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the evidence cannot be retrieved.
     pub fn get_evidence(request: &GetEvidenceRequest) -> Result<GetEvidenceResponse, ChallengeError> {
         log::info!("Starting evidence collection");
 

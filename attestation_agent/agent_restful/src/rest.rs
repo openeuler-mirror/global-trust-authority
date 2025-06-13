@@ -274,6 +274,10 @@ impl RestService {
     /// * `Result<Arc<Self>, AgentError>` - Success returns a reference to the configured service,
     ///   failure returns an appropriate error
     ///
+    /// # Errors
+    ///
+    /// Returns an error if the configuration is invalid or if the service cannot be configured.
+    ///
     /// # Example
     ///
     /// ```no_run
@@ -330,6 +334,10 @@ impl RestService {
     /// # Returns
     ///
     /// * `Result<(), AgentError>` - Success or error if path is invalid or conflicting
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the registration fails.
     ///
     /// # Example
     ///
@@ -507,6 +515,10 @@ impl RestService {
     ///
     /// * `Result<(), AgentError>` - Success or error if server cannot start
     ///
+    /// # Errors
+    ///
+    /// Returns an error if the server fails to start.
+    ///
     /// # Example
     ///
     /// ```no_run
@@ -579,11 +591,10 @@ impl RestService {
         let routes = self.get_routes()?;
         info!("Starting HTTPS server on {}", https_addr);
 
-        self.start_https_server_impl(https_addr, ssl_builder, routes, rx, config)
+        RestService::start_https_server_impl(https_addr, ssl_builder, routes, rx, config)
     }
 
     fn start_https_server_impl(
-        &self,
         https_addr: &str,
         ssl_builder: SslAcceptorBuilder,
         routes: Vec<Route>,
@@ -652,6 +663,10 @@ impl RestService {
     /// # Returns
     ///
     /// * `Result<(), AgentError>` - Success or error if shutdown fails
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the server fails to stop.
     ///
     /// # Example
     ///
@@ -992,7 +1007,7 @@ mod tests {
         let https_addr = format!("127.0.0.1:{}", https_listener.local_addr().unwrap().port());
         drop(https_listener);
 
-        service.start_https_server_impl(&https_addr, ssl_builder, routes, https_rx, basic_config).unwrap();
+        RestService::start_https_server_impl(&https_addr, ssl_builder, routes, https_rx, basic_config).unwrap();
         let _ = https_tx.send(());
     }
 

@@ -135,6 +135,12 @@ pub struct Config {
 }
 
 impl Config {
+    /// Validates the configuration for the agent, server, plugins, schedulers, and logging.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string if any configuration is invalid, such as invalid log level, empty server URL,
+    /// invalid plugin or scheduler configuration, etc.
     pub fn validate(&self) -> Result<(), String> {
         // 1. Validate logging configuration
         if !["trace", "debug", "info", "warn", "error"].contains(&self.logging.level.as_str()) {
@@ -178,7 +184,11 @@ impl Config {
         Ok(())
     }
 
-    /// Validate a single plugin configuration
+    /// Validates a single plugin configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string if the plugin configuration is invalid, such as missing name, path, or invalid parameters.
     pub fn validate_plugin(&self, plugin: &PluginConfig, idx: usize) -> Result<(), String> {
         // Validate plugin name
         if plugin.name.is_empty() {
@@ -326,6 +336,11 @@ pub struct ConfigManager {
 }
 
 impl ConfigManager {
+    /// Creates a new `ConfigManager` by loading and validating the configuration file from the given path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the configuration file cannot be found, loaded, or if the configuration is invalid.
     pub fn new(config_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let actual_path = Self::find_config_path(config_path)?;
 
@@ -368,7 +383,11 @@ impl ConfigManager {
         &self.config_path
     }
 
-    /// Serialize any value that implements Serialize to JSON string
+    /// Serializes any value that implements `serde::Serialize` to a JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string if serialization fails.
     pub fn to_json<T: serde::Serialize>(value: &T) -> Result<String, String> {
         serde_json::to_string(value).map_err(|e| format!("Failed to serialize to JSON: {}", e))
     }

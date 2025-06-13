@@ -22,6 +22,21 @@ pub struct TpmBootPlugin {
 }
 
 impl TpmBootPlugin {
+    /// Creates a new instance of the attester.
+    ///
+    /// # Parameters
+    ///
+    /// * `plugin_type` - The type of the plugin.
+    /// * `query_configuration` - A function to query the configuration.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self, PluginError>` - Success returns a new instance of the attester,
+    ///   failure returns an appropriate error.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the attester cannot be created.
     pub fn new(plugin_type: String, query_configuration: QueryConfigurationFn) -> Result<Self, PluginError> {
         if plugin_type != "tpm_boot" {
             return Err(PluginError::InputError("Invalid plugin type".to_string()));
