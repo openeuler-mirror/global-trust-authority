@@ -159,8 +159,8 @@ impl Client {
                 builder = builder
                     .identity(identity)
                     .add_root_certificate(ca_cert)
-                    .danger_accept_invalid_certs(true)
-                    .danger_accept_invalid_hostnames(true);
+                    .danger_accept_invalid_certs(false)
+                    .danger_accept_invalid_hostnames(false);
             }
         }
 
