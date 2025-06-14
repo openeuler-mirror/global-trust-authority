@@ -51,6 +51,16 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
     fn config(&self) -> &TpmPluginConfig;
 
     // --- Utility functions for hash algorithm and PCR slots conversion ---
+
+    /// Converts a string representation of a hash algorithm to a `HashingAlgorithm` enum.
+    ///
+    /// # Returns
+    ///
+    /// A `HashingAlgorithm` enum.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the hash algorithm is unknown.
     fn hash_alg_from_str(algo: &str) -> Result<HashingAlgorithm, PluginError> {
         match algo {
             "sha1" => Ok(HashingAlgorithm::Sha1),
@@ -64,6 +74,11 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         }
     }
 
+    /// Converts a list of PCR indices to a list of PCR slots.
+    ///
+    /// # Returns
+    ///
+    /// A vector of PCR slots.
     fn pcr_slots_from_indices(indices: &[i32]) -> Vec<PcrSlot> {
         indices.iter().filter_map(|&index| match index {
             0 => Some(PcrSlot::Slot0),
@@ -94,6 +109,15 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         }).collect()
     }
 
+    /// Creates a new TPM context.
+    ///
+    /// # Returns
+    ///
+    /// A TPM context.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the TPM context cannot be created.
     fn context_new(&self) -> Result<Context, PluginError> {
         let ctx = Context::new(self.config().tcti_config.clone());
         match ctx {
@@ -112,14 +136,32 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         }
     }
 
+    /// Creates a new TPM context without a session.
+    ///
+    /// # Returns
+    ///
+    /// A TPM context.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the TPM context cannot be created.
     fn create_ctx_without_session(&self) -> Result<Context, PluginError> {
         let ctx = self.context_new()?;
         Ok(ctx)
     }
 
+    /// Reads certificate data from a TPM NV index.
+    ///
+    /// # Returns
+    ///
+    /// A vector of bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the NV index is invalid or the certificate cannot be read.
     fn get_nv_cert_data(context: &mut Context, nv_index: u64) -> Result<Option<Vec<u8>>, PluginError> {
         let index: u32 = u32::try_from(nv_index)
-            .map_err(|_| PluginError::InternalError("Invalid NV index value".to_string()))?;
+            .map_err(|e| PluginError::InternalError(format!("Invalid NV index value: {}", e)))?;
         let nv_idx: NvIndexTpmHandle = NvIndexTpmHandle::new(index)
             .map_err(|e| PluginError::InternalError(format!("Failed to create NV index handle: {}", e)))?;
 
@@ -135,13 +177,18 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         Ok(Some(cert_data))
     }
 
-    // Read X509 certificate from TPM NV
+    /// Reads an X509 certificate from a TPM NV index.
+    ///
+    /// # Returns
+    ///
+    /// An X509 certificate.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the NV index is invalid or the certificate cannot be read.
     fn read_cert_from_nv(ctx: &mut Context, nv_index: u64) -> Result<X509, PluginError> {
         let cert1_data = Self::get_nv_cert_data(ctx, nv_index)?;
-        let cert2_data = match Self::get_nv_cert_data(ctx, nv_index + 1) {
-            Ok(data) => data,
-            Err(_) => None,
-        };
+        let cert2_data = Self::get_nv_cert_data(ctx, nv_index + 1).unwrap_or_default();
 
         // combine cert1_data and cert2_data
         let mut cert_data = cert1_data.unwrap_or_default();
@@ -153,7 +200,15 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
             .map_err(|e| PluginError::InternalError(format!("Invalid certificate format: {}", e)))
     }
 
-    // Convert TPM public key to OpenSSL format for comparison
+    /// Converts a TPM public key to an OpenSSL format for comparison.
+    ///
+    /// # Returns
+    ///
+    /// An OpenSSL `PKey`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the TPM public key cannot be converted to an OpenSSL format.
     fn convert_tpm_pubkey_to_openssl(ak_public: tss_esapi::structures::Public) -> Result<PKey<openssl::pkey::Public>, PluginError> {
         match ak_public {
             Public::Rsa { unique, .. } => {
@@ -201,7 +256,15 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         }
     }
 
-    // Validates that certificate's common name matches the node_id
+    /// Validates that certificate's common name matches the `node_id`.
+    ///
+    /// # Returns
+    ///
+    /// An empty result.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the certificate's common name does not match the `node_id`.
     fn validate_cert_common_name(cert: &X509, node_id: &str) -> Result<(), PluginError> {
         // Extract the common name from the certificate
         let subject_name = cert.subject_name();
@@ -221,7 +284,15 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         Ok(())
     }
 
-    // Check if PCRs exist for the specified hash algorithm
+    /// Checks if PCRs exist for the specified hash algorithm.
+    ///
+    /// # Returns
+    ///
+    /// An empty result.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the PCRs do not exist for the specified hash algorithm.
     fn check_pcr_availability(context: &mut Context, pcr_hash_alg: HashingAlgorithm) -> Result<(), PluginError> {
         // Query TPM supported PCRs and algorithms
         let (capability_data, _more_data) = context.get_capability(
@@ -258,7 +329,15 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         Ok(())
     }
 
-    // Common methods shared by all TPM plugins
+    /// Collects the AIK certificate.
+    ///
+    /// # Returns
+    ///
+    /// A base64 encoded certificate.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the AIK certificate cannot be collected.
     fn collect_aik(&self, node_id: &str) -> Result<String, PluginError> {
         let mut ctx = self.create_ctx_without_session()?;
 
@@ -305,8 +384,16 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         Ok(pem_cert)
     }
 
+    /// Collects the PCR values.
+    ///
+    /// # Returns
+    ///
+    /// A Pcrs struct.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the PCR values cannot be collected.
     fn collect_pcrs(&self) -> Result<Pcrs, PluginError> {
-        // Implementation of collect_pcrs (same for all plugins)
         // Create a new TPM context
         let mut context = self.context_new()?;
         let pcr_hash_alg = Self::hash_alg_from_str(self.config().pcr_selection.hash_alg.as_str())?;
@@ -340,7 +427,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
 
         // Convert PCR values to hex format and associate with correct PCR indices
         let mut pcr_values: Vec<PcrValue> = Vec::new();
-        
+
         // Iterate through the PCR digests
         let values = pcr_digests.value();
         for (i, digest) in values.iter().enumerate() {
@@ -350,9 +437,9 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
             } else {
                 (i as i32).try_into().unwrap()
             };
-            
+
             pcr_values.push(PcrValue {
-                pcr_index: pcr_index,
+                pcr_index,
                 pcr_value: hex::encode(digest.value()),
             });
         }
@@ -362,7 +449,16 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
             pcr_values,
         })
     }
-    
+
+    /// Collects the quote.
+    ///
+    /// # Returns
+    ///
+    /// A Quote struct.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the quote cannot be collected.
     fn collect_quote(&self, nonce: &[u8]) -> Result<Quote, PluginError> {
         // Trim the nonce to 32 bytes if it exceeds 32 bytes
         let nonce = &nonce[..std::cmp::min(nonce.len(), 32)];
@@ -459,10 +555,26 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         })
     }
     
-    // Plugin-specific log collection method that must be implemented by each plugin
+    /// Collects the log.
+    ///
+    /// # Returns
+    ///
+    /// A vector of Log structs.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the log cannot be collected.
     fn collect_log(&self) -> Result<Vec<Log>, PluginError>;
     
-    // Default implementation for collect_evidence that can be used by all plugins
+    /// Collects the evidence.
+    ///
+    /// # Returns
+    ///
+    /// A `serde_json::Value` struct.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the evidence cannot be collected.
     fn collect_evidence_impl(&self, node_id: Option<&str>, nonce: Option<&[u8]>) -> Result<serde_json::Value, PluginError> {
         let node_id = match node_id {
             Some(node_id) => node_id,

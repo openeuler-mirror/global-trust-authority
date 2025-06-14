@@ -69,6 +69,50 @@ impl ClientConfig {
         self
     }
 
+    /// Validates the client configuration.
+    ///
+    /// This method performs comprehensive validation of the client configuration, including:
+    /// - Basic configuration validation (using the Validate trait)
+    /// - HTTPS-specific validation:
+    ///   - Checks if `base_url` starts with "https://"
+    ///   - If HTTPS is used, validates that certificate configuration is present
+    ///   - Validates the certificate configuration if present
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), AgentError>` - Returns `Ok(())` if all validations pass,
+    ///   otherwise returns an `AgentError` with a descriptive error message.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `AgentError::ConfigError` in the following cases:
+    /// * Basic configuration validation fails
+    /// * HTTPS is used but certificate configuration is missing
+    /// * Certificate configuration validation fails
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// // HTTP configuration
+    /// let config = ClientConfig {
+    ///     base_url: "http://example.com".to_string(),
+    ///     cert_config: None,
+    ///     ..Default::default()
+    /// };
+    /// assert!(config.validate_config().is_ok());
+    ///
+    /// // HTTPS configuration with certificates
+    /// let config = ClientConfig {
+    ///     base_url: "https://example.com".to_string(),
+    ///     cert_config: Some(CertConfig {
+    ///         cert_path: Some("cert.pem".to_string()),
+    ///         key_path: Some("key.pem".to_string()),
+    ///         ca_path: Some("ca.pem".to_string()),
+    ///     }),
+    ///     ..Default::default()
+    /// };
+    /// assert!(config.validate_config().is_ok());
+    /// ```
     pub fn validate_config(&self) -> Result<(), AgentError> {
         if let Err(err) = self.validate() {
             return Err(AgentError::ConfigError(format!("Validation failed: {:?}", err)));
@@ -184,9 +228,49 @@ impl Client {
 
     /// Helper function: masks sensitive information in proxy URLs
     fn mask_sensitive_info(url: &str) -> String {
-        url.split('@').last().map_or_else(|| url.to_string(), |masked| format!("***@{}", masked))
+        url.split('@').next_back().map_or_else(|| url.to_string(), |masked| format!("***@{}", masked))
     }
 
+    /// Sends an HTTP request to the server with optional JSON payload.
+    ///
+    /// This method handles the complete request lifecycle including:
+    /// - Acquiring the HTTP client lock
+    /// - Constructing the request URL
+    /// - Adding JSON payload if provided
+    /// - Adding required headers (Content-Type and User-Id)
+    /// - Sending the request and handling the response
+    ///
+    /// # Arguments
+    ///
+    /// * `method` - The HTTP method to use (GET, POST, etc.)
+    /// * `path` - The API endpoint path to request
+    /// * `json` - Optional JSON payload to send with the request
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Response, AgentError>` - Returns the HTTP response if successful,
+    ///   otherwise returns an appropriate `AgentError`
+    ///
+    /// # Errors
+    ///
+    /// Returns an `AgentError` in the following cases:
+    /// * `LockError` - If unable to acquire the client lock
+    /// * `ConfigError` - If the HTTP client is not initialized
+    /// * `ConfigError` - If unable to serialize the JSON payload
+    /// * `ConfigError` - If unable to get the global configuration
+    /// * `ConfigError` - If the `user_id` is not found in the configuration
+    /// * `NetworkError` - If the request fails to send or receive a response
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// // GET request without payload
+    /// let response = client.request(Method::GET, "/api/status", None).await?;
+    ///
+    /// // POST request with JSON payload
+    /// let json = serde_json::json!({"key": "value"});
+    /// let response = client.request(Method::POST, "/api/data", Some(json)).await?;
+    /// ```
     pub async fn request(&self, method: Method, path: &str, json: Option<Value>) -> Result<Response, AgentError> {
         let client_guard = self.client.read().map_err(|e| {
             error!("Failed to acquire client read lock: {}", e);

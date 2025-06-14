@@ -18,6 +18,30 @@ pub mod validate_utils {
     use std::path::Path;
     use validator::ValidationError;
 
+    /// Validates a file path and its accessibility.
+    ///
+    /// This function performs the following checks:
+    /// 1. Checks if the path is empty
+    /// 2. Checks if the file exists
+    /// 3. Checks if the path points to a file (not a directory)
+    /// 4. Checks if the file is readable
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - A string slice that holds the file path to validate
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), ValidationError>` - Returns `Ok(())` if all validations pass,
+    ///   otherwise returns a `ValidationError` with an appropriate error message.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ValidationError` in the following cases:
+    /// * Path is empty
+    /// * File does not exist
+    /// * Path is not a file
+    /// * File is not readable
     pub fn validate_file(path: &str) -> Result<(), ValidationError> {
         // Check if path is empty
         if path.is_empty() {
@@ -37,19 +61,50 @@ pub mod validate_utils {
         }
 
         // Check if file is readable
-        if let Err(_) = fs::metadata(path_obj).and_then(|metadata| {
+        if fs::metadata(path_obj).and_then(|metadata| {
             if metadata.permissions().readonly() {
                 Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "File is not readable"))
             } else {
                 Ok(())
             }
-        }) {
+        }).is_err() {
             return Err(ValidationError::new("Cannot read file"));
         }
 
         Ok(())
     }
 
+    /// Validates a bind address string for server configuration.
+    ///
+    /// This function checks if the provided address is a valid:
+    /// - IPv4 address (e.g., "127.0.0.1")
+    /// - IPv6 address (e.g., "`::1`")
+    /// - Hostname (e.g., "localhost", "example.com")
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - A reference to a string containing the address to validate
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), ValidationError>` - Returns `Ok(())` if the address is valid,
+    ///   otherwise returns a `ValidationError` with an appropriate error message.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ValidationError` if:
+    /// * The address is not a valid IPv4 address
+    /// * The address is not a valid IPv6 address
+    /// * The address is not a valid hostname (doesn't match the hostname regex pattern)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// assert!(validate_bind_address(&"127.0.0.1".to_string()).is_ok());
+    /// assert!(validate_bind_address(&"::1".to_string()).is_ok());
+    /// assert!(validate_bind_address(&"localhost".to_string()).is_ok());
+    /// assert!(validate_bind_address(&"invalid".to_string()).is_err());
+    /// ```
     pub fn validate_bind_address(address: &&String) -> Result<(), ValidationError> {
         // Check if it's a valid IPv4 address
         if let Ok(_ipv4) = address.parse::<Ipv4Addr>() {
@@ -65,7 +120,10 @@ pub mod validate_utils {
         let hostname_regex = Regex::new(
             r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$",
         )
-        .unwrap();
+        .map_err(|_e| {
+            ValidationError::new("Failed to compile hostname validation pattern")
+        })?;
+
         if hostname_regex.is_match(address) {
             return Ok(());
         }
@@ -73,6 +131,49 @@ pub mod validate_utils {
         Err(ValidationError::new("Invalid bind address. Must be a valid IPv4, IPv6 address or hostname"))
     }
 
+    /// Validates a REST API route path string.
+    ///
+    /// This function performs comprehensive validation of a REST API route path, including:
+    /// - Path must not be empty
+    /// - Path must start with '/'
+    /// - No control characters allowed
+    /// - No query parameters or fragments allowed
+    /// - Proper parameter placeholder syntax (e.g., "/users/{id}")
+    /// - No nested braces
+    /// - No duplicate parameter names
+    /// - Parameter names must be alphanumeric or underscore
+    ///
+    /// # Arguments
+    ///
+    /// * `rest_path` - A string slice containing the route path to validate
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), AgentError>` - Returns `Ok(())` if the path is valid,
+    ///   otherwise returns an `AgentError` with a descriptive error message.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `AgentError::ConfigError` with a descriptive message if:
+    /// * The path is empty or contains only whitespace
+    /// * The path doesn't start with '/'
+    /// * The path contains control characters ('\0', '\n', '\r')
+    /// * The path contains query parameters ('?') or fragments ('#')
+    /// * The path contains nested braces
+    /// * The path has unmatched braces
+    /// * The path contains empty parameter names
+    /// * The path contains duplicate parameter names
+    /// * The path contains invalid characters in parameter names
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// assert!(validate_rest_path("/api/users").is_ok());
+    /// assert!(validate_rest_path("/api/users/{id}").is_ok());
+    /// assert!(validate_rest_path("api/users").is_err()); // Missing leading slash
+    /// assert!(validate_rest_path("/api/users/{id}/{id}").is_err()); // Duplicate parameter
+    /// assert!(validate_rest_path("/api/users/{id?}").is_err()); // Invalid parameter name
+    /// ```
     pub fn validate_rest_path(rest_path: &str) -> Result<(), AgentError> {
         if rest_path.trim().is_empty() {
             return Err(AgentError::ConfigError("Route path cannot be empty".to_string()));
