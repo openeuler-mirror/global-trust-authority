@@ -21,13 +21,9 @@ use agent_utils::{AgentError, Client, ClientConfig};
 use challenge::do_challenge;
 use challenge::AttesterInfo;
 use config::{ConfigManager, InitialDelayConfig, AGENT_CONFIG};
-use log::LevelFilter;
 use log::{debug, error, info};
-use log4rs::{
-    append::file::FileAppender,
-    config::{Appender, Config, Root},
-    encode::pattern::PatternEncoder,
-};
+use common_log::config::{LogConfig, LoggerConfig};
+use common_log::init_with_config;
 use scheduler::SchedulerBuilders;
 use serde_json::Value;
 use std::future::Future;
@@ -35,10 +31,11 @@ use std::pin::Pin;
 use std::sync::Arc;
 use tokio::pin;
 use tokio::time::Duration;
-use std::fs;
-use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
 
 const MAX_QUEUE_SIZE: usize = 3;
+const MAX_LOG_FILE_SIZE: u64 = 10485760; // 10MB
+const MAX_LOG_FILE_COUNT: u32 = 6;
 
 #[tokio::main]
 async fn main() -> Result<(), AgentError> {
@@ -62,33 +59,25 @@ async fn main() -> Result<(), AgentError> {
         .map_err(|e| AgentError::ConfigError(format!("Failed to get agent config instance: {}", e)))?
         .clone();
 
-    let log_file = FileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{d(%Y-%m-%d %H:%M:%S:%3f)} {l} [{M}:{L}] - {m}{n}")))
-        .build(&config.logging.file)
-        .map_err(|e| AgentError::IoError(format!("Failed to build log file appender: {}", e)))?;
+    // init log config
+    let log_path = Path::new(&config.logging.file);
+    let log_directory = log_path.parent().and_then(|p| p.to_str()).unwrap_or("/var/log").to_string();
+    let log_file_name = log_path.file_name().and_then(|name| name.to_str()).unwrap_or("ra-agent.log").to_string();
 
-    // Set log file permissions to 640
-    if let Err(e) = fs::set_permissions(&config.logging.file, PermissionsExt::from_mode(0o640)) {
-        error!("Failed to set log file permissions: {}", e);
-    }
-
-    let log_level = match config.logging.level.to_lowercase().as_str() {
-        "debug" => LevelFilter::Debug,
-        "warn" => LevelFilter::Warn,
-        "error" => LevelFilter::Error,
-        "off" => LevelFilter::Off,
-        _ => LevelFilter::Info,
+    let log_config = LogConfig {
+        loggers: vec![LoggerConfig {
+            path_prefix: "root".to_string(),
+            log_directory,
+            log_file_name,
+            max_file_size: MAX_LOG_FILE_SIZE,
+            max_zip_count: MAX_LOG_FILE_COUNT,
+            level: config.logging.level.clone(),
+        }]
     };
 
-    let log_config = Config::builder()
-        .appender(Appender::builder().build("file", Box::new(log_file)))
-        .build(Root::builder().appender("file").build(log_level))
-        .map_err(|e| AgentError::ConfigError(format!("Failed to build log config: {}", e)))?;
-
-    if let Err(e) = log4rs::init_config(log_config) {
-        error!("Failed to initialize logger: {}", e);
-        return Err(AgentError::IoError(format!("Failed to initialize logger: {}", e)));
-    }
+    init_with_config(log_config)
+        .map_err(|e| AgentError::IoError(format!("Failed to initialize logger: {}", e)))?;
+    info!("Logger initialized");
 
     // Print working directory and some basic information
     info!(

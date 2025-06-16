@@ -18,7 +18,7 @@ pub struct LogConfig {
     pub loggers: Vec<LoggerConfig>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct LoggerConfig {
     pub path_prefix: String,
     pub log_directory: String,

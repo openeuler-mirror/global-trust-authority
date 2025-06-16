@@ -15,7 +15,7 @@ chrono.workspace = true
 rand.workspace = true
 cron.workspace = true
 serde_json.workspace = true
-log4rs.workspace = true
+common_log.workspace = true
 agent_restful = { path = "../agent_restful" }
 agent_utils = { path = "../utils", features = ["client"] }
 config = { path = "../config" }

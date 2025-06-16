@@ -32,7 +32,7 @@ pub struct PutArgs {
     pub encoding: String,
 
     /// Encryption algorithm
-    #[arg(long, required = true, value_parser = ["rsa_3072", "rsa_4096", "sm2", "ec"], ignore_case = true)]
+    #[arg(long, required = true, value_parser = ["rsa_3072"], ignore_case = true)]
     pub algorithm: String,
 
     /// Private key content, cannot be used with '--key_file'
@@ -46,7 +46,7 @@ pub struct PutArgs {
 
 /// Params:
 ///      args: param for bin
-/// Errors 
+/// # Errors 
 ///     execute error
 pub fn handle_put(args: PutArgs) -> Result<(), AppError> {
     let put_cipher = PutCipherReq {

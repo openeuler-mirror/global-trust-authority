@@ -26,6 +26,8 @@ pub trait CommandExecutor {
     ///     command: shell command
     ///     args: command param
     ///     envs: execute shell env map
+    /// # Errors: 
+    ///     shell command execute error
     fn execute(&self, command: &str, args: &Vec<String>, envs: &HashMap<OsString, OsString>) -> io::Result<Output>;
 }
 pub struct CommandService;

@@ -150,7 +150,7 @@ curl  --cert ra_client_cert.pem \
 ### Parameter Specifications
 | Parameter    | Required | Values  | Allowed Values    | Description                      |
 |--------------|----------|---------|-------------------|----------------------------------|
-| --key_name   | Yes      | String  | `NSK`,`PSK`,`TSK` | Unique identifier for the key    |
+| --key_name   | Yes      | String  | `NSK`,`FSK`,`TSK` | Unique identifier for the key    |
 | --algorithm  | Yes      | String  | `RSA_3072`        | Encryption algorithm for the key |
 | --encoding   | Yes      | String  | `PEM`             | Encoding format for the key      |
 | --key_file   | Yes      | String  | -                 | Path to key file                 |

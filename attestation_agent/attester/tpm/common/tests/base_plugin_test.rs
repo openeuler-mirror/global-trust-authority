@@ -10,6 +10,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
+use tss_esapi::Context;
+use tss_esapi::structures::PcrSelectionList;
 use tpm_common_attester::{TpmPluginBase, TpmPluginConfig, Log, Quote, Pcrs, PcrValue};
 use plugin_manager::{AgentPlugin, PluginError, PluginBase};
 use serde_json::Value;
@@ -62,8 +64,8 @@ impl TpmPluginBase for MockTpmPlugin {
         Ok("mock_ak_cert".to_string())
     }
     
-    fn collect_pcrs(&self) -> Result<Pcrs, PluginError> {
-        Ok(Pcrs {
+    fn collect_pcrs_quote(&self, nonce: &[u8]) -> Result<(Quote, Pcrs), PluginError> {
+        let pcr = Pcrs {
             hash_alg: "sha256".to_string(),
             pcr_values: vec![
                 PcrValue {
@@ -75,14 +77,12 @@ impl TpmPluginBase for MockTpmPlugin {
                     pcr_value: "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210".to_string(),
                 },
             ],
-        })
-    }
-    
-    fn collect_quote(&self, _nonce: &[u8]) -> Result<Quote, PluginError> {
-        Ok(Quote {
+        };
+        let quote = Quote {
             quote_data: "mock_quote_data".to_string(),
             signature: "mock_signature".to_string(),
-        })
+        };
+        Ok((quote, pcr))
     }
     
     fn collect_log(&self) -> Result<Vec<Log>, PluginError> {

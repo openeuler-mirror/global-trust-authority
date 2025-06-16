@@ -269,6 +269,16 @@ After executing the command, there is no output, proving that the service was un
 
 ### attestation_agent
 
+#### Notices
+
+The agent is currently running with root privileges. The RESTful interface of the agent is only for the use of this node. Please do not configure the 'listen'address' field with other IP addresses to avoid security risks. The RESTful interface of the agent will be supported for external use in later versions.
+
+```yaml
+agent:
+  listen_address: "127.0.0.1"
+  listen_port: 8088
+```
+
 #### Build the rpm package
 
 Build the rpm package, run rpm_build.sh

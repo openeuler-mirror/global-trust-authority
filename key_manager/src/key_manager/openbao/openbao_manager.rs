@@ -106,6 +106,8 @@ impl OpenBaoManager {
     }
 
     /// desc: check current secrets has been created, select all secrets to check
+    /// # Errors:
+    ///     result is not match fixed format
     pub fn check_secrets(&mut self) -> Result<bool, AppError> {
         // 创建密钥路径
         self.clean().secrets().list().detailed().format_json();
@@ -147,6 +149,8 @@ impl OpenBaoManager {
     /// desc: create single metadata, this metadata is openbao v2 path
     /// param: 
     ///     item: metadata name 
+    /// # Errors:
+    ///     shell command execute error
     pub fn create_metadata(&mut self, item: &str) -> Result<(), AppError> {
         self.clean().kv().metadata().put().mount(config::SECRET_PATH).max_versions(&u32::MAX).map_name(item);
         let result = get_command_service().execute(self.get_command(), self.get_args(), self.get_envs());

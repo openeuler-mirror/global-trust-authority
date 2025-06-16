@@ -10,7 +10,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use chrono::{DateTime, Local};
 use log::{error, info, LevelFilter};
 use log4rs::append::rolling_file::policy::compound::roll::fixed_window::FixedWindowRoller;
 use log4rs::append::rolling_file::policy::compound::trigger::size::SizeTrigger as SizeBasedTriggerPolicy;
@@ -34,21 +33,132 @@ pub struct Logger {
 }
 
 impl Logger {
-    pub fn new_from_config(config: LogConfig) -> Result<Self, Box<dyn std::error::Error>> {
-        Self::new(config)
+    pub fn new_from_config(config: LogConfig) -> Result<Self, Box<dyn Error>> {
+        Self::new_without_env(config)
     }
 
-    pub fn new_from_yaml(config_path: impl Into<PathBuf>) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new_from_yaml(config_path: impl Into<PathBuf>) -> Result<Self, Box<dyn Error>> {
         let config = LogConfig::from_yaml(config_path)?;
         Self::new(config)
     }
 
-    pub fn new(config: LogConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn spawn_permission_monitor(config: Option<LoggerConfig>) {
+        let (relative_log_directory, root_log_file) = match config {
+            Some(root_config) => {
+                let root_log_file = std::path::Path::new(&root_config.log_directory)
+                    .join(root_config.log_file_name.as_str());
+                (root_config.log_directory, root_log_file)
+            },
+            None => {
+                let log_out_dir = env::var("LOG_OUTPUT_DIR").expect("LOG_OUTPUT_DIR must be set");
+                let log_directory = std::path::Path::new(&log_out_dir).join("logs").to_string_lossy().to_string();
+                let root_log_file = std::path::Path::new(&log_directory).join("root.log");
+                (log_directory, root_log_file)
+            },
+        };
+
+        std::thread::spawn(move || {
+            loop {
+                if let Ok(metadata) = std::fs::metadata(&root_log_file) {
+                    if metadata.is_file() {
+                        let permissions = Permissions::from_mode(0o640);
+                        if let Err(e) = std::fs::set_permissions(&root_log_file, permissions) {
+                            error!("Failed to set root log file permissions: {}", e);
+                        }
+                    }
+                }
+                // Set zip file permissions to 440 (owner r, group r, others none)
+                if let Ok(entries) = std::fs::read_dir(&relative_log_directory) {
+                    for entry in entries.filter_map(Result::ok) {
+                        let path = entry.path();
+                        if path.is_file() && path.extension().map_or(false, |ext| ext == "gz") {
+                            let permissions = Permissions::from_mode(0o440);
+                            if let Err(e) = std::fs::set_permissions(&path, permissions) {
+                                error!("Failed to set zip file permissions for {}: {}", path.display(), e);
+                            }
+                        }
+                    }
+                }
+
+                // Sleep for a period before checking again
+                std::thread::sleep(std::time::Duration::from_secs(5));
+            }
+        });
+    }
+
+    /// Creates a new logger instance without using environment variables.
+    ///
+    /// This method has the following characteristics:
+    /// 1. Does not use environment variables to set log paths, instead uses the paths directly from config
+    /// 2. Does not create log directories, assumes they already exist
+    /// 3. Controls permissions for log directories (750: owner rwx, group rx, others none)
+    /// 4. Controls permissions for log files (640: owner rw, group r, others none)
+    /// 5. Does not delete old compressed log files
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The logging configuration
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self, Box<dyn Error>>` - The logger instance or an error
+    pub fn new_without_env(config: LogConfig) -> Result<Self, Box<dyn Error>> {
+        let mut log4rs_config = Config::builder();
+        for logger_config in &config.loggers {
+            let appender = Self::create_appender(logger_config, logger_config.log_directory.as_str())?;
+            let appender_name = format!("{}_appender", logger_config.path_prefix);
+            log4rs_config = log4rs_config
+                .appender(Appender::builder().build(&appender_name, Box::new(appender)));
+            let logger = log4rs::config::Logger::builder()
+                .appender(appender_name)
+                .additive(false)
+                .build(
+                    logger_config.path_prefix.clone(),
+                    Self::parse_level(&logger_config.level),
+                );
+            log4rs_config = log4rs_config.logger(logger);
+        }
+
+        // Configure root logger
+        let final_config: Config;
+        let root_appender_name = "root_appender";
+        let root_appender_exists = config
+            .loggers
+            .iter()
+            .any(|l| format!("{}_appender", l.path_prefix) == root_appender_name);
+
+        if let Some(root_config) = config.get_root_config() {
+            let root_appender = Self::create_appender(root_config, root_config.log_directory.as_str())?;
+            if !root_appender_exists {
+                log4rs_config = log4rs_config.appender(
+                    Appender::builder().build(root_appender_name, Box::new(root_appender)),
+                );
+            }
+
+            let root = Root::builder()
+                .appender(root_appender_name)
+                .build(Self::parse_level(&root_config.level));
+            final_config = log4rs_config.build(root)?;
+        } else {
+            let root = Root::builder().build(LevelFilter::Info);
+            final_config = log4rs_config.build(root)?;
+        }
+        let handle = log4rs::init_config(final_config)?;
+
+        if let Some(root_config) = config.get_root_config().cloned() {
+            Self::spawn_permission_monitor(Some(root_config));
+        }
+
+        Ok(Self { handle })
+    }
+
+    pub fn new(config: LogConfig) -> Result<Self, Box<dyn Error>> {
         let mut log4rs_config = Config::builder();
 
         // Create appenders for each logger configuration
         for logger_config in &config.loggers {
-            let appender = Self::create_appender(logger_config)?;
+            let relative_log_directory = Self::get_relative_log_directory(logger_config)?;
+            let appender = Self::create_appender(logger_config, &relative_log_directory)?;
             let appender_name = format!("{}_appender", logger_config.path_prefix);
             log4rs_config = log4rs_config
                 .appender(Appender::builder().build(&appender_name, Box::new(appender)));
@@ -73,7 +183,8 @@ impl Logger {
             .any(|l| format!("{}_appender", l.path_prefix) == root_appender_name);
 
         if let Some(root_config) = config.get_root_config() {
-            let root_appender = Self::create_appender(root_config)?;
+            let relative_log_directory = Self::get_relative_log_directory(root_config)?;
+            let root_appender = Self::create_appender(root_config, &relative_log_directory)?;
             // Check if root_appender exists, add if not
             if !root_appender_exists {
                 log4rs_config = log4rs_config.appender(
@@ -107,7 +218,7 @@ impl Logger {
             let zip_files: Vec<_> = std::fs::read_dir(&relative_log_directory)?
                 .filter_map(|entry| {
                     let path = entry.ok().unwrap().path();
-                    if path.is_file() && path.extension().map_or(false, |ext| ext == "zip") {
+                    if path.is_file() && path.extension().map_or(false, |ext| ext == "gz") {
                         Some(path)
                     } else {
                         None
@@ -129,46 +240,14 @@ impl Logger {
 
         let handle = log4rs::init_config(final_config)?;
 
-        // Spawn a new thread to periodically check and set file permissions
-        std::thread::spawn(move || {
-            let log_out_dir = env::var("LOG_OUTPUT_DIR").expect("LOG_OUTPUT_DIR must be set");
-            let relative_log_directory = std::path::Path::new(&log_out_dir).join("logs").to_string_lossy().to_string();
-
-            loop {
-                // Set root log file permissions to 640 (owner rw, group r, others none)
-                let root_log_file = std::path::Path::new(&relative_log_directory).join("root.log");
-                if let Ok(metadata) = std::fs::metadata(&root_log_file) {
-                    if metadata.is_file() {
-                        let permissions = Permissions::from_mode(0o640);
-                        if let Err(e) = std::fs::set_permissions(&root_log_file, permissions) {
-                            error!("Failed to set root log file permissions: {}", e);
-                        }
-                    }
-                }
-
-                // Set zip file permissions to 440 (owner r, group r, others none)
-                if let Ok(entries) = std::fs::read_dir(&relative_log_directory) {
-                    for entry in entries.filter_map(Result::ok) {
-                        let path = entry.path();
-                        if path.is_file() && path.extension().map_or(false, |ext| ext == "zip") {
-                            let permissions = Permissions::from_mode(0o440);
-                            if let Err(e) = std::fs::set_permissions(&path, permissions) {
-                                error!("Failed to set zip file permissions for {}: {}", path.display(), e);
-                            }
-                        }
-                    }
-                }
-                // Sleep for a period before checking again
-                std::thread::sleep(std::time::Duration::from_secs(5));
-            }
-        });
+        Self::spawn_permission_monitor(None);
 
         Ok(Self { handle })
     }
 
-    fn create_appender(
+    fn get_relative_log_directory(
         config: &LoggerConfig,
-    ) -> Result<RollingFileAppender, Box<dyn std::error::Error>> {
+    ) -> Result<String, Box<dyn Error>> {
         match dotenv::dotenv() {
             Ok(path) => info!("load .env file: {}", path.display()),
             Err(e) => error!(".env load fail: {}", e),
@@ -195,11 +274,17 @@ impl Logger {
         if let Err(e) = std::fs::set_permissions(&relative_log_directory, dir_permissions) {
             error!("Failed to set log directory permissions: {}", e);
         }
+        Ok(relative_log_directory)
+    }
 
+    fn create_appender(
+        config: &LoggerConfig,
+        relative_log_directory: &str,
+    ) -> Result<RollingFileAppender, Box<dyn Error>> {
         // Configure log file path
         let log_file = std::path::Path::new(&relative_log_directory).join(&config.log_file_name).to_string_lossy().to_string();
         let archived_log_pattern = format!(
-            "{}/{}-{{}}.zip",
+            "{}/{}-{{}}.gz",
             relative_log_directory, config.log_file_name
         );
 
