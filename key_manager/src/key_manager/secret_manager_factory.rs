@@ -26,8 +26,12 @@ pub trait SecretManager : Send + Sync{
     /// desc: import secret to secret manager comp
     /// param: 
     ///     cipher: secret manager comp need param and config 
+    /// # Errors:
+    ///     return shell execute error info
     fn import_secret(&mut self, cipher: &PutCipherReq) -> Result<String, AppError>;
     /// desc: init secret manager comp, contain create init config 
+    /// # Errors:
+    ///     return shell execute error info
     fn init_system(&mut self) -> Result<(), AppError>;
 }
 
