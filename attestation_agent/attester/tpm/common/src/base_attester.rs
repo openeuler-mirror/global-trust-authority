@@ -398,6 +398,25 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         Ok((quote, pcrs))
     }
 
+    /// Collects PCR values from TPM for the specified PCR banks.
+    ///
+    /// # Arguments
+    ///
+    /// * `context` - TPM context for executing commands
+    /// * `pcr_selection_list` - PCR selection list specifying which PCRs to read
+    /// * `pcr_banks` - List of PCR bank indices to read from
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Pcrs, PluginError>` - Returns the PCR values if successful,
+    ///   otherwise returns a `PluginError`
+    ///
+    /// # Errors
+    ///
+    /// Returns a `PluginError::InternalError` if:
+    /// * PCR read operation fails
+    /// * PCR selection validation fails
+    /// * PCR value conversion fails
     fn collect_pcrs(
         &self,
         context: &mut Context,
@@ -442,6 +461,25 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         })
     }
 
+    /// Collects a quote from TPM for the specified PCR selection.
+    ///
+    /// # Arguments
+    ///
+    /// * `context` - TPM context for executing commands
+    /// * `pcr_selection_list` - PCR selection list specifying which PCRs to quote
+    /// * `nonce` - Random data used to prevent replay attacks
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Quote, PluginError>` - Returns the TPM quote if successful,
+    ///   otherwise returns a `PluginError`
+    ///
+    /// # Errors
+    ///
+    /// Returns a `PluginError::InternalError` if:
+    /// * PCR selection list creation fails
+    /// * TPM quote operation fails
+    /// * Quote marshalling fails
     fn collect_quote(
         &self,
         context: &mut Context,

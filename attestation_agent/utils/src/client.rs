@@ -149,6 +149,24 @@ impl Client {
         CLIENT_INSTANCE.get_or_init(|| Arc::new(Self::default())).clone()
     }
 
+    /// Configures the HTTP client with the provided configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Client configuration containing base URL and certificate settings
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Arc<Self>, AgentError>` - Returns an Arc-wrapped instance if successful,
+    ///   otherwise returns an `AgentError`
+    ///
+    /// # Errors
+    ///
+    /// Returns an `AgentError` in the following cases:
+    /// * `ConfigError` - If the configuration validation fails
+    /// * `LockError` - If unable to acquire the configuration lock
+    /// * `LockError` - If unable to acquire the client lock
+    /// * `ConfigError` - If unable to create the HTTP client
     pub fn configure(config: ClientConfig) -> Result<Arc<Self>, AgentError> {
         let instance = Self::instance();
         if let Err(err) = config.validate_config() {
