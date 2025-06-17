@@ -45,8 +45,46 @@ pub fn query_configuration(plugin_name: String) -> Option<String> {
     }
 }
 
-/// Load and initialize plugins based on configuration
-/// Iterates all plugins in config and loads them into the plugin manager
+/// Loads and initializes plugins based on the provided configuration.
+///
+/// This function performs the following steps:
+/// 1. Gets the plugin manager instance
+/// 2. Iterates through all plugins in the configuration
+/// 3. Validates and collects enabled plugins
+/// 4. Initializes the plugin manager with the discovered plugins
+///
+/// # Arguments
+///
+/// * `config` - A reference to the `Config` struct containing plugin configurations
+///
+/// # Returns
+///
+/// * `Result<(), AgentError>` - Returns `Ok(())` if all plugins are successfully loaded,
+///   otherwise returns an `AgentError` with a descriptive error message.
+///
+/// # Errors
+///
+/// Returns an `AgentError::PluginLoadError` in the following cases:
+/// * Plugin file is not found
+/// * No enabled plugins are found in the configuration
+/// * Plugin manager initialization fails
+///
+/// # Examples
+///
+/// ```rust
+/// let config = Config {
+///     plugins: vec![
+///         PluginConfig {
+///             name: "tpm_boot".to_string(),
+///             path: "/path/to/tpm_boot.so".to_string(),
+///             enabled: true,
+///             ..Default::default()
+///         }
+///     ],
+///     ..Default::default()
+/// };
+/// load_plugins(&config)?;
+/// ```
 pub fn load_plugins(config: &Config) -> Result<(), AgentError> {
     // Get AgentPlugin manager instance
     let plugin_manager = PluginManager::<dyn AgentPlugin, AgentHostFunctions>::get_instance();
