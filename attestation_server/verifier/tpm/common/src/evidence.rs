@@ -305,7 +305,7 @@ impl Evidence {
     pub async fn verify(
         &mut self,
         user_id: &str,
-        node_id: Option<&str>,
+        _node_id: Option<&str>,
         nonce: Option<&[u8]>,
         generator: &dyn GenerateEvidence,
     ) -> Result<Value, PluginError> {
@@ -317,28 +317,6 @@ impl Evidence {
 
         // Parse AK certificate
         let ak_cert = self.parse_ak_certificate()?;
-
-        // Check if node_id exists
-        if let Some(node_id) = node_id {
-            // Get common name from certificate
-            let cn = ak_cert.subject_name()
-                .entries_by_nid(openssl::nid::Nid::COMMONNAME)
-                .next()
-                .ok_or_else(|| PluginError::InputError("Failed to get CommonName from certificate".to_string()))?
-                .data()
-                .as_utf8()
-                .map_err(|e| PluginError::InputError(format!("Failed to parse certificate CommonName: {}", e)))?
-                .to_string();
-
-            // Check if certificate CommonName matches node_id
-            if cn != node_id {
-                return Err(PluginError::InputError(format!(
-                    "Certificate CommonName({}) does not match node_id({})", 
-                    cn, 
-                    node_id
-                )));
-            }
-        }
 
         let public_ak = ak_cert.public_key()
             .map_err(|e| PluginError::InputError(format!("Failed to extract public key from certificate: {}", e)))?;

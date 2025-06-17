@@ -33,7 +33,7 @@ use hex;
 use openssl::hash::{Hasher, MessageDigest, DigestBytes};
 use tpm_common_verifier::{PcrValues, AlgorithmId, CryptoVerifier};
 use plugin_manager::PluginError;
-use crate::byte_reader::ByteReader;
+use crate::event::byte_reader::ByteReader;
 use crate::event::model::{
     EventType, TpmEventLog,
     TcgDigestAlgorithm, EventLogEntry,
@@ -158,7 +158,7 @@ impl EventLog {
     ///
     /// # Returns
     /// * `Result<EventLogEntry, PluginError>` - Parsed event entry or error
-    fn parse_first_event(&self, parser: &mut ByteReader) -> Result<EventLogEntry, PluginError> {
+    fn parse_first_event(&self, parser: &mut ByteReader<'_>) -> Result<EventLogEntry, PluginError> {
         let first_entry: EventLogEntry = self.parse_event_entry(parser, &TcgDigestParseV1)?;
         Ok(first_entry)
     }
@@ -178,7 +178,7 @@ impl EventLog {
     /// * `Result<EventLogEntry, PluginError>` - Parsed event entry or error
     fn parse_event_entry(
         &self,
-        parser: &mut ByteReader,
+        parser: &mut ByteReader<'_>,
         digest_parser: &dyn TcgDigestParse,
     ) -> Result<EventLogEntry, PluginError> {
         // 1. Read PCR index

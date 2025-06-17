@@ -11,7 +11,7 @@
  */
 
 use tpm_boot_attester::TpmBootPlugin;
-use plugin_manager::{AgentPlugin, PluginError};
+use plugin_manager::PluginError;
 use serde_json;
 
 /// Test configuration for the Boot plugin
@@ -78,21 +78,6 @@ fn mock_missing_pcr_selections_configuration(_plugin_type: String) -> Option<Str
     Some(config.to_string())
 }
 
-/// Test configuration with missing quote_hash_algo
-fn mock_missing_quote_hash_algo_configuration(_plugin_type: String) -> Option<String> {
-    let config = serde_json::json!({
-        "attester_type": "boot",
-        "tcti_config": "device:/dev/tpm0",
-        "ak_handle": 0x81010020_i64,
-        "ak_nv_index": 0x150001b_i64,
-        "pcr_selections": {"banks": [0, 1, 2, 3, 4, 5, 6, 7], "hash_alg": "sha256"},
-        "quote_signature_scheme": {"hash_alg": "sha256", "signature_alg": "rsassa"},
-        "log_file_path": "/sys/kernel/security/tpm0/binary_bios_measurements"
-        // quote_hash_algo is missing
-    });
-    Some(config.to_string())
-}
-
 /// Test configuration with missing log_file_path
 fn mock_missing_log_file_path_configuration(_plugin_type: String) -> Option<String> {
     let config = serde_json::json!({
@@ -149,28 +134,6 @@ fn test_invalid_json_configuration() {
         panic!("Expected InternalError with 'Failed to parse plugin configuration as JSON', got {:?}", plugin_result);
     }
 }
-
-#[test]
-fn test_missing_node_id() {
-    // Create a new plugin with the mock configuration
-    let plugin = TpmBootPlugin::new(String::from("tpm_boot"), mock_boot_configuration)
-        .expect("Failed to create TpmBootPlugin");
-    
-    // Test collect_evidence with missing node_id
-    let node_id = None;
-    let nonce = Some("123456".as_bytes());
-    
-    let result = plugin.collect_evidence(node_id, nonce);
-    
-    // Check that the result is an error
-    assert!(result.is_err());
-    if let Err(PluginError::InputError(msg)) = result {
-        assert_eq!(msg, "Node ID is required");
-    } else {
-        panic!("Expected InputError with 'Node ID is required', got {:?}", result);
-    }
-}
-
 
 #[test]
 fn test_missing_ak_handle() {

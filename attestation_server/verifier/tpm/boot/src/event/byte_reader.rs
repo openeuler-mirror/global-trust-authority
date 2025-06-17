@@ -75,7 +75,7 @@ pub trait ByteParseable: Sized {
     /// # Errors
     ///
     /// Returns a PluginError when the byte stream contains insufficient data or is incorrectly formatted
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError>;
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError>;
 }
 
 impl<'a> ByteReader<'a> {

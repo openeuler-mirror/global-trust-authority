@@ -28,7 +28,7 @@ use plugin_manager::PluginError;
 use tpm_common_verifier::AlgorithmId;
 use std::mem::size_of;
 use hex;
-use crate::byte_reader::{
+use crate::event::byte_reader::{
     ByteReader, ByteParseable,
     UEFI_GUID_SIZE,
 };
@@ -98,7 +98,7 @@ pub trait TcgDigestParse {
     /// 
     /// # Errors
     /// * `PluginError::InputError` - If there's an error reading the digest data
-    fn parse_digest(&self, cursor: &mut ByteReader) -> Result<TcgDigestAlgorithm, PluginError>;
+    fn parse_digest(&self, cursor: &mut ByteReader<'_>) -> Result<TcgDigestAlgorithm, PluginError>;
 
     /// Determines if this is a TCG 2.0 version
     ///
@@ -117,7 +117,7 @@ pub struct TcgDigestParseV2;
 
 /// TCG 1.2 digest contains only a single digest field
 impl TcgDigestParse for TcgDigestParseV1 {
-    fn parse_digest(&self, cursor: &mut ByteReader) -> Result<TcgDigestAlgorithm, PluginError> {
+    fn parse_digest(&self, cursor: &mut ByteReader<'_>) -> Result<TcgDigestAlgorithm, PluginError> {
         let digest: Vec<u8> = cursor.read_bytes(SHA1_DIGEST_SIZE)?;
         Ok(TcgDigestAlgorithm::V1(hex::encode(digest)))
     }
@@ -125,7 +125,7 @@ impl TcgDigestParse for TcgDigestParseV1 {
 
 /// TCG 2.0 digest contains multiple digests, each with an algorithm ID and digest data
 impl TcgDigestParse for TcgDigestParseV2 {
-    fn parse_digest(&self, cursor: &mut ByteReader) -> Result<TcgDigestAlgorithm, PluginError> {
+    fn parse_digest(&self, cursor: &mut ByteReader<'_>) -> Result<TcgDigestAlgorithm, PluginError> {
         let digest_count: u32 = cursor.read_u32()
         .map_err(|e| PluginError::InputError(format!("Failed to read digest count: {}", e)))?;
 
@@ -162,7 +162,7 @@ impl ByteParseable for EfiSpecIdEvent {
     /// Parses EFI specification ID event
     ///
     /// This event contains TCG specification version information and supported digest algorithms
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let platform_class: u32 = parser.read_u32()?;
         let family_minor: u8 = parser.read_u8()?;
         let family_major: u8 = parser.read_u8()?;
@@ -210,7 +210,7 @@ impl ByteParseable for StartupLocalityEvent {
     /// Parses startup locality event
     ///
     /// This event contains TPM startup locality information
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let locality: u8 = parser.read_u8()?;
         Ok(StartupLocalityEvent {
             signature: String::from_utf8_lossy(STARTUP_LOCALITY_SIGNATURE).trim_end_matches('\0').to_string(),
@@ -223,7 +223,7 @@ impl ByteParseable for EvNoActionEvent {
     /// Parses no action event
     ///
     /// Parses into different no action event types based on signature
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let signature: Vec<u8> = parser.read_bytes(NO_ACTION_EVENT_SIZE)?;
         if signature == SPEC_ID_EVENT_SIGNATURE_00 {
             Err(PluginError::InputError("Not support spec id event.".to_string()))
@@ -244,7 +244,7 @@ impl ByteParseable for EvSeparatorEvent {
     /// Parses separator event
     ///
     /// Separator events are used to separate events from different stages
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let value: u32 = parser.read_u32()?;
         Ok(EvSeparatorEvent {value})
     }
@@ -254,7 +254,7 @@ impl ByteParseable for EventBaseString {
     /// Parses base string event
     ///
     /// Parses all remaining bytes as a UTF-8 string
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let value: Vec<u8> = parser.read_bytes(parser.remaining() as usize)?;
         Ok(EventBaseString { value: String::from_utf8_lossy(&value).to_string() })
     }
@@ -264,7 +264,7 @@ impl ByteParseable for PCClientTaggedEvent {
     /// Parses PC client tagged event
     ///
     /// Contains event ID, data size, and data content
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let tagged_event_id: u32 = parser.read_u32()?;
         let tagged_event_data_size: u32 = parser.read_u32()?;
         let tagged_event_data: Vec<u8> = parser.read_bytes(tagged_event_data_size as usize)?;
@@ -276,7 +276,7 @@ impl ByteParseable for UefiPlatformFirmwareBlobEvent {
     /// Parses UEFI platform firmware BLOB event
     ///
     /// Contains firmware base address and length information
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let blob_base: u64 = parser.read_u64()?;
         let blob_length: u64 = parser.read_u64()?;
         Ok(UefiPlatformFirmwareBlobEvent {
@@ -290,7 +290,7 @@ impl ByteParseable for UefiPlatformFirmwareBlobEvent2 {
     /// Parses UEFI platform firmware BLOB event (version 2)
     ///
     /// Compared to version 1, adds a description field
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let blob_description_size: u8 = parser.read_u8()?;
         let blob_description: Vec<u8> = parser.read_bytes(blob_description_size as usize)?;
         let blob_base: u64 = parser.read_u64()?;
@@ -307,7 +307,7 @@ impl ByteParseable for UefiFirmwareBlobEvent {
     /// Parses UEFI firmware BLOB event
     ///
     /// May be one of multiple formats: version 1, version 2, or string
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         // If remaining bytes can't even form UefiPlatformFirmwareBlobEvent (16 bytes), treat as string
         if parser.remaining() < size_of::<UefiPlatformFirmwareBlobEvent>() as u64 {
             let data: Vec<u8> = parser.read_bytes(parser.remaining() as usize)?;
@@ -349,7 +349,7 @@ impl ByteParseable for SCrtmVersionEvent {
     /// Parses S-CRTM version event
     ///
     /// May be a GUID or UCS-2 string
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         // Check if it's a 16-byte GUID
         if parser.remaining() as usize == UEFI_GUID_SIZE {
             let guid_str: String = parser.read_guid()?;
@@ -366,7 +366,7 @@ impl ByteParseable for EfiSignatureData {
     /// Parses EFI signature data
     ///
     /// Contains signature owner GUID and signature data
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let signature_owner: String = parser.read_guid()?;
         let signature_data: Vec<u8> = parser.read_bytes(parser.remaining() as usize)?;
         Ok(EfiSignatureData { 
@@ -380,7 +380,7 @@ impl ByteParseable for EfiVariableSecureBoot {
     /// Parses EFI secure boot variable
     ///
     /// Reads enabled status (1=enabled, 0=disabled)
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let enabled: u8 = parser.read_u8()?;
         Ok(EfiVariableSecureBoot { enabled: bool_to_yes_no(enabled == 1) })
     }
@@ -390,7 +390,7 @@ impl ByteParseable for EfiSignatureList {
     /// Parses EFI signature list
     ///
     /// Contains signature type, list size, header size, signature size, and multiple signature data
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         // signature type is guid.
         let signature_type: String = parser.read_guid()?;
 
@@ -433,7 +433,7 @@ impl ByteParseable for EfiLoadOption {
     /// Parses EFI load option
     ///
     /// Contains attributes, file path list length, description, and device path
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let attributes: u32 = parser.read_u32()?;
         let file_path_list_length: u16 = parser.read_u16()?;
         let description: String = parser.read_unicode_name(file_path_list_length as usize / 2)?;
@@ -469,7 +469,7 @@ impl ByteParseable for EfiLoadOption {
 /// * `PluginError::InputError` - If input data is invalid or cannot be parsed
 pub fn parse_uefi_variable_data_event(
     event_type: &EventType,
-    parser: &mut ByteReader
+    parser: &mut ByteReader<'_>
 ) -> Result<UefiVariableDataEvent, PluginError> {
     // read guid
     let guid: String = parser.read_guid()?;
@@ -560,7 +560,7 @@ impl ByteParseable for UefiPartitionHeader {
     /// Parses UEFI partition header
     ///
     /// Contains various metadata for the partition table
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let signature: String = parser.read_string(size_of::<u64>() as usize)?;
         let revision: u32 = parser.read_u32()?;
         let header_size: u32 = parser.read_u32()?;
@@ -598,7 +598,7 @@ impl ByteParseable for UefiPartitionEntry {
     /// Parses UEFI partition table entry
     ///
     /// Contains detailed information for a single partition
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let partition_type_guid: String = parser.read_guid()?;
         let unique_partition_guid: String = parser.read_guid()?;
         let starting_lba: u64 = parser.read_u64()?;
@@ -620,7 +620,7 @@ impl ByteParseable for UefiGptDataEvent {
     /// Parses UEFI GPT data event
     ///
     /// Contains partition header and list of partition entries
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let uefi_partition_header: UefiPartitionHeader = UefiPartitionHeader::parse_from(parser)?;
         let number_of_partitions: u64 = parser.read_u64()?;
         let mut partitions: Vec<UefiPartitionEntry> = Vec::with_capacity(number_of_partitions as usize);
@@ -640,7 +640,7 @@ impl ByteParseable for UefiImageLoadEvent {
     /// Parses UEFI image load event
     ///
     /// Contains image location, size, and device path information
-    fn parse_from(parser: &mut ByteReader) -> Result<Self, PluginError> {
+    fn parse_from(parser: &mut ByteReader<'_>) -> Result<Self, PluginError> {
         let image_location_in_memory: u64 = parser.read_u64()?;
         let image_length_in_memory: u64 = parser.read_u64()?;
         let image_link_time_address: u64 = parser.read_u64()?;
@@ -676,7 +676,7 @@ impl ByteParseable for UefiImageLoadEvent {
 /// # Errors
 /// * `PluginError::InputError` - If input data is invalid or cannot be parsed
 pub fn parse_typed_event<T, F>(
-    parser: &mut ByteReader,
+    parser: &mut ByteReader<'_>,
     wrapper: F,
     event_name: &str
 ) -> Result<TpmEventLog, PluginError>

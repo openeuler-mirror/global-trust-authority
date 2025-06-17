@@ -11,7 +11,7 @@
  */
 
 use tpm_ima_attester::TpmImaPlugin;
-use plugin_manager::{AgentPlugin, PluginError};
+use plugin_manager::PluginError;
 use serde_json;
 
 /// Test configuration for the IMA plugin
@@ -157,27 +157,6 @@ fn test_invalid_json_configuration() {
         assert!(msg.starts_with("Failed to parse plugin configuration as JSON"));
     } else {
         panic!("Expected InternalError with 'Failed to parse plugin configuration as JSON', got {:?}", plugin_result);
-    }
-}
-
-#[test]
-fn test_missing_node_id() {
-    // Create a new plugin with the mock configuration
-    let plugin = TpmImaPlugin::new(String::from("tpm_ima"), mock_ima_configuration)
-        .expect("Failed to create TpmImaPlugin");
-
-    // Test collect_evidence with missing node_id
-    let node_id = None;
-    let nonce = Some("123456".as_bytes());
-
-    let result = plugin.collect_evidence(node_id, nonce);
-
-    // Check that the result is an error
-    assert!(result.is_err());
-    if let Err(PluginError::InputError(msg)) = result {
-        assert_eq!(msg, "Node ID is required");
-    } else {
-        panic!("Expected InputError with 'Node ID is required', got {:?}", result);
     }
 }
 
