@@ -704,8 +704,6 @@ impl SingleTaskScheduler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::TimeZone;
-    use chrono::Timelike;
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -995,7 +993,7 @@ mod tests {
 
         // 2. Test enabling retry without intervals expression
         let config_no_cron = SchedulerConfig::new().retry_enabled(true);
-        let scheduler_no_cron = create_scheduler(config_no_cron, || async { Ok(()) });
+        let _scheduler_no_cron = create_scheduler(config_no_cron, || async { Ok(()) });
 
         // 4. Test if scheduler is already in running state
         let running_config = SchedulerConfig::new().intervals(0);
@@ -1120,7 +1118,7 @@ mod tests {
         builders.add(config2, task2);
 
         // Starting all should fail due to the invalid scheduler
-        let result = builders.start_all().await;
+        let _result = builders.start_all().await;
 
         // No schedulers should be running
         builders.stop_all().await; // Should be safe even if nothing is running

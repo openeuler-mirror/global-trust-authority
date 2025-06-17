@@ -10,7 +10,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-mod byte_reader;
 mod event;
 mod verifier;
 
@@ -34,7 +33,7 @@ pub use event::parser::{
 };
 pub use event::log::EventLog;
 pub use verifier::TpmBootPlugin;
-pub use byte_reader::{
+pub use event::byte_reader::{
     ByteReader, ByteParseable,
     UEFI_GUID_SIZE
 };

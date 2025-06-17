@@ -10,8 +10,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use tss_esapi::Context;
-use tss_esapi::structures::PcrSelectionList;
 use tpm_common_attester::{TpmPluginBase, TpmPluginConfig, Log, Quote, Pcrs, PcrValue};
 use plugin_manager::{AgentPlugin, PluginError, PluginBase};
 use serde_json::Value;
@@ -60,11 +58,11 @@ impl TpmPluginBase for MockTpmPlugin {
     }
     
     // Override the default implementations for testing
-    fn collect_aik(&self, _node_id: &str) -> Result<String, PluginError> {
+    fn collect_aik(&self, _node_id: Option<&str>) -> Result<String, PluginError> {
         Ok("mock_ak_cert".to_string())
     }
     
-    fn collect_pcrs_quote(&self, nonce: &[u8]) -> Result<(Quote, Pcrs), PluginError> {
+    fn collect_pcrs_quote(&self, _nonce: &[u8]) -> Result<(Quote, Pcrs), PluginError> {
         let pcr = Pcrs {
             hash_alg: "sha256".to_string(),
             pcr_values: vec![
@@ -113,13 +111,39 @@ fn test_collect_evidence_impl() {
     assert_eq!(evidence_json["logs"].as_array().unwrap().len(), 1);
     assert_eq!(evidence_json["logs"][0]["log_type"], "TcgEventLog");
     
-    // Test with missing node_id
     let result = plugin.collect_evidence(None, Some("123456".as_bytes()));
-    assert!(result.is_err());
-    match result {
-        Err(PluginError::InputError(_)) => {}, // Expected error
-        _ => panic!("Expected InputError for missing node_id"),
-    }
+    assert!(result.is_ok());
+
+    let evidence_out = result.unwrap();
+    assert!(evidence_out.is_object());
+
+    // Verify necessary fields
+    assert!(evidence_out.get("ak_cert").is_some());
+    assert!(evidence_out.get("quote").is_some());
+    assert!(evidence_out.get("pcrs").is_some());
+    assert!(evidence_out.get("logs").is_some());
+
+    // Verify quote field
+    let quote = evidence_out.get("quote").unwrap();
+    assert!(quote.is_object());
+    assert!(quote.get("quote_data").is_some());
+    assert!(quote.get("signature").is_some());
+
+    // Verify pcrs field
+    let pcrs = evidence_out.get("pcrs").unwrap();
+    assert!(pcrs.is_object());
+    assert!(pcrs.get("hash_alg").is_some());
+    assert!(pcrs.get("pcr_values").is_some());
+    assert!(pcrs.get("pcr_values").unwrap().is_array());
+
+    // Verify logs field
+    let logs = evidence_out.get("logs").unwrap();
+    assert!(logs.is_array());
+    assert!(!logs.as_array().unwrap().is_empty());
+    let first_log = logs.get(0).unwrap();
+    assert!(first_log.is_object());
+    assert!(first_log.get("log_type").is_some());
+    assert!(first_log.get("log_data").is_some());
 }
 
 #[test]

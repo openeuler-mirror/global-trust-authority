@@ -245,34 +245,6 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         }
     }
 
-    /// Validates that certificate's common name matches the `node_id`.
-    ///
-    /// # Returns
-    ///
-    /// An empty result.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the certificate's common name does not match the `node_id`.
-    fn validate_cert_common_name(cert: &X509, node_id: &str) -> Result<(), PluginError> {
-        // Extract the common name from the certificate
-        let subject_name = cert.subject_name();
-        let common_name_entry = subject_name.entries_by_nid(Nid::COMMONNAME).next();
-        let common_name = match common_name_entry {
-            Some(entry) => entry.data().as_utf8()
-                .map_err(|e| PluginError::InternalError(format!("Failed to extract common name: {}", e)))?
-                .to_string(),
-            None => return Err(PluginError::InternalError("Common name not found in certificate".to_string())),
-        };
-
-        // Check if the node_id matches the common name
-        if common_name != node_id {
-            return Err(PluginError::InternalError("Node ID does not match the common name in the certificate".to_string()));
-        }
-
-        Ok(())
-    }
-
     /// Checks if PCRs exist for the specified hash algorithm.
     ///
     /// # Returns
@@ -324,7 +296,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
     /// # Errors
     ///
     /// Returns an error if the AIK certificate cannot be collected.
-    fn collect_aik(&self, node_id: &str) -> Result<String, PluginError> {
+    fn collect_aik(&self, _node_id: Option<&str>) -> Result<String, PluginError> {
         let mut ctx = self.create_ctx_without_session()?;
 
         // Get the persistent AK handle and check if it exists
@@ -356,9 +328,6 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
                 "AK public key does not match the key in certificate".to_string()
             ));
         }
-
-        // Validates that certificate's common name matches the node_id
-        Self::validate_cert_common_name(&ak_cert, node_id)?;
 
         // Return base64 encoded certificate
         let cert_der = ak_cert.to_der()
@@ -577,14 +546,9 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
     ///
     /// Returns an error if the evidence cannot be collected.
     fn collect_evidence_impl(&self, node_id: Option<&str>, nonce: Option<&[u8]>) -> Result<serde_json::Value, PluginError> {
-        let node_id = match node_id {
-            Some(node_id) => node_id,
-            None => return Err(PluginError::InputError("Node ID is required".to_string())),
-        };
-
         let nonce = nonce.unwrap_or(&[]);
 
-        // collect ak_cert, validate node_id
+        // collect ak_cert
         let ak_cert = self.collect_aik(node_id)?;
 
         let (quote, pcrs) = self.collect_pcrs_quote(nonce)?;
