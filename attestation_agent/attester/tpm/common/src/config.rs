@@ -28,12 +28,18 @@ pub struct QuoteSignatureScheme {
 }
 
 #[derive(Debug)]
+pub struct AkCert {
+    pub cert_type: String,
+    pub ak_handle: u32,
+    pub ak_nv_index: u32,
+}
+
+#[derive(Debug)]
 pub struct TpmPluginConfig {
     pub plugin_type: String,
     pub log_file_path: String,
     pub tcti_config: TctiNameConf,
-    pub ak_handle: i64,
-    pub ak_nv_index: i64,
+    pub ak_certs: Vec<AkCert>,
     pub pcr_selection: PcrSelection,
     pub raw_config: serde_json::Value,
     pub quote_signature_scheme: Option<QuoteSignatureScheme>,
@@ -45,16 +51,42 @@ impl TpmPluginConfig {
         let config: serde_json::Value = serde_json::from_str(config_json)
             .map_err(|e| PluginError::InternalError(format!("Failed to parse plugin configuration as JSON: {}", e)))?;
         
-        let ak_handle: i64 = config
-            .get("ak_handle")
-            .and_then(|v| v.as_i64())
-            .ok_or_else(|| PluginError::InternalError("AK handle not found or invalid".to_string()))?;
-        
-        let ak_nv_index: i64 = config
-            .get("ak_nv_index")
-            .and_then(|v| v.as_i64())
-            .ok_or_else(|| PluginError::InternalError("AK NV index not found or invalid".to_string()))?;
-        
+        // Parse AK cert configuration
+        let ak_cert_array: &serde_json::Value = config
+            .get("ak_certs")
+            .ok_or_else(|| PluginError::InternalError("AK cert configuration not found".to_string()))?;
+
+        let ak_certs: Vec<AkCert> = match ak_cert_array {
+            serde_json::Value::Array(arr) => {
+                arr.iter().map(|ak_cert_obj| {
+                    let cert_type: String = ak_cert_obj
+                        .get("cert_type")
+                        .and_then(|v| v.as_str())
+                        .map(String::from)
+                        .ok_or_else(|| PluginError::InternalError("AK cert type not found or invalid".to_string()))?;
+
+                    let ak_handle: u32 = ak_cert_obj
+                        .get("ak_handle")
+                        .and_then(|v| v.as_u64())
+                        .map(|v| v as u32)
+                        .ok_or_else(|| PluginError::InternalError("AK handle not found or invalid".to_string()))?;
+                    
+                    let ak_nv_index: u32 = ak_cert_obj
+                        .get("ak_nv_index")
+                        .and_then(|v| v.as_u64())
+                        .map(|v| v as u32)
+                        .ok_or_else(|| PluginError::InternalError("AK NV index not found or invalid".to_string()))?;
+                    
+                    Ok(AkCert {
+                        cert_type,
+                        ak_handle,
+                        ak_nv_index,
+                    })
+                }).collect::<Result<Vec<AkCert>, PluginError>>()?
+            },
+            _ => return Err(PluginError::InternalError("AK cert configuration must be an array".to_string()))
+        };
+
         // Parse the new PCR selection structure
         let pcr_selection_obj = config
             .get("pcr_selections")
@@ -121,8 +153,7 @@ impl TpmPluginConfig {
             plugin_type,
             log_file_path,
             tcti_config,
-            ak_handle,
-            ak_nv_index,
+            ak_certs,
             pcr_selection,
             raw_config: config,
             quote_signature_scheme,

@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use tpm_common_attester::{TpmPluginBase, TpmPluginConfig, Log, Quote, Pcrs, PcrValue};
+use tpm_common_attester::{TpmPluginBase, AkCert, TpmPluginConfig, Log, Quote, Pcrs, PcrValue};
 use plugin_manager::{AgentPlugin, PluginError, PluginBase};
 use serde_json::Value;
 
@@ -23,8 +23,13 @@ impl MockTpmPlugin {
     fn new() -> Self {
         // Create a minimal valid config for testing
         let config_json = r#"{
-            "ak_handle": 12345,
-            "ak_nv_index": 67890,
+            "ak_certs": [
+                {
+                    "cert_type": "aik",
+                    "ak_handle": 12345,
+                    "ak_nv_index": 67890
+                }
+            ],
             "pcr_selections": {
                 "banks": [0, 1, 2, 3],
                 "hash_alg": "sha256"
@@ -58,7 +63,7 @@ impl TpmPluginBase for MockTpmPlugin {
     }
     
     // Override the default implementations for testing
-    fn collect_aik(&self, _node_id: Option<&str>) -> Result<String, PluginError> {
+    fn collect_ak_cert(&self, _node_id: Option<&str>, _ak_cert: &AkCert) -> Result<String, PluginError> {
         Ok("mock_ak_cert".to_string())
     }
     
@@ -103,7 +108,7 @@ fn test_collect_evidence_impl() {
     
     let evidence_json = result.unwrap();
     assert!(evidence_json.is_object());
-    assert_eq!(evidence_json["ak_cert"], "mock_ak_cert");
+    assert_eq!(evidence_json["ak_certs"][0]["cert_data"], "mock_ak_cert");
     assert_eq!(evidence_json["quote"]["quote_data"], "mock_quote_data");
     assert_eq!(evidence_json["quote"]["signature"], "mock_signature");
     assert_eq!(evidence_json["pcrs"]["hash_alg"], "sha256");
@@ -118,7 +123,7 @@ fn test_collect_evidence_impl() {
     assert!(evidence_out.is_object());
 
     // Verify necessary fields
-    assert!(evidence_out.get("ak_cert").is_some());
+    assert!(evidence_out.get("ak_certs").is_some());
     assert!(evidence_out.get("quote").is_some());
     assert!(evidence_out.get("pcrs").is_some());
     assert!(evidence_out.get("logs").is_some());

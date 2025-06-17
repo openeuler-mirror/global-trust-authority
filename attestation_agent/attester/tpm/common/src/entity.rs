@@ -12,11 +12,16 @@
 
 use serde::{Serialize, Deserialize};
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AkCertData {
+    pub cert_type: String,
+    pub cert_data: String,
+}
 // evidence structure
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Evidence {
     // No prefix and suffix, only the base64 content
-    pub ak_cert: String,
+    pub ak_certs: Vec<AkCertData>,
     pub quote: Quote,
     pub pcrs: Pcrs,
     pub logs: Vec<Log>,

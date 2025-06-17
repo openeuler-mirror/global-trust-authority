@@ -279,6 +279,12 @@ agent:
   listen_port: 8088
 ```
 
+#### Ak Certificate
+
+The current AK certificate does not support verifying TCG certificate specifications.
+
+Supported certificate types: AIK certificate, IAK certificate, and LAK certificate. Currently, certificates stored in the TPM chip nv index are supported, and in the future, the use of incoming certificate files will be supported.
+
 #### Build the rpm package
 
 Build the rpm package, run rpm_build.sh

@@ -11,8 +11,8 @@
  */
 
 // Common base plugin trait for TPM plugins
-use crate::config::TpmPluginConfig;
-use crate::entity::{Evidence, Quote, Pcrs, Log, PcrValue};
+use crate::config::{AkCert, TpmPluginConfig};
+use crate::entity::{Evidence, Quote, Pcrs, Log, PcrValue, AkCertData};
 use plugin_manager::{AgentPlugin, PluginError, PluginBase};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use openssl::pkey::PKey;
@@ -154,10 +154,8 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         Ok(ctx)
     }
 
-    fn get_nv_cert_data(context: &mut Context, nv_index: u64) -> Result<Vec<u8>, PluginError> {
-        let index: u32 = u32::try_from(nv_index)
-            .map_err(|e| PluginError::InternalError(format!("Invalid NV index value: {}", e)))?;
-        let nv_idx: NvIndexTpmHandle = NvIndexTpmHandle::new(index)
+    fn get_nv_cert_data(context: &mut Context, nv_index: u32) -> Result<Vec<u8>, PluginError> {
+        let nv_idx: NvIndexTpmHandle = NvIndexTpmHandle::new(nv_index)
             .map_err(|e| PluginError::InternalError(format!("Failed to create NV index handle: {}", e)))?;
 
         let nv_auth_handle: NvAuth = context.execute_without_session(|ctx| {
@@ -181,7 +179,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
     /// # Errors
     ///
     /// Returns an error if the NV index is invalid or the certificate cannot be read.
-    fn read_cert_from_nv(ctx: &mut Context, nv_index: u64) -> Result<X509, PluginError> {
+    fn read_cert_from_nv(ctx: &mut Context, nv_index: u32) -> Result<X509, PluginError> {
         let cert_data = Self::get_nv_cert_data(ctx, nv_index)?;
 
         // Convert to X509 certificate format
@@ -296,11 +294,11 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
     /// # Errors
     ///
     /// Returns an error if the AIK certificate cannot be collected.
-    fn collect_aik(&self, _node_id: Option<&str>) -> Result<String, PluginError> {
+    fn collect_ak_cert(&self, _node_id: Option<&str>, ak_cert: &AkCert) -> Result<String, PluginError> {
         let mut ctx = self.create_ctx_without_session()?;
 
         // Get the persistent AK handle and check if it exists
-        let persistent_handle = PersistentTpmHandle::new(self.config().ak_handle as u32)
+        let persistent_handle = PersistentTpmHandle::new(ak_cert.ak_handle)
             .map_err(|e| PluginError::InternalError(format!("Invalid AK handle value: {}", e)))?;
 
         let tpm_handle = TpmHandle::Persistent(persistent_handle);
@@ -313,7 +311,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         }).map_err(|e| PluginError::InternalError(format!("Failed to read AK public key: {}", e)))?;
 
         // Read certificate from TPM NV index
-        let ak_cert = Self::read_cert_from_nv(&mut ctx, self.config().ak_nv_index.try_into().unwrap())?;
+        let ak_cert = Self::read_cert_from_nv(&mut ctx, ak_cert.ak_nv_index)?;
 
         // Verify that certificate's public key matches the AK public key
         let cert_pubkey = ak_cert.public_key()
@@ -458,8 +456,17 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         // Trim the nonce to 32 bytes if it exceeds 32 bytes
         let nonce: &[u8] = &nonce[..std::cmp::min(nonce.len(), MAX_QUOTE_NONCE_SIZE)];
 
+        // Get the AK cert based on configuration
+        let ak_cert: &AkCert = if self.config().ak_certs.len() == 1 {
+            &self.config().ak_certs[0]
+        } else {
+            self.config().ak_certs.iter()
+                .find(|cert| cert.cert_type == "lak")
+                .ok_or_else(|| PluginError::InputError("No LAK certificate found".to_string()))?
+        };
+
         // Get the persistent AK handle and convert it to KeyHandle
-        let persistent_handle = PersistentTpmHandle::new(self.config().ak_handle as u32)
+        let persistent_handle = PersistentTpmHandle::new(ak_cert.ak_handle)
             .map_err(|e| PluginError::InternalError(format!("Invalid AK handle value: {}", e)))?;
         let tpm_handle = TpmHandle::Persistent(persistent_handle);
         let ak_handle: KeyHandle = context.tr_from_tpm_public(tpm_handle)
@@ -548,8 +555,16 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
     fn collect_evidence_impl(&self, node_id: Option<&str>, nonce: Option<&[u8]>) -> Result<serde_json::Value, PluginError> {
         let nonce = nonce.unwrap_or(&[]);
 
-        // collect ak_cert
-        let ak_cert = self.collect_aik(node_id)?;
+        let mut ak_cert_data: Vec<AkCertData> = Vec::new();
+        for ak_cert in &self.config().ak_certs {
+            // collect ak_cert, validate node_id
+            let cert_data: String = self.collect_ak_cert(node_id, &ak_cert)?;
+            let cert: AkCertData = AkCertData {
+                cert_type: ak_cert.cert_type.clone(),
+                cert_data,
+            };
+            ak_cert_data.push(cert);
+        }
 
         let (quote, pcrs) = self.collect_pcrs_quote(nonce)?;
 
@@ -558,7 +573,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
 
         // Create Evidence struct instance
         let evidence = Evidence {
-            ak_cert,
+            ak_certs: ak_cert_data,
             quote,
             pcrs,
             logs,
