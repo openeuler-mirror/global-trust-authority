@@ -70,6 +70,12 @@ pub trait GenerateEvidence: Send + Sync {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct AkCertData {
+    pub cert_type: String,
+    pub cert_data: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Logs {
     pub log_type: String,
     pub log_data: String,
@@ -88,7 +94,7 @@ pub struct Evidence {
     pub quote: QuoteVerifier,
     pub pcrs: PcrValues,
     pub logs: Vec<Logs>,
-    pub ak_cert: String,
+    pub ak_certs: Vec<AkCertData>,
 }
 
 impl Evidence {
@@ -119,7 +125,11 @@ impl Evidence {
     ///         "log_type": "tpm_boot",
     ///         "log_data": "log data string"
     ///     }],
-    ///     "ak_cert": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA..."
+    ///     "ak_certs": [
+    ///         {
+    ///             "cert_type": "iak",
+    ///             "cert_data": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA..."
+    ///     }]
     /// });
     ///
     /// // In actual code, Evidence would be properly imported
@@ -130,7 +140,7 @@ impl Evidence {
     /// 
     /// * `PluginError::InputError` - If the JSON value is missing required fields or has invalid data.
     pub fn from_json_value(json_value: &Value) -> Result<Self, PluginError> {
-        let required_fields = &["quote", "pcrs", "logs", "ak_cert"];
+        let required_fields = &["quote", "pcrs", "logs", "ak_certs"];
         Self::validate_json_fields(json_value, required_fields)
             .map_err(|e| PluginError::InputError(e))?;
 
@@ -156,16 +166,50 @@ impl Evidence {
         let logs: Vec<Logs> = serde_json::from_value(json_value["logs"].clone())
             .map_err(|e| PluginError::InputError(format!("Failed to parse log: {}", e)))?;
 
-        let ak_cert = json_value["ak_cert"].as_str()
-            .ok_or_else(|| PluginError::InputError("AK certificate must be a string".to_string()))?
-            .to_string();
+        let ak_certs_array = json_value["ak_certs"].as_array()
+            .ok_or_else(|| PluginError::InternalError("AK certs array not found or invalid".to_string()))?;
 
+        let mut ak_certs = Vec::new();
+        for (idx, ak_cert_obj) in ak_certs_array.iter().enumerate() {
+            let cert_type: String = ak_cert_obj
+                .get("cert_type")
+                .and_then(|v| v.as_str())
+                .map(String::from)
+                .ok_or_else(|| PluginError::InternalError(format!("AK cert type not found or invalid at index {}", idx)))?;
+
+            let cert_data: String = ak_cert_obj
+                .get("cert_data")
+                .and_then(|v| v.as_str())
+                .map(String::from)
+                .ok_or_else(|| PluginError::InternalError(format!("AK cert data not found or invalid at index {}", idx)))?;
+
+            let valid_cert_type = &["aik", "iak", "lak"];
+            if !valid_cert_type.contains(&cert_type.as_str()) {
+                return Err(PluginError::InputError(format!("Invalid ak cert type at index {}: {}", idx, cert_type)));
+            }
+
+            ak_certs.push(AkCertData {
+                cert_type,
+                cert_data,
+            });
+        }
+
+        if ak_certs.is_empty() {
+            return Err(PluginError::InternalError("No AK certificates found".to_string()));
+        }
+
+        // Check if LAK certificate exists, then IAK certificate must also exist
+        if ak_certs.iter().any(|cert| cert.cert_type == "lak") {
+            if !ak_certs.iter().any(|cert| cert.cert_type == "iak") {
+                return Err(PluginError::InputError("If LAK certificate exists, IAK certificate must also exist".to_string()));
+            }
+        }
         Ok(Evidence {
             marshalled_quote: quote_value,
             quote: quote_verifier,
             pcrs: pcr_values,
             logs,
-            ak_cert,
+            ak_certs,
         })
     }
 
@@ -183,20 +227,20 @@ impl Evidence {
         }
     }
 
-    fn parse_ak_certificate(&self) -> Result<X509, PluginError> {
+    fn parse_ak_certificate(&self, cert_data: &str) -> Result<X509, PluginError> {
         // 1. Try standard PEM format
-        if let Ok(cert) = X509::from_pem(self.ak_cert.as_bytes()) {
+        if let Ok(cert) = X509::from_pem(cert_data.as_bytes()) {
             return Ok(cert);
         }
 
         // 2. Try adding PEM header and footer
-        let pem_cert = format!("-----BEGIN CERTIFICATE-----\n{}\n-----END CERTIFICATE-----", self.ak_cert);
+        let pem_cert = format!("-----BEGIN CERTIFICATE-----\n{}\n-----END CERTIFICATE-----", cert_data);
         if let Ok(cert) = X509::from_pem(pem_cert.as_bytes()) {
             return Ok(cert);
         }
 
         // 3. Try base64 decoding to DER format
-        match BASE64.decode(self.ak_cert.as_bytes()) {
+        match BASE64.decode(cert_data.as_bytes()) {
             Ok(der_data) => {
                 match X509::from_der(&der_data) {
                     Ok(cert) => Ok(cert),
@@ -309,14 +353,24 @@ impl Evidence {
         nonce: Option<&[u8]>,
         generator: &dyn GenerateEvidence,
     ) -> Result<Value, PluginError> {
-        let validate_cert_chain = &generator.get_host_functions().validate_cert_chain;
-        // Validate certificate chain
-        if !(validate_cert_chain)(generator.get_plugin_type(), user_id, self.ak_cert.as_bytes()).await {
-            return Err(PluginError::InputError("Certificate chain validation failed".to_string()));
+        for ak_cert in &self.ak_certs {
+            let validate_cert_chain = &generator.get_host_functions().validate_cert_chain;
+            // Validate certificate chain
+            if !(validate_cert_chain)(generator.get_plugin_type(), user_id, ak_cert.cert_data.as_bytes()).await {
+                return Err(PluginError::InputError("Certificate chain validation failed".to_string()));
+            }
         }
 
+        let ak_cert: &AkCertData = if self.ak_certs.len() == 1 {
+            &self.ak_certs[0]
+        } else {
+            self.ak_certs.iter()
+                .find(|cert| cert.cert_type == "lak")
+                .ok_or_else(|| PluginError::InputError("No LAK certificate found".to_string()))?
+        };
+
         // Parse AK certificate
-        let ak_cert = self.parse_ak_certificate()?;
+        let ak_cert = self.parse_ak_certificate(ak_cert.cert_data.as_str())?;
 
         let public_ak = ak_cert.public_key()
             .map_err(|e| PluginError::InputError(format!("Failed to extract public key from certificate: {}", e)))?;

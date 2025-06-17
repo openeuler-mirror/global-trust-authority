@@ -64,8 +64,8 @@ impl PluginBase for TpmImaPlugin {
 impl AgentPlugin for TpmImaPlugin {
     fn collect_evidence(&self, node_id: Option<&str>, nonce: Option<&[u8]>) -> Result<serde_json::Value, PluginError> {
         // Use the common implementation from the trait
-    self.collect_evidence_impl(node_id, nonce)
-}
+        self.collect_evidence_impl(node_id, nonce)
+    }
 }
 
 impl TpmPluginBase for TpmImaPlugin {

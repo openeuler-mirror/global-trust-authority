@@ -46,6 +46,10 @@ plugins:
     params:
       attester_type: tpm_boot
       tcti_config: "device"
+      ak_certs:
+        - cert_type: "iak"
+          ak_handle: 0x81010020
+          ak_nv_index: 0x150001b
       log_file_path: "/sys/kernel/security/tpm0/binary_bios_measurements"
   - name: "ima-plugin"
     path: "/usr/lib/plugins/ima.so"
@@ -53,6 +57,10 @@ plugins:
     enabled: true
     params:
       attester_type: tpm_ima
+      ak_certs:
+        - cert_type: "iak"
+          ak_handle: 0x81010020
+          ak_nv_index: 0x150001b
       tcti_config: "device"
       log_file_path: "/sys/kernel/security/ima/ascii_runtime_measurements"
 schedulers:

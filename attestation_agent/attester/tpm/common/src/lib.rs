@@ -17,5 +17,5 @@ mod entity;
 
 // Public exports
 pub use base_attester::TpmPluginBase;
-pub use config::TpmPluginConfig;
+pub use config::{AkCert, TpmPluginConfig};
 pub use entity::{Log, Evidence, Quote, Pcrs, PcrValue};

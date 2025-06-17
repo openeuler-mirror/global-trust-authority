@@ -16,8 +16,18 @@ use tpm_common_attester::TpmPluginConfig;
 fn test_config_from_json_valid() {
     // Create a valid JSON configuration
     let config_json = r#"{
-        "ak_handle": 12345,
-        "ak_nv_index": 67890,
+        "ak_certs": [
+            {
+                "cert_type": "iak",
+                "ak_handle": 12345,
+                "ak_nv_index": 67890
+            },
+            {
+                "cert_type": "lak",
+                "ak_handle": 1122,
+                "ak_nv_index": 3344
+            }
+        ],
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
             "hash_alg": "sha256"
@@ -28,15 +38,19 @@ fn test_config_from_json_valid() {
     
     // Parse the configuration
     let result = TpmPluginConfig::from_json("test_plugin".to_string(), config_json);
-    
+
     // Verify the result is Ok
     assert!(result.is_ok());
     
     // Verify the parsed configuration values
     let config = result.unwrap();
     assert_eq!(config.plugin_type, "test_plugin");
-    assert_eq!(config.ak_handle, 12345);
-    assert_eq!(config.ak_nv_index, 67890);
+    assert_eq!(config.ak_certs[0].cert_type, "iak");
+    assert_eq!(config.ak_certs[0].ak_handle, 12345);
+    assert_eq!(config.ak_certs[0].ak_nv_index, 67890);
+    assert_eq!(config.ak_certs[1].cert_type, "lak");
+    assert_eq!(config.ak_certs[1].ak_handle, 1122);
+    assert_eq!(config.ak_certs[1].ak_nv_index, 3344);
     assert_eq!(config.log_file_path, "/path/to/event/log");
     assert_eq!(config.pcr_selection.hash_alg, "sha256");
     assert_eq!(config.pcr_selection.banks, vec![0, 1, 2, 3]);
@@ -47,8 +61,13 @@ fn test_config_from_json_valid() {
 fn test_config_with_signature_scheme() {
     // Create a JSON configuration with signature scheme
     let config_json = r#"{
-        "ak_handle": 12345,
-        "ak_nv_index": 67890,
+        "ak_certs": [
+            {
+                "cert_type": "iak",
+                "ak_handle": 12345,
+                "ak_nv_index": 67890
+            }
+        ],
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
             "hash_alg": "sha256"
@@ -81,8 +100,13 @@ fn test_config_with_signature_scheme() {
 fn test_config_with_invalid_signature_scheme() {
     // Missing hash_alg in signature scheme
     let config_json = r#"{
-        "ak_handle": 12345,
-        "ak_nv_index": 67890,
+        "ak_certs": [
+            {
+                "cert_type": "iak",
+                "ak_handle": 12345,
+                "ak_nv_index": 67890
+            }
+        ],
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
             "hash_alg": "sha256"
@@ -99,8 +123,13 @@ fn test_config_with_invalid_signature_scheme() {
     
     // Missing signature_alg in signature scheme
     let config_json = r#"{
-        "ak_handle": 12345,
-        "ak_nv_index": 67890,
+        "ak_certs": [
+            {
+                "cert_type": "iak",
+                "ak_handle": 12345,
+                "ak_nv_index": 67890
+            }
+        ],
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
             "hash_alg": "sha256"
@@ -117,8 +146,13 @@ fn test_config_with_invalid_signature_scheme() {
     
     // Invalid signature scheme format (not an object)
     let config_json = r#"{
-        "ak_handle": 12345,
-        "ak_nv_index": 67890,
+        "ak_certs": [
+            {
+                "cert_type": "iak",
+                "ak_handle": 12345,
+                "ak_nv_index": 67890
+            }
+        ],
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
             "hash_alg": "sha256"
@@ -136,7 +170,12 @@ fn test_config_with_invalid_signature_scheme() {
 fn test_missing_ak_handle() {
     // Missing ak_handle
     let config_json = r#"{
-        "ak_nv_index": 67890,
+        "ak_certs": [
+            {
+                "cert_type": "iak",
+                "ak_nv_index": 67890
+            }
+        ],
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
             "hash_alg": "sha256"
@@ -153,7 +192,12 @@ fn test_missing_ak_handle() {
 fn test_missing_ak_nv_index() {
     // Missing ak_nv_index
     let config_json = r#"{
-        "ak_handle": 12345,
+        "ak_certs": [
+            {
+                "cert_type": "iak",
+                "ak_handle": 12345,
+            }
+        ],
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
             "hash_alg": "sha256"
@@ -170,8 +214,13 @@ fn test_missing_ak_nv_index() {
 fn test_missing_pcr_selections() {
     // Missing pcr_selections
     let config_json = r#"{
-        "ak_handle": 12345,
-        "ak_nv_index": 67890,
+        "ak_certs": [
+            {
+                "cert_type": "iak",
+                "ak_handle": 12345,
+                "ak_nv_index": 67890
+            }
+        ],
         "event_log_path": "/path/to/event/log",
         "tcti_config": "device:/dev/tpmrm0"
     }"#;
@@ -184,8 +233,13 @@ fn test_missing_pcr_selections() {
 fn test_missing_log_path() {
     // Missing log path
     let config_json = r#"{
-        "ak_handle": 12345,
-        "ak_nv_index": 67890,
+        "ak_certs": [
+            {
+                "cert_type": "iak",
+                "ak_handle": 12345,
+                "ak_nv_index": 67890
+            }
+        ],
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
             "hash_alg": "sha256"
@@ -201,8 +255,13 @@ fn test_missing_log_path() {
 fn test_missing_tcti_config() {
     // Missing tcti_config
     let config_json = r#"{
-        "ak_handle": 12345,
-        "ak_nv_index": 67890,
+        "ak_certs": [
+            {
+                "cert_type": "iak",
+                "ak_handle": 12345,
+                "ak_nv_index": 67890
+            }
+        ],
         "pcr_selections": {
             "banks": [0, 1, 2, 3],
             "hash_alg": "sha256"

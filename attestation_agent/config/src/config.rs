@@ -24,12 +24,19 @@ const TPM_KEY_HANDLE_MAX: u32 = 0x81FFFFFF;
 const TPM_NV_INDEX_MIN: u32 = 0x01000000;
 const TPM_NV_INDEX_MAX: u32 = 0x01D1FFFF;
 
+// Ak Cert Configuration
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AkCert {
+    pub cert_type: String,
+    pub ak_handle: Option<u32>,         // AK handle
+    pub ak_nv_index: Option<u32>,       // AK NV index
+}
+
 // TPM Basic Configuration
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TpmBaseConfig {
     pub tcti_config: String,                                  // TCTI configuration string
-    pub ak_handle: Option<u32>,                               // AK handle
-    pub ak_nv_index: Option<u32>,                             // AK NV index
+    pub ak_certs: Vec<AkCert>,                                // AK cert arrary
     pub pcr_selections: Option<PcrSelection>,                 // PCR selection list
     pub quote_signature_scheme: Option<QuoteSignatureScheme>, // Quote signature scheme
 }
@@ -243,26 +250,50 @@ impl Config {
             ));
         }
 
-        // Validate AK handle
-        if let Some(handle) = tpm_base.ak_handle {
-            if !(TPM_KEY_HANDLE_MIN..=TPM_KEY_HANDLE_MAX).contains(&handle) {
+        // Validate AK certs
+        let valid_cert_type = ["aik", "iak", "lak"];
+        for (cert_idx, ak_cert) in tpm_base.ak_certs.iter().enumerate() {
+            // Validate cert type
+            if !valid_cert_type.contains(&ak_cert.cert_type.as_str()) {
                 return Err(format!(
-                    "Plugin #{} '{}' has AK handle value 0x{:x} outside valid range (0x{:x}-0x{:x})",
-                    idx, plugin_name, handle, TPM_KEY_HANDLE_MIN, TPM_KEY_HANDLE_MAX
+                    "Plugin #{} '{}' has invalid ak cert type at index {}: {}. Valid values: {:?}",
+                    idx, plugin_name, cert_idx, ak_cert.cert_type, valid_cert_type
                 ));
+            }
+
+            // Validate AK handle
+            if let Some(handle) = ak_cert.ak_handle {
+                if !(TPM_KEY_HANDLE_MIN..=TPM_KEY_HANDLE_MAX).contains(&handle) {
+                    return Err(format!(
+                        "Plugin #{} '{}' has AK handle value 0x{:x} at index {} outside valid range (0x{:x}-0x{:x})",
+                        idx, plugin_name, handle, cert_idx, TPM_KEY_HANDLE_MIN, TPM_KEY_HANDLE_MAX
+                    ));
+                }
+            }
+
+            // Validate NV index
+            if let Some(index) = ak_cert.ak_nv_index {
+                if !(TPM_NV_INDEX_MIN..=TPM_NV_INDEX_MAX).contains(&index) {
+                    return Err(format!(
+                        "Plugin #{} '{}' has NV index value 0x{:x} at index {} outside valid range (0x{:x}-0x{:x})",
+                        idx, plugin_name, index, cert_idx, TPM_NV_INDEX_MIN, TPM_NV_INDEX_MAX
+                    ));
+                }
             }
         }
 
-        // Validate NV index
-        if let Some(index) = tpm_base.ak_nv_index {
-            if !(TPM_NV_INDEX_MIN..=TPM_NV_INDEX_MAX).contains(&index) {
+        if tpm_base.ak_certs.is_empty() {
+            return Err(format!("Plugin #{} '{}' No AK certificates found", idx, plugin_name));
+        }
+
+        // Check if LAK certificate exists, then IAK certificate must also exist
+        if tpm_base.ak_certs.iter().any(|cert| cert.cert_type == "lak") {
+            if !tpm_base.ak_certs.iter().any(|cert| cert.cert_type == "iak") {
                 return Err(format!(
-                    "Plugin #{} '{}' has NV index value 0x{:x} outside valid range (0x{:x}-0x{:x})",
-                    idx, plugin_name, index, TPM_NV_INDEX_MIN, TPM_NV_INDEX_MAX
+                    "Plugin #{} '{}' If LAK certificate exists, IAK certificate must also exist", idx, plugin_name
                 ));
             }
         }
-
         // Validate PCR selections
         if let Some(pcr) = &tpm_base.pcr_selections {
             // Validate PCR indexes

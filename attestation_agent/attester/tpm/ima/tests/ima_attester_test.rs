@@ -19,8 +19,7 @@ fn mock_ima_configuration(_plugin_type: String) -> Option<String> {
     let config = serde_json::json!({
         "attester_type": "ima",
         "tcti_config": "device:/dev/tpm0",
-        "ak_handle": 0x81010020_i64,
-        "ak_nv_index": 0x01800001_i64,
+        "ak_certs": [{"cert_type": "aik", "ak_handle": 0x81010020_u32, "ak_nv_index": 0x150001b_u32}],
         "pcr_selections": {"banks": [10], "hash_alg": "sha256"},
         "quote_signature_scheme": {"hash_alg": "sha256", "signature_alg": "rsassa"},
         "log_file_path": "/sys/kernel/security/ima/ascii_runtime_measurements",
@@ -42,7 +41,7 @@ fn mock_missing_ak_handle_configuration(_plugin_type: String) -> Option<String> 
         "attester_type": "ima",
         "tcti_config": "device:/dev/tpm0",
         // ak_handle is missing
-        "ak_nv_index": 0x01800001_i64,
+        "ak_certs": [{"cert_type": "aik", "ak_nv_index": 0x150001b_u32}],
         "pcr_selections": {"banks": [10], "hash_alg": "sha256"},
         "log_file_path": "/sys/kernel/security/ima/ascii_runtime_measurements",
         "template_name": "ima-ng",
@@ -57,7 +56,7 @@ fn mock_missing_ak_nv_index_configuration(_plugin_type: String) -> Option<String
     let config = serde_json::json!({
         "attester_type": "ima",
         "tcti_config": "device:/dev/tpm0",
-        "ak_handle": 0x81010020_i64,
+        "ak_certs": [{"cert_type": "aik", "ak_handle": 0x81010020_u32}],
         // ak_nv_index is missing
         "pcr_selections": {"banks": [10], "hash_alg": "sha256"},
         "log_file_path": "/sys/kernel/security/ima/ascii_runtime_measurements",
@@ -73,8 +72,7 @@ fn mock_missing_pcr_selections_configuration(_plugin_type: String) -> Option<Str
     let config = serde_json::json!({
         "attester_type": "ima",
         "tcti_config": "device:/dev/tpm0",
-        "ak_handle": 0x81010020_i64,
-        "ak_nv_index": 0x01800001_i64,
+        "ak_certs": [{"cert_type": "aik", "ak_handle": 0x81010020_u32, "ak_nv_index": 0x150001b_u32}],
         // pcr_selections is missing
         "log_file_path": "/sys/kernel/security/ima/ascii_runtime_measurements",
         "template_name": "ima-ng",
@@ -89,8 +87,7 @@ fn mock_missing_log_file_path_configuration(_plugin_type: String) -> Option<Stri
     let config = serde_json::json!({
         "attester_type": "ima",
         "tcti_config": "device:/dev/tpm0",
-        "ak_handle": 0x81010020_i64,
-        "ak_nv_index": 0x01800001_i64,
+        "ak_certs": [{"cert_type": "aik", "ak_handle": 0x81010020_u32, "ak_nv_index": 0x150001b_u32}],
         "pcr_selections": {"banks": [10], "hash_alg": "sha256"},
         // log_file_path is missing
         "template_name": "ima-ng",

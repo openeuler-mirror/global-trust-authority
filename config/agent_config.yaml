@@ -23,8 +23,10 @@ plugins:
     params:
       attester_type: "tpm_boot"
       tcti_config: "device" # options: device, mssim, swtpm, tabrmd, libtpm
-      ak_handle: 0x81010020
-      ak_nv_index: 0x150001b
+      ak_certs:
+        - cert_type: "iak"
+          ak_handle: 0x81010020
+          ak_nv_index: 0x150001b
       pcr_selections: 
         banks: [0, 1, 2, 3, 4, 5, 6, 7] # options: 0-23
         hash_alg: "sha256" # options: sha1, sha256, sha384, sha512, sm3
@@ -40,8 +42,10 @@ plugins:
     params:
       attester_type: "tpm_ima"
       tcti_config: "device" # options: device, mssim, swtpm, tabrmd, libtpm
-      ak_handle: 0x81010020
-      ak_nv_index: 0x150001b
+      ak_certs:
+        - cert_type: "iak"
+          ak_handle: 0x81010020
+          ak_nv_index: 0x150001b
       pcr_selections: 
         banks: [10] # options: 10
         hash_alg: "sha256" # options: sha1, sha256, sha384, sha512, sm3
