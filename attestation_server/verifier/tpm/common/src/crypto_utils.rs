@@ -89,6 +89,36 @@ impl CryptoVerifier {
         }
     }
 
+    
+    /// Converts a hash algorithm name string to its digest size in bytes.
+    /// The string comparison is case-insensitive.
+    ///
+    /// # Arguments
+    ///
+    /// * `hash_str` - The string name of the hash algorithm (e.g., "sha256", "sm3").
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(usize)` on success, or `Err(PluginError::InputError)`
+    /// if the algorithm name is not recognized.
+    /// 
+    /// # Errors
+    /// 
+    /// * `PluginError::InputError` - If the algorithm name is not recognized.    
+    pub fn hash_str_to_digest_size(hash_str: &str) -> Result<usize, PluginError> {
+        match hash_str.to_lowercase().as_str() {
+            "sha1" => Ok(20_usize),
+            "sha256" => Ok(32_usize),
+            "sha384" => Ok(48_usize),
+            "sha512" => Ok(64_usize),
+            "sm3" => Ok(32_usize),
+            alg => Err(PluginError::InputError(
+                format!("Unsupported hash algorithm: {}", alg)
+            ))
+        }
+    }
+
+
     /// Verifies a digital signature against the original data using a public key.
     /// Supports RSA, RSA-PSS, ECDSA, and SM2 signature types.
     ///

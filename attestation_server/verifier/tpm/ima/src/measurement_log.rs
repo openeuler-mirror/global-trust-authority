@@ -97,8 +97,18 @@ impl ImaLog {
             
             // Combine remaining parts as file path
             let file_path = parts[4].to_string();
-
-            let template_hash = Self::calculate_template_hash(&file_hash, &file_hash_alg, &file_path, template_hash_alg)?;
+            
+            let logged_template_hash = parts[1].to_string();
+            let template_hash = match logged_template_hash.chars().all(|c| c == '0') {
+                false => Self::calculate_template_hash(&file_hash, &file_hash_alg, &file_path, template_hash_alg)?,
+                true => {
+                    let digest_size = CryptoVerifier::hash_str_to_digest_size(&template_hash_alg)
+                    .map_err(|e| PluginError::InputError(
+                        format!("Failed to get digest size: {}", e)
+                    ))?;
+                    "0".repeat(digest_size * 2)
+                },
+            };
             
             logs.push(ImaLogEntry {
                 pcr_index,
@@ -267,10 +277,17 @@ impl ImaLog {
         
         // Collect template hashes for each PCR index
         for log in &self.logs {
+            // Replace all '0' with 'f' in template_hash if it's all zeros
+            let processed_hash = if log.template_hash.chars().all(|c| c == '0') {
+                "f".repeat(log.template_hash.len())
+            } else {
+                log.template_hash.clone()
+            };
+            
             pcr_template_hashes
                 .entry(log.pcr_index)
                 .or_insert_with(Vec::new)
-                .push(log.template_hash.clone());
+                .push(processed_hash);
         }
         
         // Calculate replay value for each PCR index
