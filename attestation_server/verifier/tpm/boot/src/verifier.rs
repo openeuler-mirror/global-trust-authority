@@ -27,6 +27,7 @@
 
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::error::Error;
 use serde_json::Value;
 use plugin_manager::{ServicePlugin, PluginError, PluginBase, ServiceHostFunctions};
 use tpm_common_verifier::{GenerateEvidence, Evidence, EvidenceResult, PcrValues, LogResult, Logs};
@@ -285,9 +286,9 @@ impl ServicePlugin for TpmBootPlugin {
 /// # Returns
 /// * `Option<Box<dyn ServicePlugin>>` - Returns plugin instance on success, None if type doesn't match
 #[no_mangle]
-pub fn create_plugin(host_functions: ServiceHostFunctions, plugin_type: &str) -> Option<Box<dyn ServicePlugin>> {
+pub fn create_plugin(host_functions: ServiceHostFunctions, plugin_type: &str) -> Result<Box<dyn ServicePlugin>, Box<dyn Error>> {
     if plugin_type != "tpm_boot" {
-        return None;
+        return Err(Box::new(PluginError::InputError("Invalid plugin type".to_string())));
     }
-    Some(Box::new(TpmBootPlugin::new(plugin_type.to_string(), host_functions)))
+    Ok(Box::new(TpmBootPlugin::new(plugin_type.to_string(), host_functions)))
 }

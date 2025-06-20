@@ -120,6 +120,7 @@ pub struct ServerConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AgentConfig {
+    pub listen_enabled: bool,
     pub listen_address: String,
     pub listen_port: u16,
     pub uuid: Option<String>,    // Optional UUID to uniquely identify the agent

@@ -90,25 +90,39 @@ async fn main() -> Result<(), AgentError> {
     load_plugins(&config).map_err(|e| AgentError::PluginLoadError(format!("Failed to load plugins: {}", e)))?;
     info!("Plugins loaded successfully");
 
+    let challenge_config =
+    if let Some(config) = config.schedulers.iter().find(|config| config.name == "challenge") {
+        config
+    } else {
+        error!("Challenge scheduler not found in configuration");
+        return Err(AgentError::ConfigError("Challenge scheduler not configured".to_string()));
+    };
+
     // start server
-    info!("Starting server at listen address: {}:{}", config.agent.listen_address, config.agent.listen_port);
-    let rest_config =
-        ServiceConfig::new().with_port(config.agent.listen_port).with_bind_address(&config.agent.listen_address);
+    let service: Option<Arc<RestService>> = if config.agent.listen_enabled {
+        info!("Starting server at listen address: {}:{}", config.agent.listen_address, config.agent.listen_port);
+        let rest_config =
+            ServiceConfig::new().with_port(config.agent.listen_port).with_bind_address(&config.agent.listen_address);
 
-    let service = RestService::configure(rest_config)?;
+        let service = RestService::configure(rest_config)?;
 
-    service.register(
-        Method::POST,
-        "/global-trust-authority/agent/v1/tokens",
-        |_: HttpRequest, body: Option<Value>| token_controller::get_token(body),
-    )?;
-    service.register(
-        Method::POST,
-        "/global-trust-authority/agent/v1/evidences",
-        |_: HttpRequest, body: Option<Value>| get_evidence_controller::get_evidence(body),
-    )?;
+        service.register(
+            Method::POST,
+            "/global-trust-authority/agent/v1/tokens",
+            |_: HttpRequest, body: Option<Value>| token_controller::get_token(body),
+        )?;
+        service.register(
+            Method::POST,
+            "/global-trust-authority/agent/v1/evidences",
+            |_: HttpRequest, body: Option<Value>| get_evidence_controller::get_evidence(body),
+        )?;
 
-    service.start_server().await?;
+        service.start_server().await?;
+        Some(service)
+    } else {
+        info!("agent restful service is disabled");
+        None
+    };
 
     debug!("Server URL from config: {}", config.server.server_url);
     let mut client_config = ClientConfig::new().with_base_url(config.server.server_url.clone());
@@ -121,17 +135,6 @@ async fn main() -> Result<(), AgentError> {
     }
 
     Client::configure(client_config)?;
-
-    let challenge_config =
-        if let Some(config) = config.schedulers.iter().find(|config| config.name == "challenge") {
-            config
-        } else {
-            log::error!("Challenge scheduler not found in configuration, skipping challenge initialization");
-            if let Err(e) = service.stop_server().await {
-                error!("Failed to stop server: {}", e);
-            }
-            return Err(AgentError::ConfigError("Challenge scheduler not configured".to_string()));
-        };
 
     let initial_delay =
         challenge_config.initial_delay.clone().unwrap_or(InitialDelayConfig { min_seconds: 0, max_seconds: 0 });
@@ -204,10 +207,13 @@ async fn main() -> Result<(), AgentError> {
 
     schedulers.stop_all().await;
 
-    service
-        .stop_server()
-        .await
-        .map_err(|e| AgentError::ServerShutdownError(format!("Failed to stop server: {}", e)))?;
+    if let Some(service) = service {
+        service
+            .stop_server()
+            .await
+            .map_err(|e| AgentError::ServerShutdownError(format!("Failed to stop server: {}", e)))?;
+        info!("Server stopped successfully");
+    }
 
     Ok(())
 }

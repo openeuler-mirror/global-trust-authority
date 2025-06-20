@@ -355,6 +355,7 @@ For example, in the following agent_config.yaml file, the ak_handle with the val
 
 ```sh
 agent:
+ listen_enabled: false
  listen_address: "0.0.0.0"
  listen_port: 8088
  uuid: "a4e7c719-6b05-4ac6-b95a-7e71a9d6f9d5" 

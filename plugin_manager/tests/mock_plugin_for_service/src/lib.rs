@@ -70,12 +70,12 @@ impl<'a> ServicePlugin for MockServicePlugin<'a> {
 }
 
 #[no_mangle]
-pub fn create_plugin<'a>(host_functions: &'a ServiceHostFunctions, plugin_type: &str) -> Option<Box<dyn ServicePlugin + 'a>> {
+pub fn create_plugin<'a>(host_functions: &'a ServiceHostFunctions, plugin_type: &str) -> Result<Box<dyn ServicePlugin + 'a>, Box<dyn Error>> {
     // Extract the functions from the host functions struct
     let validate_cert_chain = &host_functions.validate_cert_chain;
     let get_unmatched_measurements = &host_functions.get_unmatched_measurements;
     let query_configuration = &host_functions.query_configuration;
     
     // Create a new instance with the host functions
-    Some(Box::new(MockServicePlugin::new(String::from(plugin_type), validate_cert_chain, get_unmatched_measurements, query_configuration)))
+    Ok(Box::new(MockServicePlugin::new(String::from(plugin_type), validate_cert_chain, get_unmatched_measurements, query_configuration)))
 }
