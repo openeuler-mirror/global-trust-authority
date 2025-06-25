@@ -12,6 +12,7 @@
 
 // Plugin manager implementation
 
+use std::error::Error;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock, RwLock};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -28,7 +29,7 @@ pub struct PluginEntry {
 }
 
 /// Generic plugin creation function type that takes a specific host function type
-pub type CreatePluginFn<T, H> = fn(&H, &str) -> Option<Box<T>>;
+pub type CreatePluginFn<T, H> = fn(&H, &str) -> Result<Box<T>, Box<dyn Error>>;
 
 /// Generic plugin manager that can work with any plugin type and host function type
 pub struct PluginManager<T: PluginBase + ?Sized, H: HostFunctions> {
@@ -92,7 +93,7 @@ impl<T: PluginBase + ?Sized + 'static, H: HostFunctions> PluginManager<T, H> {
         
         // Try to create the plugin
         let plugin = constructor(host_functions, name)
-            .ok_or_else(|| format!("Plugin creation failed for {}", name))?;
+            .map_err(|e| format!("Plugin {} creation failed for {}", name, e))?;
         
         if plugin.plugin_type() != name {
             return Err(format!("Plugin type mismatch for {}", name));

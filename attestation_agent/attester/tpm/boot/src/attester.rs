@@ -15,6 +15,7 @@ use tpm_common_attester::{TpmPluginBase, TpmPluginConfig, Log};
 use plugin_manager::{AgentPlugin, PluginError, PluginBase, QueryConfigurationFn, AgentHostFunctions};
 use std::fs::File;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
+use std::error::Error;
 
 #[derive(Debug)]
 pub struct TpmBootPlugin {
@@ -108,16 +109,12 @@ impl TpmPluginBase for TpmBootPlugin {
 
 // Each plugin has its own create_plugin function
 #[no_mangle]
-pub fn create_plugin(host_functions: &AgentHostFunctions, plugin_type: &str) -> Option<Box<dyn AgentPlugin>> {
+pub fn create_plugin(host_functions: &AgentHostFunctions, plugin_type: &str) -> Result<Box<dyn AgentPlugin>, Box<dyn Error>> {
     // Extract the functions from the host functions struct
     let query_configuration = host_functions.query_configuration;
     
     // Create a new instance with the host functions
-    match TpmBootPlugin::new(String::from(plugin_type), query_configuration) {
-        Ok(plugin) => Some(Box::new(plugin)),
-        Err(e) => {
-            log::error!("Failed to create plugin: {}", e);
-            None
-        }
-    }
+    TpmBootPlugin::new(String::from(plugin_type), query_configuration)
+        .map(|plugin| Box::new(plugin) as Box<dyn AgentPlugin>)
+        .map_err(|e| Box::new(e) as Box<dyn Error>)
 }

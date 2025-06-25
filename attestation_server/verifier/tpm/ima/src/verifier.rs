@@ -16,6 +16,7 @@ use tpm_common_verifier::{GenerateEvidence, Evidence, EvidenceResult, PcrValues,
 use crate::measurement_log::ImaLog;
 use once_cell::sync::Lazy;
 use async_trait::async_trait;
+use std::error::Error;
 
 /// TPM IMA verification plugin
 pub struct TpmImaPlugin {
@@ -148,9 +149,9 @@ impl ServicePlugin for TpmImaPlugin {
 }
 
 #[no_mangle]
-pub fn create_plugin(host_functions: ServiceHostFunctions, plugin_type: &str) -> Option<Box<dyn ServicePlugin>> {
+pub fn create_plugin(host_functions: ServiceHostFunctions, plugin_type: &str) -> Result<Box<dyn ServicePlugin>, Box<dyn Error>> {
     if plugin_type != "tpm_ima" {
-        return None;
+        return Err(Box::new(PluginError::InputError("Invalid plugin type".to_string())));
     }
-    Some(Box::new(TpmImaPlugin::new(plugin_type.to_string(), host_functions)))
+    Ok(Box::new(TpmImaPlugin::new(plugin_type.to_string(), host_functions)))
 }

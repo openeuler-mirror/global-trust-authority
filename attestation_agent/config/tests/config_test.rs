@@ -26,6 +26,7 @@ use tempfile::{NamedTempFile, TempDir};
 fn create_valid_config_yaml() -> String {
     r#"
 agent:
+  listen_enabled: true
   listen_address: "127.0.0.1"
   listen_port: 8080
   uuid: "test-agent-001"

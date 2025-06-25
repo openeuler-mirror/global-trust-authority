@@ -75,6 +75,7 @@ Configuration of agent ip, server url, log file and plugins information on agent
 
 | Configuration Level | Field Name | Field Meaning | Field Type | Default/Example Values |
 |-------------------|------------|---------------|------------|----------------------|
+| agent | listen_enabled | IP address listen switch | bool | false|
 | agent | listen_address | IP address for the agent to listen | string | "0.0.0.0" |
 | agent | listen_port | Port number for the agent to listen | integer | 8088 |
 | agent | uuid | Unique agent identifier, same as common name field in IAK certificate | string | "a4e7c719-6b05-4ac6-b95a-7e71a9d6f9d5" |
@@ -91,8 +92,9 @@ Configuration of agent ip, server url, log file and plugins information on agent
 | plugins | enabled | Whether the plugin is enabled | boolean | true |
 | plugins | params.attester_type | attester type | string | "tpm_boot", "tpm_ima" |
 | plugins | params.tcti_config | TPM Command Transmission Interface configuration | string | "device" (options: device, mssim, swtpm, tabrmd, libtpm) |
-| plugins | params.ak_handle | Attestation Key handle, Need to create in advance, please refer to the key handle range: https://trustedcomputinggroup.org/wp-content/uploads/Registry-of-Reserved-TPM-2.0-Handles-and-Localities-Version-1.2-Revision-1.00_pub.pdf | integer | 0x81010020 |
-| plugins | params.ak_nv_index | AK Cert nv_index, iak certificate application reference: https://trustedcomputinggroup.org/wp-content/uploads/TPM-2p0-Keys-for-Device-Identity-and-Attestation_v1_r12_pub10082021.pdf | integer | 0x150001b |
+| plugins | params.ak_certs.cert_type | ak certificate type | String | "iak" |
+| plugins | params.ak_certs.ak_handle | Attestation Key handle, Need to create in advance, please refer to the key handle range: https://trustedcomputinggroup.org/wp-content/uploads/Registry-of-Reserved-TPM-2.0-Handles-and-Localities-Version-1.2-Revision-1.00_pub.pdf | integer | 0x81010020 |
+| plugins | params.ak_certs.ak_nv_index | AK Cert nv_index, iak certificate application reference: https://trustedcomputinggroup.org/wp-content/uploads/TPM-2p0-Keys-for-Device-Identity-and-Attestation_v1_r12_pub10082021.pdf | integer | 0x150001b |
 | plugins | params.pcr_selections.banks | PCR banks to use | array | [0,1,2,3,4,5,6,7] for tpm_boot, [10] for tpm_ima |
 | plugins | params.pcr_selections.hash_alg | The PCR hash algorithm selected and the supported algorithms depend on the TPM chip | string | "sha256" (options: sha1, sha256, sha384, sha512, sm3) |
 | plugins | params.quote_signature_scheme.signature_alg | Signature algorithm for quotes | string | "rsassa" (options: rsapss, rsassa, ecdsa) |
