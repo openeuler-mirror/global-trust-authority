@@ -107,8 +107,11 @@ server_config = {path = "attestation_server/server_config" }
 scopeguard = "1.2.0"
 clap = { version = "4.5.32", features = ["derive"] }
 hyperlocal = "0.9.0"
-hyper = "1.5.2"
+hyper = "1.6.0"
 percent-encoding = "2.3.1"
 strum = "0.27.1"
 strum_macros = "0.27.1"
 futures-util = "0.3.31"
+tar = "0.4"
+flate2 = "1.1.2"
+zip = "4.1.0"
