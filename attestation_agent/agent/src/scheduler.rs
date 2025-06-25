@@ -370,13 +370,7 @@ impl SingleTaskScheduler {
         let queue_size = Arc::clone(&self.queue_size);
 
         tokio::spawn(async move {
-            let first_execution_success = Self::handle_first_execution(&task, &config, &state, &rx).await;
-
-            if let Err(e) = first_execution_success {
-                warn!("The {} first execution failed, details: [{}]", config.name, e);
-                *state.lock().await = SchedulerState::Idle;
-                return;
-            }
+            let _ = Self::handle_first_execution(&task, &config, &state, &rx).await;
 
             if config.enabled {
                 Self::handle_execution(task, config, state, rx, queue_size).await;

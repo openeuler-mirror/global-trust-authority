@@ -153,19 +153,34 @@ async fn main() -> Result<(), AgentError> {
         .enabled(challenge_config.enabled);
 
     let task = Box::new(move || {
-        std::thread::spawn(|| {
-            info!("Scheduler task executed (threaded)");
-            let attester_info: Option<Vec<AttesterInfo>> = None;
-            let attester_data: Option<serde_json::Value> = None;
-            let result = {
-                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                rt.block_on(async { do_challenge(&attester_info, &attester_data).await })
-            };
-            if let Err(e) = result {
-                log::error!("do_challenge failed in scheduler thread: {}", e);
+        let thread_handle = std::thread::Builder::new()
+            .name("challenge_scheduler".to_string())
+            .spawn(move || {
+                info!("Scheduler task executed (threaded)");
+                let attester_info: Option<Vec<AttesterInfo>> = None;
+                let attester_data: Option<serde_json::Value> = None;
+                let result = {
+                    let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+                    rt.block_on(async { do_challenge(&attester_info, &attester_data).await })
+                };
+                if let Err(e) = &result {
+                    log::error!("do_challenge failed in scheduler thread: {}", e);
+                }
+                result
+            })
+            .expect("Failed to spawn scheduler thread");
+        Box::pin(async move {
+            match thread_handle.join() {
+                Ok(res) => match res {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(AgentError::SchedulerTaskError(e.to_string())),
+                },
+                Err(e) => {
+                    log::error!("Scheduler thread panicked: {:?}", e);
+                    Err(AgentError::SchedulerTaskError("Thread panic".to_string()))
+                }
             }
-        });
-        Box::pin(async { Ok(()) }) as Pin<Box<dyn Future<Output = Result<(), agent_utils::AgentError>> + Send>>
+        }) as Pin<Box<dyn Future<Output = Result<(), agent_utils::AgentError>> + Send>>
     });
 
     let mut schedulers = SchedulerBuilders::new();
