@@ -106,9 +106,9 @@ common_log = {path = "attestation_common/common_log"}
 server_config = {path = "attestation_server/server_config" }
 scopeguard = "1.2.0"
 clap = { version = "4.5.32", features = ["derive"] }
-hyperlocal = "0.8"
-hyper = "0.14.32"
+hyperlocal = "0.9.0"
+hyper = "1.5.2"
 percent-encoding = "2.3.1"
-strum = "0.26.3"
-strum_macros = "0.26.4"
+strum = "0.27.1"
+strum_macros = "0.27.1"
 futures-util = "0.3.31"
