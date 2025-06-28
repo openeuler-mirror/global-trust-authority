@@ -19,6 +19,8 @@ attestation_service:
         path: "/etc/attestation_server/export_policy/tpm_boot.rego"
       - name: "tpm_ima"
         path: "/etc/attestation_server/export_policy/tpm_ima.rego"
+      - name: "tpm_dim"
+        path: "/etc/attestation_server/export_policy/tpm_dim.rego"
     is_verify_policy_signature: false
     single_user_policy_limit: 30
     policy_content_size_limit: 500
@@ -33,3 +35,5 @@ attestation_service:
       path: "/usr/lib64/libtpm_boot_verifier.so"
     - name: "tpm_ima"
       path: "/usr/lib64/libtpm_ima_verifier.so"
+    - name: "tpm_dim"
+      path: "/usr/lib64/libtpm_dim_verifier.so"
