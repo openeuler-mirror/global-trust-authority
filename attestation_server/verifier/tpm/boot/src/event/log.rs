@@ -521,7 +521,7 @@ impl EventLog {
         // 4. Determine initial value - use function to generate initial value
         let initial_value = match last_value.as_deref() {
             Some(val) if !val.is_empty() => val.to_string(),
-            _ => Self::create_initial_pcr_value(index, digest_len, self.locality)
+            _ => tpm_common_verifier::PcrValues::create_initial_pcr_value(&self.selected_digest_alg, index, Some(self.locality)).unwrap()
         };
 
         // 5. Calculate replay value and update
@@ -533,32 +533,6 @@ impl EventLog {
 
         pcr_values.update_replay_value(index, replay_value);
         Ok(())
-    }
-
-    /// Create initial PCR value
-    ///
-    /// Create appropriate initial value based on PCR index
-    ///
-    /// # Parameters
-    /// * `index` - PCR index
-    /// * `digest_len` - Digest length
-    /// * `locality` - Locality information used for PCR0
-    ///
-    /// # Returns
-    /// * `String` - Hex encoded initial value
-    fn create_initial_pcr_value(index: u32, digest_len: usize, locality: u8) -> String {
-        // PCR 0-16 and 23 have all zeros as initial value
-        if index <= 16 || index == 23 {
-            let mut zero_value = vec![0u8; digest_len];
-            // PCR0 needs locality information
-            if index == 0 {
-                zero_value[digest_len - 1] = locality;
-            }
-            hex::encode(zero_value)
-        } else {
-            // PCR 17-22 have all ones as initial value
-            hex::encode(vec![1u8; digest_len])
-        }
     }
 
     /// Verify PCR values

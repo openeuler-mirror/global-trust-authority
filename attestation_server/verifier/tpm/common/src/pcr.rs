@@ -197,6 +197,24 @@ impl PcrValues {
         &self.hash_alg
     }
 
+    /// Set the PCR value for a specific PCR index
+    ///
+    /// # Arguments
+    /// * `index` - PCR index to set
+    /// * `value` - New PCR value to set
+    pub fn set_pcr_value(&mut self, index: u32, value: String) {
+        if let Some(entry) = self.pcr_values.iter_mut().find(|e| e.pcr_index == index) {
+            entry.pcr_value = value;
+        } else {
+            self.pcr_values.push(PcrValueEntry {
+                pcr_index: index,
+                pcr_value: value,
+                replay_value: None,
+                is_matched: None,
+            });
+        }
+    }
+
     /// Get the PCR value for a specific PCR index
     ///
     /// # Arguments
@@ -379,5 +397,37 @@ impl PcrValues {
         }
 
         Ok(hex::encode(current_value))
+    }
+
+    /// Create initial PCR value
+    ///
+    /// # Arguments
+    /// * `hash_alg` - Hash algorithm name (e.g., "sha256")
+    /// * `pcr_index` - PCR index
+    /// * `locality` - Optional locality (for PCR0)
+    ///
+    /// # Returns
+    /// * `String` - Hex encoded initial value
+    pub fn create_initial_pcr_value(hash_alg: &str, pcr_index: u32, locality: Option<u8>) -> Result<String, PluginError> {
+        let digest_len = match hash_alg {
+            "sha1" => 20,
+            "sha256" => 32,
+            "sha384" => 48,
+            "sha512" => 64,
+            "sm3" => 32,
+            _ => return Err(PluginError::InputError(format!("Unsupported hash algorithm: {}", hash_alg))),
+        };
+        let value = if pcr_index <= 16 || pcr_index == 23 {
+            let mut zero_value = vec![0u8; digest_len];
+            if pcr_index == 0 {
+                if let Some(loc) = locality {
+                    zero_value[digest_len - 1] = loc;
+                }
+            }
+            hex::encode(zero_value)
+        } else {
+            hex::encode(vec![1u8; digest_len])
+        };
+        Ok(value)
     }
 }
