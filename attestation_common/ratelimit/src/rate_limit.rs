@@ -109,3 +109,7 @@ pub fn create_management_governor() -> Governor {
 pub fn create_challenge_governor() -> Governor {
     create_governor("CHALLENGE_REQUESTS_PER_SECOND", "CHALLENGE_BURST_SIZE")
 }
+
+pub fn create_register_governor() -> Governor {
+    create_governor("REGISTER_REQUESTS_PER_SECOND", "REGISTER_BURST_SIZE")
+}

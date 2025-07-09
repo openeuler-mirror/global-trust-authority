@@ -32,7 +32,8 @@ members = [
     "attestation_common/jwt",
     "plugin_manager",
     "attestation_cli",
-    "key_manager",
+    "key_manager", 
+    "attestation_server/register",
 ]
 
 resolver = "2"
@@ -63,6 +64,7 @@ ctor = "0.4.0"
 libsm = "0.6.0"
 encoding = "0.2.33"
 futures = "0.3.31"
+futures-util = "0.3.31"
 plugin_manager = { path = "./plugin_manager" }
 attestation = { path = "attestation_server/attestation" }
 key_management = { path = "attestation_server/key" }
@@ -72,6 +74,7 @@ endorserment = { path = "attestation_server/endorserment" }
 rv = { path = "attestation_server/ref_value" }
 resource_provider = {path = "attestation_server/resource_provider" }
 policy_engine = { path = "attestation_server/policy_engine" }
+register = {path = "attestation_server/register"}
 rand = "0.8.4"
 rand_chacha = "0.3.1"
 base64 = "0.22.1"
@@ -106,3 +109,4 @@ common_log = {path = "attestation_common/common_log"}
 server_config = {path = "attestation_server/server_config" }
 scopeguard = "1.2.0"
 clap = { version = "4.5.32", features = ["derive"] }
+ring = "0.17.14"
