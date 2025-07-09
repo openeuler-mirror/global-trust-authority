@@ -24,8 +24,10 @@ use actix_web::body::BoxBody;
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse};
 use actix_web::{middleware, web, App, HttpServer};
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
-use ratelimit::{create_challenge_governor, create_management_governor};
+use ratelimit::{create_challenge_governor, create_management_governor, create_register_governor};
 use rdb::get_connection;
+use register::filter::{AuthFilter, APIKEY_ENABLE};
+use register::route::routes::configure_register_routes;
 use server_config::init_chain::init_db_table_handler::DbTableInitHandler;
 use server_config::init_chain::logger_init_handler::LoggerInitHandler;
 use server_config::init_chain::traits::InitContext;
@@ -65,6 +67,7 @@ async fn main() -> std::io::Result<()> {
     let pool = get_connection().await.clone().unwrap();
     let management_governor = create_management_governor();
     let challenge_governor = create_challenge_governor();
+    let register_governor = create_register_governor();
     let server = HttpServer::new(move || {
         let max_json_size =
             env::var("MAX_JSON_SIZE").ok().and_then(|s| s.parse().ok()).unwrap_or(MAX_JSON_SIZE_DEFAULT);
@@ -83,8 +86,12 @@ async fn main() -> std::io::Result<()> {
                     }))
                     .wrap_fn(|req, srv| validate_user_id_header(req, srv))
                     .wrap(middleware::Logger::default())
+                    .wrap(AuthFilter)
                     .configure(|cfg| {
-                        configure_user_routes(cfg, challenge_governor.clone(), management_governor.clone())
+                        configure_user_routes(cfg, challenge_governor.clone(), management_governor.clone());
+                        if *APIKEY_ENABLE {
+                            configure_register_routes(cfg, register_governor.clone());
+                        }
                     }),
             )
             .default_service(web::route().to(default_not_found_page))
@@ -116,9 +123,10 @@ fn validate_user_id_header(
 ) -> impl Future<Output = Result<ServiceResponse<BoxBody>, actix_web::Error>> {
     let is_valid =
         req.headers().get(USER_ID).map(|id| !id.is_empty() && id.len() <= USER_ID_MAX_LENGTH).unwrap_or(false);
+    let is_register = req.path().ends_with("register");
     let fut = srv.call(req);
     async move {
-        if !is_valid {
+        if !is_valid && !is_register{
             Err(actix_web::error::ErrorBadRequest("User-Id header is required and must be 1-36 characters"))
         } else {
             fut.await
