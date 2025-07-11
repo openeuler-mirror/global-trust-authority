@@ -177,6 +177,31 @@ pub enum PolicyCommands {
 }
 
 #[derive(Subcommand)]
+pub enum RegisterCommands {
+    /// New register operation
+    New {
+        /// output uid and apikey only to console
+        #[clap(short = 'n', long)]
+        nowrite: bool,
+    },
+    /// Refresh register information
+    Refresh {
+ 
+        /// Token for refresh operation
+        #[clap(short, long)]
+        user: Option<String>,
+   
+        /// Token for refresh operation
+        #[clap(short = 'k', long = "apikey")]
+        apikey: Option<String>,
+
+        /// output uid and apikey only to console
+        #[clap(short = 'n', long)]
+        nowrite: bool,
+    },
+}
+
+#[derive(Subcommand)]
 pub enum BaselineCommands {
     /// Insert baseline
     Set {

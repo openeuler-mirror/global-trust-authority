@@ -14,7 +14,8 @@ mod commands;
 mod entities;
 
 use crate::commands::{
-    BaselineCommands, CertificateCommands, EvidenceCommands, NonceCommands, PolicyCommands, TokenCommands,
+    BaselineCommands, CertificateCommands, EvidenceCommands, NonceCommands, PolicyCommands, RegisterCommands,
+    TokenCommands,
 };
 use crate::entities::{CertType, ContentType, NonceResponse, TokenResponse};
 use agent_utils::load_plugins::load_plugins;
@@ -30,7 +31,8 @@ use reqwest::header::HeaderValue;
 use reqwest::{Certificate, Client, Identity, StatusCode};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::fs;
+use std::fs::{self, File};
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
@@ -54,10 +56,20 @@ struct Cli {
     /// User Id
     #[clap(short, long, default_value = "")]
     user: String,
+
+    /// Api Key
+    #[clap(short = 'k', long = "apikey", default_value = "")]
+    apikey: String,
 }
 
 #[derive(Subcommand)]
 enum CommandGroup {
+    /// Register
+    Register {
+        #[clap(subcommand)]
+        command: RegisterCommands,
+    },
+
     /// Policy Management
     Policy {
         #[clap(subcommand)]
@@ -111,6 +123,7 @@ enum CommandGroup {
 }
 
 static USER_ID: &str = "User-Id";
+static API_KEY: &str = "API-Key";
 static AGENT_VERSION: &str = "1.0.0";
 static START_STR: &str = "@";
 static RPM_CONFIG_PATH: &str = "/etc/attestation_cli/agent_config.yaml";
@@ -121,7 +134,13 @@ lazy_static! {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join(Path::new("config/agent_config.yaml"));
 }
 
-async fn deal_certificate_commands(command: &CertificateCommands, server_url: String, client: Client, user: &String) {
+async fn deal_certificate_commands(
+    command: &CertificateCommands,
+    server_url: String,
+    client: Client,
+    user: &String,
+    apikey: &String,
+) {
     let url = format!("{}/cert", &server_url);
     match command {
         CertificateCommands::Set { name, description, cert_type, content, crl_content, is_default } => {
@@ -155,6 +174,7 @@ async fn deal_certificate_commands(command: &CertificateCommands, server_url: St
             let response = client
                 .post(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .json(&request_body)
                 .send()
                 .await
@@ -171,6 +191,7 @@ async fn deal_certificate_commands(command: &CertificateCommands, server_url: St
             let response = client
                 .delete(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .json(&request_body)
                 .send()
                 .await
@@ -189,6 +210,7 @@ async fn deal_certificate_commands(command: &CertificateCommands, server_url: St
             let response = client
                 .put(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .json(&request_body)
                 .send()
                 .await
@@ -207,6 +229,7 @@ async fn deal_certificate_commands(command: &CertificateCommands, server_url: St
             let response = client
                 .get(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .query(&params)
                 .send()
                 .await
@@ -241,7 +264,13 @@ fn get_policy_content(content: &Option<String>, content_type: &Option<ContentTyp
     }
 }
 
-async fn deal_policy_commands(command: &PolicyCommands, server_url: String, client: Client, user: &String) {
+async fn deal_policy_commands(
+    command: &PolicyCommands,
+    server_url: String,
+    client: Client,
+    user: &String,
+    apikey: &String,
+) {
     let url = format!("{}/policy", &server_url);
     match command {
         PolicyCommands::Set { name, description, attester_type, content_type, content, is_default } => {
@@ -258,6 +287,7 @@ async fn deal_policy_commands(command: &PolicyCommands, server_url: String, clie
             let response = client
                 .post(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .json(&request_body)
                 .send()
                 .await
@@ -280,6 +310,7 @@ async fn deal_policy_commands(command: &PolicyCommands, server_url: String, clie
             let response = client
                 .delete(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .json(&request_body)
                 .send()
                 .await
@@ -302,6 +333,7 @@ async fn deal_policy_commands(command: &PolicyCommands, server_url: String, clie
             let response = client
                 .put(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .json(&request_body)
                 .send()
                 .await
@@ -320,6 +352,7 @@ async fn deal_policy_commands(command: &PolicyCommands, server_url: String, clie
             let response = client
                 .get(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .query(&params)
                 .send()
                 .await
@@ -355,7 +388,13 @@ fn get_name(name: &Option<String>, content: &Option<String>) -> Option<String> {
     }
 }
 
-async fn deal_baseline_commands(command: &BaselineCommands, server_url: String, client: Client, user: &String) {
+async fn deal_baseline_commands(
+    command: &BaselineCommands,
+    server_url: String,
+    client: Client,
+    user: &String,
+    apikey: &String,
+) {
     let url = format!("{}/ref_value", &server_url);
     match command {
         BaselineCommands::Set { name, description, attester_type, content, is_default } => {
@@ -371,6 +410,7 @@ async fn deal_baseline_commands(command: &BaselineCommands, server_url: String, 
             let response = client
                 .post(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .json(&request_body)
                 .send()
                 .await
@@ -387,6 +427,7 @@ async fn deal_baseline_commands(command: &BaselineCommands, server_url: String, 
             let response = client
                 .delete(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .json(&request_body)
                 .send()
                 .await
@@ -407,6 +448,7 @@ async fn deal_baseline_commands(command: &BaselineCommands, server_url: String, 
             let response = client
                 .put(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .json(&request_body)
                 .send()
                 .await
@@ -425,6 +467,7 @@ async fn deal_baseline_commands(command: &BaselineCommands, server_url: String, 
             let response = client
                 .get(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .query(&params)
                 .send()
                 .await
@@ -451,6 +494,7 @@ async fn deal_nonce_commands(
     client: Client,
     user: &String,
     config: Config,
+    apikey: &String,
 ) {
     let url = format!("{}/challenge", &server_url);
     match command {
@@ -463,6 +507,7 @@ async fn deal_nonce_commands(
             let response = client
                 .post(url)
                 .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                 .json(&request_body)
                 .send()
                 .await
@@ -549,7 +594,13 @@ async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
     }
 }
 
-async fn deal_token_commands(command: &TokenCommands, server_url: String, client: Client, user: &String) {
+async fn deal_token_commands(
+    command: &TokenCommands,
+    server_url: String,
+    client: Client,
+    user: &String,
+    apikey: &String,
+) {
     let url = format!("{}/token/verify", &server_url);
     match command {
         TokenCommands::Verify { file, token } => {
@@ -573,6 +624,7 @@ async fn deal_token_commands(command: &TokenCommands, server_url: String, client
                 let response = client
                     .post(&url)
                     .header(USER_ID, HeaderValue::from_str(user).unwrap())
+                    .header(API_KEY, HeaderValue::from_str(apikey).unwrap())
                     .json(&request_body)
                     .send()
                     .await
@@ -592,6 +644,69 @@ fn get_config_path() -> String {
     }
 }
 
+async fn register_apikey_commands(
+    command: &RegisterCommands,
+    server_url: String,
+    client: Client,
+    user_config: &String,
+    apikey_config: &String,
+) {
+    let url = format!("{}/register", &server_url);
+    let write;
+    let mut user_req = String::new();
+    let mut apikey_req = String::new();
+    match command {
+        RegisterCommands::New { nowrite } => {
+            write = !*nowrite;
+        },
+        RegisterCommands::Refresh { user, apikey, nowrite } => {
+            (user_req, apikey_req) = match (user, apikey) {
+                (Some(user), Some(apikey)) => (user.to_string(), apikey.to_string()),
+                (None, None) => (user_config.to_string(), apikey_config.to_string()),
+                (_, _) => {
+                    eprintln!("Error: user or apikey is missing");
+                    std::process::exit(1);
+                },
+            };
+            write = !*nowrite;
+        },
+    }
+    let response = client
+        .get(&url)
+        .header(USER_ID, HeaderValue::from_str(&user_req).unwrap())
+        .header(API_KEY, HeaderValue::from_str(&apikey_req).unwrap())
+        .send()
+        .await
+        .unwrap();
+    let status_code = response.status();
+    let data = response.text().await.unwrap();
+    println!("status: {}", status_code);
+    println!("body: {}", data);
+    if status_code != StatusCode::OK {
+        eprintln!("Error: request failed");
+        std::process::exit(1);
+    }
+    let response_data: serde_json::Value = serde_json::from_str(data.as_str()).unwrap();
+    if write {
+        let apikey = response_data.get("API-Key").unwrap().as_str().unwrap();
+        let uid = response_data.get("User-Id").unwrap().as_str().unwrap();
+        let config_path = get_config_path();
+        let mut file = File::open(&config_path).unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        let mut config: serde_yaml::Value = serde_yaml::from_str(&contents).unwrap();
+        if let serde_yaml::Value::Mapping(ref mut agent_map) = config["agent"] {
+            agent_map
+                .insert(serde_yaml::Value::String("user_id".to_string()), serde_yaml::Value::String(uid.to_string()));
+            agent_map
+                .insert(serde_yaml::Value::String("apikey".to_string()), serde_yaml::Value::String(apikey.to_string()));
+        }
+        let mut file = File::create(&config_path).unwrap();
+        let updated_yaml = serde_yaml::to_string(&config).unwrap();
+        file.write_all(updated_yaml.as_bytes()).unwrap();
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
@@ -605,6 +720,12 @@ async fn main() {
     let tls = config.clone().server.tls.unwrap();
     let cert_path = if cli.cert_path.is_empty() { tls.cert_path } else { cli.cert_path };
     let ca_path = if cli.ca_path.is_empty() { tls.ca_path } else { cli.ca_path };
+
+    let mut user_id = cli.user.clone();
+    user_id = if user_id.is_empty() { config.agent.user_id.clone().unwrap_or("".to_string()) } else { user_id };
+    let mut apikey = cli.apikey.clone();
+    apikey = if apikey.is_empty() { config.agent.apikey.clone().unwrap_or("".to_string()) } else { apikey };
+
     // Create client
     let client: Client = if server_url.starts_with("https://") {
         // 1. Load server CA certificate (to verify server identity)
@@ -627,16 +748,16 @@ async fn main() {
     };
     match &cli.group {
         CommandGroup::Policy { command } => {
-            deal_policy_commands(command, server_url, client, &cli.user).await;
+            deal_policy_commands(command, server_url, client, &user_id, &apikey).await;
         },
         CommandGroup::Certificate { command } => {
-            deal_certificate_commands(command, server_url, client, &cli.user).await;
+            deal_certificate_commands(command, server_url, client, &user_id, &apikey).await;
         },
         CommandGroup::Baseline { command } => {
-            deal_baseline_commands(command, server_url, client, &cli.user).await;
+            deal_baseline_commands(command, server_url, client, &user_id, &apikey).await;
         },
         CommandGroup::Nonce { command } => {
-            deal_nonce_commands(command, server_url, client, &cli.user, config).await;
+            deal_nonce_commands(command, server_url, client, &user_id, config, &apikey).await;
         },
         CommandGroup::Evidence { command } => {
             deal_evidence_commands(command, config).await;
@@ -651,7 +772,8 @@ async fn main() {
             // Send POST request
             let response = client
                 .post(url)
-                .header(USER_ID, HeaderValue::from_str(&cli.user).unwrap())
+                .header(USER_ID, HeaderValue::from_str(&user_id).unwrap())
+                .header(API_KEY, HeaderValue::from_str(&apikey).unwrap())
                 .json(&request_body)
                 .send()
                 .await
@@ -684,7 +806,10 @@ async fn main() {
             }
         },
         CommandGroup::Token { command } => {
-            deal_token_commands(command, server_url, client, &cli.user).await;
+            deal_token_commands(command, server_url, client, &user_id, &apikey).await;
+        },
+        CommandGroup::Register { command } => {
+            register_apikey_commands(command, server_url, client, &user_id, &apikey).await;
         },
     }
 }

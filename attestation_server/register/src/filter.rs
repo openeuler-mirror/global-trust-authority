@@ -20,7 +20,7 @@ use std::{
     task::{Context, Poll},
     vec,
 };
-
+use common_log::{error, info};
 use crate::{apikey::register::ApiKeyInfo, service::register_service::register::check_apikey, APIKEY, UID};
 
 pub struct AuthFilter;
@@ -116,6 +116,22 @@ lazy_static! {
 }
 
 pub fn get_api_key_enable() -> bool {
-    let enable = std::env::var("ENABLE_APIKEY").unwrap_or_default();
-    enable == "true"
+    match std::env::var("ENABLE_APIKEY") {
+        Ok(val) => {
+            match val.parse::<bool>() {
+                Ok(enable) => {
+                    info!("ENABLE_APIKEY set to {}", enable);
+                    enable
+                },
+                Err(_e) => {
+                    error!("ENABLE_APIKEY env is not bool {}, use default value false", val);
+                    false
+                }
+            }
+        },
+        Err(e) => {
+            error!("Environment variable ENABLE_APIKEY not found: {}, use default value false", e);
+            false
+        }
+    }
 }
