@@ -14,9 +14,10 @@ use crate::middlewares::rate_limit::{RateLimit, GLOBAL_LIMITER};
 use crate::middlewares::request_logger::RequestLogger;
 use crate::middlewares::security_headers::SecurityHeaders;
 use crate::middlewares::trusted_proxies::TrustedProxies;
+use crate::response_error::create_error_response;
 use actix_web::dev::Service;
 use actix_web::middleware::{Condition, Logger, NormalizePath, TrailingSlash};
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, http};
 use agent_utils::validate_utils::{validate_bind_address, validate_file, validate_rest_path};
 use agent_utils::AgentError;
 use log::{error, info, warn};
@@ -400,10 +401,17 @@ impl RestService {
     {
         Arc::new(move || {
             let handler = Arc::clone(&handler);
-            web::post().to(move |req: HttpRequest, body: Option<web::Json<Value>>| {
+            web::post().to(move |req: HttpRequest, body: Result<web::Json<Value>, actix_web::Error>| {
                 let handler = Arc::clone(&handler);
-                let data = body.map(|b| b.into_inner());
-                async move { handler(req, data) }
+                async move {
+                    match body {
+                        Ok(json) => handler(req, Some(json.into_inner())),
+                        Err(_) => create_error_response(
+                            "Invalid request: JSON syntax error or type mismatch",
+                            http::StatusCode::BAD_REQUEST,
+                        ),
+                    }
+                }
             })
         })
     }
@@ -414,10 +422,17 @@ impl RestService {
     {
         Arc::new(move || {
             let handler = Arc::clone(&handler);
-            web::put().to(move |req: HttpRequest, body: Option<web::Json<Value>>| {
+            web::put().to(move |req: HttpRequest, body: Result<web::Json<Value>, actix_web::Error>| {
                 let handler = Arc::clone(&handler);
-                let data = body.map(|b| b.into_inner());
-                async move { handler(req, data) }
+                async move {
+                    match body {
+                        Ok(json) => handler(req, Some(json.into_inner())),
+                        Err(_) => create_error_response(
+                            "Invalid request: JSON syntax error or type mismatch",
+                            http::StatusCode::BAD_REQUEST,
+                        ),
+                    }
+                }
             })
         })
     }
@@ -1331,7 +1346,7 @@ mod tests {
         let response = response.expect("Failed to connect to server even after retries");
         assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
         let body = response.text().await.unwrap();
-        assert!(body.contains("Invalid JSON payload"));
+        assert!(body.contains("Invalid request: JSON syntax error or type mismatch"));
 
         let stop_result = service.stop_server().await;
         assert!(stop_result.is_ok());
