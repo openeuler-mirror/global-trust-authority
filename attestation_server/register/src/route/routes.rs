@@ -12,11 +12,15 @@
 use actix_web::web;
 use ratelimit::Governor;
 use crate::controller::register_controller;
+use crate::controller::register_controller::register;
 
 pub fn configure_register_routes(cfg: &mut web::ServiceConfig, register_governor:Governor) {
     cfg.service(
         web::scope("/register")
             .wrap(register_governor.clone())
+            .route("", web::post().to(|req, db| {
+                register(req, db)
+            }))
             .route("", web::get().to(register_controller::register)),
     );
 }

@@ -20,9 +20,9 @@ pub mod register {
     use uuid::Uuid;
     use crate::error::register_error::RegisterError;
     
-    static APIKEY_LENGTH: usize = 32; 
-    static SALT_LENGTH: usize = 16;
-    static PBKDF2_SIZE: u32 = 10000;
+    pub static APIKEY_LENGTH: usize = 32; 
+    pub static SALT_LENGTH: usize = 16;
+    pub static PBKDF2_SIZE: u32 = 10000;
 
     pub struct ApiKeyInfo {
         pub uid: String,
@@ -101,5 +101,72 @@ pub mod register {
         let mut key = vec![0u8; size];
         OsRng.fill_bytes(&mut key);
         key
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ring::digest::SHA256_OUTPUT_LEN;
+    use crate::apikey::register::{generate_apikey, generate_random, generate_str, get_hashed_key, refresh_apikey, APIKEY_LENGTH, SALT_LENGTH};
+
+    #[test]
+    fn test_generate_apikey() {
+        let result = generate_apikey();
+        assert!(result.is_ok());
+        let api_key_info = result.unwrap();
+        assert!(!api_key_info.uid.is_empty());
+        assert_eq!(api_key_info.salt.len(), SALT_LENGTH);
+        assert_eq!(api_key_info.apikey.len(), APIKEY_LENGTH);
+        assert_eq!(api_key_info.hashed_key.len(), SHA256_OUTPUT_LEN);
+        assert!(api_key_info.apikey.chars().all(|c| c.is_ascii_alphanumeric()));
+    }
+
+    #[test]
+    fn test_refresh_apikey() {
+        let mut original = generate_apikey().unwrap();
+        let old_apikey = original.apikey.clone();
+        let old_hashed_key = original.hashed_key.clone();
+        let result = refresh_apikey(&mut original);
+        assert!(result.is_ok());
+        assert_ne!(original.apikey, old_apikey);
+        assert_ne!(original.hashed_key, old_hashed_key);
+        assert!(!original.uid.is_empty());
+        assert_eq!(original.salt.len(), SALT_LENGTH);
+        assert_eq!(original.apikey.len(), APIKEY_LENGTH);
+        assert_eq!(original.hashed_key.len(), SHA256_OUTPUT_LEN);
+    }
+
+    #[test]
+    fn test_get_hashed_key() {
+        let test_key = "test_api_key";
+        let test_salt = generate_random(SALT_LENGTH);
+        let result = get_hashed_key(test_key, &test_salt);
+        assert!(result.is_ok());
+        let hashed_key = result.unwrap();
+        assert_eq!(hashed_key.len(), SHA256_OUTPUT_LEN);
+        let result2 = get_hashed_key(test_key, &test_salt);
+        assert_eq!(hashed_key, result2.unwrap());
+        let different_salt = generate_random(SALT_LENGTH);
+        let result3 = get_hashed_key(test_key, &different_salt);
+        assert_ne!(hashed_key, result3.unwrap());
+    }
+
+    #[test]
+    fn test_generate_str() {
+        let test_size = 10;
+        let result = generate_str(test_size);
+        assert_eq!(result.len(), test_size);
+        assert!(result.chars().all(|c| c.is_ascii_alphanumeric()));
+        let result2 = generate_str(test_size);
+        assert_ne!(result, result2);
+    }
+
+    #[test]
+    fn test_generate_random() {
+        let test_size = 16;
+        let result = generate_random(test_size);
+        assert_eq!(result.len(), test_size);
+        let result2 = generate_random(test_size);
+        assert_ne!(result, result2);
     }
 }

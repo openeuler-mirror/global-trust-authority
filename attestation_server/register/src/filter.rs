@@ -9,10 +9,7 @@
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-use actix_web::{
-    dev::{Service, ServiceRequest, ServiceResponse, Transform},
-    Error,
-};
+use actix_web::{dev::{Service, ServiceRequest, ServiceResponse, Transform}, web, Error};
 use futures::executor::block_on;
 use futures_util::future::{ready, LocalBoxFuture, Ready};
 use lazy_static::lazy_static;
@@ -20,6 +17,8 @@ use std::{
     task::{Context, Poll},
     vec,
 };
+use std::sync::Arc;
+use sea_orm::DatabaseConnection;
 use common_log::{error, info};
 use crate::{apikey::register::ApiKeyInfo, service::register_service::register::check_apikey, APIKEY, UID};
 
@@ -64,13 +63,11 @@ where
         if !*APIKEY_ENABLE {
             return Box::pin(self.service.call(req));
         }
-        // 获取当前需要的ID和APIKEY
         let uid = match req.headers().get(UID) {
-            None => "", // UID 头不存在，视为正常情况，返回空字符串
+            None => "",
             Some(header_value) => match header_value.to_str() {
-                Ok(uid_str) => uid_str, // 转换成功，返回 UID 字符串
+                Ok(uid_str) => uid_str,
                 Err(_) => {
-                    // 转换出错，拦截请求
                     return Box::pin(async {
                         Err(actix_web::error::ErrorBadRequest("UID header contains invalid UTF-8"))
                     });
@@ -79,29 +76,34 @@ where
         };
 
         let apikey = match req.headers().get(APIKEY) {
-            None => "", // APIKEY 头不存在，视为正常情况，返回空字符串
+            None => "", 
             Some(header_value) => match header_value.to_str() {
-                Ok(apikey_str) => apikey_str, // 转换成功，返回 APIKEY 字符串
+                Ok(apikey_str) => apikey_str,
                 Err(_) => {
-                    // 转换出错，拦截请求
                     return Box::pin(async {
                         Err(actix_web::error::ErrorBadRequest("APIKEY header contains invalid UTF-8"))
                     });
                 },
             },
         };
-
-        // 注册场景
         if apikey.is_empty() && uid.is_empty() && req.path().ends_with("register") {
             return Box::pin(self.service.call(req));
         }
-
+        let db = match req.app_data::<web::Data<Arc<DatabaseConnection>>>() {
+            Some(db) => db,     
+            None => {
+                return Box::pin(async {
+                    error!("db connect load error!");
+                    Err(actix_web::error::ErrorInternalServerError("db connect load error!"))
+                });
+            },
+        };
         let auth_result = block_on(check_apikey(&ApiKeyInfo {
             apikey: apikey.to_string(),
             uid: uid.to_string(),
             salt: vec![],
             hashed_key: vec![],
-        }));
+        }, db.clone()));
 
         match auth_result {
             Ok(true) => Box::pin(self.service.call(req)),
@@ -133,5 +135,45 @@ pub fn get_api_key_enable() -> bool {
             error!("Environment variable ENABLE_APIKEY not found: {}, use default value false", e);
             false
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    #[test]
+    fn test_enable_apikey_true() {
+        unsafe { env::set_var("ENABLE_APIKEY", "true"); }
+        assert!(get_api_key_enable());
+        unsafe { env::remove_var("ENABLE_APIKEY"); }
+    }
+
+    #[test]
+    fn test_enable_apikey_false() {
+        unsafe { env::set_var("ENABLE_APIKEY", "false"); }
+        assert!(!get_api_key_enable());
+        unsafe { env::remove_var("ENABLE_APIKEY"); }
+    }
+
+    #[test]
+    fn test_enable_apikey_invalid_value() {
+        unsafe { env::set_var("ENABLE_APIKEY", "not_a_boolean"); }
+        assert!(!get_api_key_enable());
+        unsafe { env::remove_var("ENABLE_APIKEY"); }
+    }
+
+    #[test]
+    fn test_enable_apikey_not_set() {
+        unsafe { env::remove_var("ENABLE_APIKEY"); }
+        assert!(!get_api_key_enable());
+    }
+
+    #[test]
+    fn test_enable_apikey_case_insensitive() {
+        unsafe { env::set_var("ENABLE_APIKEY", "TRUE"); }
+        assert!(!get_api_key_enable());
+        unsafe { env::remove_var("ENABLE_APIKEY"); }
     }
 }
