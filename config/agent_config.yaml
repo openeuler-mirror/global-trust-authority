@@ -4,6 +4,7 @@ agent:
   listen_port: 8088
   uuid: "a4e7c719-6b05-4ac6-b95a-7e71a9d6f9d5"  # Unique agent identifier
   user_id: "test_01" # Unique user identifier
+  apikey:
 
 server:
   server_url: "https://127.0.0.1:8443"  # Base URL, API paths will be automatically appended

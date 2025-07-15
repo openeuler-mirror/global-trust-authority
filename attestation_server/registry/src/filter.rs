@@ -86,7 +86,7 @@ where
                 },
             },
         };
-        if apikey.is_empty() && uid.is_empty() && req.path().ends_with("registry") {
+        if apikey.is_empty() && uid.is_empty() && req.path().ends_with("register") {
             return Box::pin(self.service.call(req));
         }
         let db = match req.app_data::<web::Data<Arc<DatabaseConnection>>>() {

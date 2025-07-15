@@ -126,7 +126,7 @@ static USER_ID: &str = "User-Id";
 static API_KEY: &str = "API-Key";
 static AGENT_VERSION: &str = "1.0.0";
 static START_STR: &str = "@";
-static RPM_CONFIG_PATH: &str = "/etc/attestation_cli/agent_config.yaml";
+static RPM_CONFIG_PATH: &str = "/etc/attestation_agent/agent_config.yaml";
 static SERVICE_URL_PREFIX: &str = "/global-trust-authority/service/v1";
 
 lazy_static! {
@@ -691,6 +691,7 @@ async fn register_apikey_commands(
         let apikey = response_data.get("API-Key").unwrap().as_str().unwrap();
         let uid = response_data.get("User-Id").unwrap().as_str().unwrap();
         let config_path = get_config_path();
+        println!("{}", &config_path);
         let mut file = File::open(&config_path).unwrap();
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
