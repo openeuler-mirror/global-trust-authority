@@ -76,7 +76,7 @@ where
         };
 
         let apikey = match req.headers().get(APIKEY) {
-            None => "", 
+            None => "",
             Some(header_value) => match header_value.to_str() {
                 Ok(apikey_str) => apikey_str,
                 Err(_) => {
@@ -86,7 +86,7 @@ where
                 },
             },
         };
-        if apikey.is_empty() && uid.is_empty() && req.path().ends_with("register") {
+        if apikey.is_empty() && uid.is_empty() && req.path().ends_with("registry") {
             return Box::pin(self.service.call(req));
         }
         let db = match req.app_data::<web::Data<Arc<DatabaseConnection>>>() {

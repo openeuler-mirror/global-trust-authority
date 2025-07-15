@@ -21,10 +21,10 @@ pub mod register {
     use common_log::{debug, error};
 
     pub async fn register_apikey(db: web::Data<Arc<DatabaseConnection>>) -> Result<ApiKeyInfo, RegisterError> {
-        debug!("start register api key");
+        debug!("start registry api key");
         let info = generate_apikey()?;
         insert_data(&info, &db).await?;
-        debug!("register api key success {:?}", &info.uid);
+        debug!("registry api key success {:?}", &info.uid);
         Ok(info)
     }
 

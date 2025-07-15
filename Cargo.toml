@@ -33,7 +33,7 @@ members = [
     "plugin_manager",
     "attestation_cli",
     "key_manager",
-    "attestation_server/register",
+    "attestation_server/registry",
 ]
 
 resolver = "2"
@@ -73,7 +73,7 @@ endorserment = { path = "attestation_server/endorserment" }
 rv = { path = "attestation_server/ref_value" }
 resource_provider = {path = "attestation_server/resource_provider" }
 policy_engine = { path = "attestation_server/policy_engine" }
-register = {path = "attestation_server/register"}
+registry = {path = "attestation_server/registry" }
 rand = "0.8.4"
 rand_chacha = "0.3.1"
 base64 = "0.22.1"
