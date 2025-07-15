@@ -441,3 +441,26 @@ sudo attestation_cli token verify \
 	--token "xxxxx"
 ```
 
+### APIKey Management
+```cmd
+#Query APIKey Management Command Help
+attestation_cli token -h
+
+#Get APIKey and write agent_config.yaml
+attestation_cli register new 
+
+#Only get APIKey
+attestation_cli register new --nowrite
+
+#Update APIKey and write agent_config.yaml, param from agent_config.yaml
+attestation_cli register refresh  
+
+#Only refresh APIKey, param from agent_config.yaml
+attestation_cli register refresh --nowrite
+
+#Only refresh APIKey and write agent_config.yaml, param from input
+attestation_cli register refresh -u User-Id -k API-Key
+
+#Only refresh APIKey, param from input
+attestation_cli register refresh -u User-Id -k API-Key --nowrite
+```

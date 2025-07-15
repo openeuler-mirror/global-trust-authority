@@ -54,7 +54,7 @@ COPY --from=builder /var/test_docker/app/key_manager/target/release/key_manager 
 COPY --from=builder /var/test_docker/app/key_manager/.env /opt/key_manager
 COPY --from=builder /var/test_docker/app/key_manager/deps/* /opt/key_manager/deps/
 COPY --from=builder /var/test_docker/app/key_manager/script/generate_test_data.sh /opt/key_manager/
-COPY --from=builder /var/test_docker/app/certs/* /etc/attestation_server/certs/
+COPY --from=builder /var/test_docker/app/certs/* /tmp/certs/
 RUN chmod -R +x /opt/key_manager/*
 
 # Install runtime dependencies libssl3 OpenSSL runtime library

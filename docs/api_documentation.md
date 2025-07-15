@@ -1022,6 +1022,33 @@ http(s)://ip:port/global-trust-authority/service/v1/policy?ids=2b0ead4b-6a15-423
 }
  ```
 
+### 3.6 register apikey
+**Description**: When the request header is empty, to obtain User Id and API Key, when these two parameters are passed in the request header, to update User Id and API Key
+
+**Request Method**: `GET /global-trust-authority/service/v1/register`
+
+##### Request Headers
+| Field   | Type   | Required | Description                         |
+|---------|--------|----------|-------------------------------------|
+| User-Id | string | Yes      | Used to distinguish users           |
+| API-Key | string | Yes      | Used to verify the current identity |
+
+##### Response Parameters
+| Field   | Type    | Required                   | Description                                                    |
+|---------|---------|----------------------------|----------------------------------------------------------------|
+| User-Id | string  | Yes for failed request     | Error message                                                  |
+| API-Key | boolean | Yes for successful request | Whether signature verification passed                          |
+
+##### Example of request
+
+###### response body
+
+ ```
+{
+    "User-Id": "xxxxx"
+    "API-Key": "xxxxx"
+}
+ ```
 ## 4. Key Manager API
 
 ### 4.1 Query key
