@@ -29,11 +29,10 @@ struct RegisterResponse {
 
 pub async fn register(req: HttpRequest, db: web::Data<Arc<DatabaseConnection>>) -> HttpResponse {
     let uid = match req.headers().get(UID) {
-        None => "", // UID 头不存在，视为正常情况，返回空字符串
+        None => "",
         Some(header_value) => match header_value.to_str() {
-            Ok(uid_str) => uid_str, // 转换成功，返回 UID 字符串
+            Ok(uid_str) => uid_str, 
             Err(_) => {
-                // 转换出错，拦截请求
                 return HttpResponse::BadRequest()
                     .json(serde_json::json!({"message":  "UID header contains invalid UTF-8"}));
             },
@@ -44,14 +43,12 @@ pub async fn register(req: HttpRequest, db: web::Data<Arc<DatabaseConnection>>) 
         Some(header_value) => match header_value.to_str() {
             Ok(apikey_str) => apikey_str,
             Err(_) => {
-                // 转换出错，拦截请求
                 return HttpResponse::BadRequest()
                     .json(serde_json::json!({"message":  "apikey header contains invalid UTF-8"}));
             },
         },
     };
     if uid.is_empty() && apikey.is_empty() {
-        // 获取新的uid
         let apikey_info = match register_apikey(db).await {
             Ok(key) => key,
             Err(e) => {

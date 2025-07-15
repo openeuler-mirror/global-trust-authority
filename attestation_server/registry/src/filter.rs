@@ -63,13 +63,11 @@ where
         if !*APIKEY_ENABLE {
             return Box::pin(self.service.call(req));
         }
-        // 获取当前需要的ID和APIKEY
         let uid = match req.headers().get(UID) {
-            None => "", // UID 头不存在，视为正常情况，返回空字符串
+            None => "",
             Some(header_value) => match header_value.to_str() {
-                Ok(uid_str) => uid_str, // 转换成功，返回 UID 字符串
+                Ok(uid_str) => uid_str,
                 Err(_) => {
-                    // 转换出错，拦截请求
                     return Box::pin(async {
                         Err(actix_web::error::ErrorBadRequest("UID header contains invalid UTF-8"))
                     });
@@ -78,20 +76,17 @@ where
         };
 
         let apikey = match req.headers().get(APIKEY) {
-            None => "", // APIKEY 头不存在，视为正常情况，返回空字符串
+            None => "",
             Some(header_value) => match header_value.to_str() {
-                Ok(apikey_str) => apikey_str, // 转换成功，返回 APIKEY 字符串
+                Ok(apikey_str) => apikey_str,
                 Err(_) => {
-                    // 转换出错，拦截请求
                     return Box::pin(async {
                         Err(actix_web::error::ErrorBadRequest("APIKEY header contains invalid UTF-8"))
                     });
                 },
             },
         };
-
-        // 注册场景
-        if apikey.is_empty() && uid.is_empty() && req.path().ends_with("register") {
+        if apikey.is_empty() && uid.is_empty() && req.path().ends_with("registry") {
             return Box::pin(self.service.call(req));
         }
         let db = match req.app_data::<web::Data<Arc<DatabaseConnection>>>() {

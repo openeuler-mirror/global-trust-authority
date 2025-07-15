@@ -16,7 +16,7 @@ use crate::controller::register_controller::register;
 
 pub fn configure_register_routes(cfg: &mut web::ServiceConfig, register_governor:Governor) {
     cfg.service(
-        web::scope("/register")
+        web::scope("/registry")
             .wrap(register_governor.clone())
             .route("", web::post().to(|req, db| {
                 register(req, db)

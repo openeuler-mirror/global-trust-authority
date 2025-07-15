@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS T_REF_VALUE_DETAIL
 
 CREATE TABLE IF NOT EXISTS t_apikey_info
 (
-    uid                 VARCHAR(36)     NOT NULL    COMMENT 'User ID',
+    uid                 VARCHAR(36)     PRIMARY KEY COMMENT 'User ID',
     hashed_key          VARCHAR(64)     NOT NULL    COMMENT 'hashed_key',
     salt                VARCHAR(64)     NOT NULL    COMMENT 'Salt'
 );
