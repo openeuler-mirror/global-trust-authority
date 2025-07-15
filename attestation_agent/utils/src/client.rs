@@ -326,7 +326,20 @@ impl Client {
                     error!("agent.user_id field not found in config");
                     AgentError::ConfigError("agent.user_id field not found in config".to_string())
                 })?;
+            let apikey = AGENT_CONFIG
+                .get_instance()
+                .map_err(|e| {
+                    error!("Failed to get global config: {}", e);
+                    AgentError::ConfigError(format!("Failed to get global config: {}", e))
+                })?
+                .agent
+                .apikey
+                .clone()
+                .unwrap_or_default();
             req = req.header("Content-Type", "application/json").header("User-Id", user_id).body(json_str);
+            if !apikey.is_empty() {
+                req = req.header("API-Key", apikey)
+            }
         }
 
         info!("Sending {} request to {}", method.clone(), Self::mask_sensitive_info(&request_url));

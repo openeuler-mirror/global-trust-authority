@@ -54,6 +54,7 @@ COPY attestation_server/server_config/Cargo.toml ./attestation_server/server_con
 COPY attestation_server/verifier/tpm/common/Cargo.toml ./attestation_server/verifier/tpm/common/Cargo.toml
 COPY attestation_server/verifier/tpm/boot/Cargo.toml ./attestation_server/verifier/tpm/boot/Cargo.toml
 COPY attestation_server/verifier/tpm/ima/Cargo.toml ./attestation_server/verifier/tpm/ima/Cargo.toml
+COPY attestation_server/registry/Cargo.toml ./attestation_server/registry/Cargo.toml
 COPY plugin_manager/Cargo.toml ./plugin_manager/Cargo.toml
 COPY attestation_common/cache/Cargo.toml ./attestation_common/cache/Cargo.toml
 COPY attestation_common/config_manager/Cargo.toml ./attestation_common/config_manager/Cargo.toml

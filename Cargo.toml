@@ -33,6 +33,7 @@ members = [
     "plugin_manager",
     "attestation_cli",
     "key_manager",
+    "attestation_server/registry",
 ]
 
 resolver = "2"
@@ -72,6 +73,7 @@ endorserment = { path = "attestation_server/endorserment" }
 rv = { path = "attestation_server/ref_value" }
 resource_provider = {path = "attestation_server/resource_provider" }
 policy_engine = { path = "attestation_server/policy_engine" }
+registry = {path = "attestation_server/registry" }
 rand = "0.8.4"
 rand_chacha = "0.3.1"
 base64 = "0.22.1"
@@ -106,6 +108,7 @@ common_log = {path = "attestation_common/common_log"}
 server_config = {path = "attestation_server/server_config" }
 scopeguard = "1.2.0"
 clap = { version = "4.5.32", features = ["derive"] }
+ring = "0.17.14"
 hyperlocal = "0.9.0"
 hyper = "1.6.0"
 percent-encoding = "2.3.1"

@@ -125,6 +125,7 @@ pub struct AgentConfig {
     pub listen_port: u16,
     pub uuid: Option<String>,    // Optional UUID to uniquely identify the agent
     pub user_id: Option<String>, // Optional use_id to uniquely identify the user
+    pub apikey: Option<String>, // Optional apikey to uniquely identify the user
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

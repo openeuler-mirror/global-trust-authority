@@ -39,6 +39,7 @@ ratelimit.workspace = true
 common_log.workspace = true
 server_config = {workspace = true, features = ["rpm_build"]}
 config_manager.workspace = true
+registry.workspace = true
 
 [features]
 rpm_build = []
