@@ -18,12 +18,14 @@ pub mod register {
     use base64::engine::general_purpose;
     use base64::Engine;
     use sea_orm::DatabaseConnection;
+    use subtle::ConstantTimeEq;
+    use zeroize::Zeroize;
     use common_log::{debug, error};
 
     pub async fn register_apikey(db: web::Data<Arc<DatabaseConnection>>) -> Result<ApiKeyInfo, RegisterError> {
         debug!("start registry api key");
-        let info = generate_apikey()?;
-        insert_data(&info, &db).await?;
+        let mut info = generate_apikey()?;
+        insert_data(&mut info, &db).await?;
         debug!("registry api key success {:?}", &info.uid);
         Ok(info)
     }
@@ -31,15 +33,29 @@ pub mod register {
     pub async fn update_apikey(apikey_info: &mut ApiKeyInfo, db: web::Data<Arc<DatabaseConnection>>) -> Result<(), RegisterError> {
         debug!("start select api key {:?}", &apikey_info.uid);
         let info = select_data(apikey_info.uid.as_str(), &db).await;
-        match info {
-            Ok(_) => debug!("select success {:?}", &apikey_info.uid),
+        let data = match info {
+            Ok(data) => {
+                debug!("select success {:?}", &apikey_info.uid);
+                data
+            },
             Err(err) => {
                 error!("select data error {:?}", err);
                 return Err(err);
             }
         };
-        refresh_apikey(apikey_info)?;
-        update_data(&apikey_info, &db).await?;
+        data.hashed_key.into_bytes().zeroize();
+        let salt = general_purpose::STANDARD.decode(data.salt.as_str());
+        data.salt.into_bytes().zeroize();
+        apikey_info.salt = salt.map_err(|err| {
+            error!("decode salt error {:?}", err);
+            RegisterError::Base64DecodeFound("decode salt error".to_string())
+        })?;
+        refresh_apikey(apikey_info).map_err(|err| {
+            apikey_info.salt.zeroize();
+            err
+        })?;
+        apikey_info.salt.zeroize();
+        update_data(apikey_info, &db).await?;
         debug!("update success {:?}", &apikey_info.uid);
         Ok(())
     }
@@ -56,16 +72,29 @@ pub mod register {
                 return Ok(false);
             }
         };
-        let salt = match general_purpose::STANDARD.decode(data.salt.as_str()) {
+        let salt = general_purpose::STANDARD.decode(data.salt.as_str());
+        data.salt.into_bytes().zeroize();
+        let salt = match salt {
             Ok(salt) => salt,
             Err(err) => {
+                data.hashed_key.into_bytes().zeroize();
                 error!("decode salt error {:?}", err);
-                return Err(RegisterError::DatabaseError("".to_string()));
+                return Err(RegisterError::Base64DecodeFound("decode salt error".to_string()))
             }
         };
-        let hashed_key = get_hashed_key(&apikey_info.apikey, &salt)?;
+        let hashed_key = get_hashed_key(&apikey_info.apikey, &salt);
+        let hashed_key = match hashed_key {
+            Ok(hashed_key) => hashed_key,
+            Err(err) => {
+                data.hashed_key.into_bytes().zeroize();
+                return Err(err);
+            }
+        };
         let hashed_key = general_purpose::STANDARD.encode(hashed_key);
-        Ok(hashed_key == data.hashed_key)
+        let result = hashed_key.as_bytes().ct_eq(data.hashed_key.as_bytes()).into();
+        hashed_key.into_bytes().zeroize();
+        data.hashed_key.into_bytes().zeroize();
+        Ok(result)
     }
 
 
@@ -82,7 +111,7 @@ mod tests {
 
     async fn setup_test_db() -> Result<web::Data<Arc<DatabaseConnection>>, RegisterError> {
         let db = Database::connect("sqlite::memory:?mode=memory&cache=shared").await
-            .map_err(|e| RegisterError::DatabaseError(e.to_string()))?;
+            .map_err(|e| RegisterError::DbError(e.to_string()))?;
         db.execute(sea_orm::Statement::from_string(
             db.get_database_backend(),
             "
@@ -91,13 +120,13 @@ mod tests {
             hashed_key TEXT NOT NULL,
             salt TEXT NOT NULL    
         );
-    ".to_string())).await.map_err(|e| RegisterError::DatabaseError(e.to_string()))?;
+    ".to_string())).await.map_err(|e| RegisterError::DbError(e.to_string()))?;
         db.execute(sea_orm::Statement::from_string(
             db.get_database_backend(),
             "
         CREATE TABLE IF NOT EXISTS dual (dummy INTEGER);
         INSERT OR IGNORE INTO dual VALUES (1);
-    ".to_string())).await.map_err(|e| RegisterError::DatabaseError(e.to_string()))?;
+    ".to_string())).await.map_err(|e| RegisterError::DbError(e.to_string()))?;
         Ok(web::Data::new(Arc::new(db)))
     }
 
@@ -108,8 +137,8 @@ mod tests {
         assert!(result.is_ok());
         let info = result.unwrap();
         assert!(!info.uid.is_empty());
-        assert!(!info.hashed_key.is_empty());
-        assert!(!info.salt.is_empty());
+        assert!(info.hashed_key.is_empty());
+        assert!(info.salt.is_empty());
     }
     
     #[tokio::test]

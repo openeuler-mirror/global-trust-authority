@@ -14,6 +14,7 @@ pub mod register {
     use base64::{engine::general_purpose, Engine};
     use sea_orm::{entity::prelude::*, ActiveValue::Set};
     use serde::Serialize;
+    use zeroize::Zeroize;
     use common_log::{debug};
 
     #[derive(Clone, Debug, Serialize, DeriveEntityModel)]
@@ -40,8 +41,7 @@ pub mod register {
         Ok(key)
     }
 
-    pub async fn update_data(info: &register::ApiKeyInfo, db: &DatabaseConnection) -> Result<Model, RegisterError> {
-
+    pub async fn update_data(info: &mut register::ApiKeyInfo, db: &DatabaseConnection) -> Result<(), RegisterError> {
         let model = Entity::find_by_id(info.uid.to_string())
             .one(db)
             .await?
@@ -49,20 +49,20 @@ pub mod register {
 
         let mut active_model: ActiveModel = model.into();
         active_model.hashed_key = Set(general_purpose::STANDARD.encode(&info.hashed_key));
-        active_model.salt = Set(general_purpose::STANDARD.encode(&info.salt));
-        let update = active_model.update(db).await?;
-        Ok(update)
+        info.hashed_key.zeroize();
+        active_model.update(db).await?;
+        Ok(())
     }
 
-    pub async fn insert_data(info: &register::ApiKeyInfo, db: &DatabaseConnection) -> Result<(), RegisterError> {
-
+    pub async fn insert_data(info: &mut register::ApiKeyInfo, db: &DatabaseConnection) -> Result<(), RegisterError> {
         let active_model = ActiveModel {
             uid: Set(info.uid.to_string()),
             hashed_key: Set(general_purpose::STANDARD.encode(&info.hashed_key)),
             salt: Set(general_purpose::STANDARD.encode(&info.salt)),
             ..Default::default()
         };
-
+        info.salt.zeroize();
+        info.hashed_key.zeroize();
         match Entity::insert(active_model).exec(db).await {
             Ok(result) => {
                 debug!("insert data success {:?}", result);
@@ -120,7 +120,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_insert_data_success() {
-        let info = ApiKeyInfo {
+        let mut info = ApiKeyInfo {
             uid: "new_uid".to_string(),
             hashed_key: b"hashed_key".to_vec(),
             salt: b"salt".to_vec(),
@@ -132,13 +132,13 @@ mod tests {
                 rows_affected: 1,
             }])
             .into_connection();
-        let result = register::insert_data(&info, &db).await;
+        let result = register::insert_data(&mut info, &db).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_insert_data_failure() {
-        let info = ApiKeyInfo {
+        let mut info = ApiKeyInfo {
             uid: "new_uid".to_string(),
             hashed_key: b"hashed_key".to_vec(),
             salt: b"salt".to_vec(),
@@ -147,7 +147,7 @@ mod tests {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_exec_errors(vec![DbErr::RecordNotInserted])
             .into_connection();
-        let result = register::insert_data(&info, &db).await;
+        let result = register::insert_data(&mut info, &db).await;
         assert!(result.is_err());
         match result.unwrap_err() {
             RegisterError::DbError(msg) => assert!(msg.contains("insert data error")),
@@ -157,7 +157,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_data_success() {
-        let info = ApiKeyInfo {
+        let mut info = ApiKeyInfo {
             uid: "existing_uid".to_string(),
             hashed_key: b"new_hashed_key".to_vec(),
             salt: b"new_salt".to_vec(),
@@ -181,16 +181,13 @@ mod tests {
             }])
             .append_query_results(vec![vec![expected_updated.clone()]])
             .into_connection();
-        let result = register::update_data(&info, &db).await;
+        let result = register::update_data(&mut info, &db).await;
         assert!(result.is_ok());
-        let updated = result.unwrap();
-        assert_eq!(updated.hashed_key, expected_updated.hashed_key);
-        assert_eq!(updated.salt, expected_updated.salt);
     }
 
     #[tokio::test]
     async fn test_update_data_not_found() {
-        let info = ApiKeyInfo {
+        let mut info = ApiKeyInfo {
             uid: "non_existent_uid".to_string(),
             hashed_key: b"new_hashed_key".to_vec(),
             salt: b"new_salt".to_vec(),
@@ -199,7 +196,7 @@ mod tests {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![Vec::<register::Model>::new()])
             .into_connection();
-        let result = register::update_data(&info, &db).await;
+        let result = register::update_data(&mut info, &db).await;
         assert!(result.is_err());
         match result.unwrap_err() {
             RegisterError::RecordNotFound(msg) => assert!(msg.contains(&info.uid)),

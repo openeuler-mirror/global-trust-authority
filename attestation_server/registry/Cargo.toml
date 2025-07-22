@@ -24,3 +24,5 @@ tokio.workspace = true
 futures.workspace = true
 lazy_static.workspace = true
 mockall.workspace = true
+zeroize.workspace = true
+subtle.workspace = true
