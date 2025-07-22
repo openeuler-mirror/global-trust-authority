@@ -88,7 +88,7 @@ mod tests {
 
     async fn setup_test_db() -> Result<web::Data<Arc<DatabaseConnection>>, RegisterError> {
         let db = Database::connect("sqlite::memory:?mode=memory&cache=shared").await
-            .map_err(|e| RegisterError::DatabaseError(e.to_string()))?;
+            .map_err(|e| RegisterError::DbError(e.to_string()))?;
         db.execute(sea_orm::Statement::from_string(
             db.get_database_backend(),
             "
@@ -97,13 +97,13 @@ mod tests {
             hashed_key TEXT NOT NULL,
             salt TEXT NOT NULL
         );
-    ".to_string())).await.map_err(|e| RegisterError::DatabaseError(e.to_string()))?;
+    ".to_string())).await.map_err(|e| RegisterError::DbError(e.to_string()))?;
         db.execute(sea_orm::Statement::from_string(
             db.get_database_backend(),
             "
         CREATE TABLE IF NOT EXISTS dual (dummy INTEGER);
         INSERT OR IGNORE INTO dual VALUES (1);
-    ".to_string())).await.map_err(|e| RegisterError::DatabaseError(e.to_string()))?;
+    ".to_string())).await.map_err(|e| RegisterError::DbError(e.to_string()))?;
         Ok(web::Data::new(Arc::new(db)))
     }
 

@@ -89,6 +89,10 @@ where
         if apikey.is_empty() && uid.is_empty() && req.path().ends_with("register") {
             return Box::pin(self.service.call(req));
         }
+        // validate token url
+        if req.path().ends_with("/token/verify") {
+            return Box::pin(self.service.call(req));
+        }
         let db = match req.app_data::<web::Data<Arc<DatabaseConnection>>>() {
             Some(db) => db,     
             None => {
@@ -126,7 +130,7 @@ pub fn get_api_key_enable() -> bool {
                     enable
                 },
                 Err(_e) => {
-                    error!("ENABLE_APIKEY env is not bool {}, use default value false", val);
+                    error!("ENABLE_APIKEY env is not bool, use default value false");
                     false
                 }
             }

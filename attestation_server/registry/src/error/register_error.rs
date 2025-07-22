@@ -16,9 +16,6 @@ use rdb::DbError;
 #[derive(Error, Debug, Clone)]
 pub enum RegisterError {
 
-    #[error("Database operation failed: {0}")]
-    DatabaseError(String),
-
     #[error("Internal service error: {0}")]
     InternalError(String),
 
@@ -29,7 +26,10 @@ pub enum RegisterError {
     DbError(String),
 
     #[error("Record not found: {0}")]
-    RecordNotFound(String)
+    RecordNotFound(String),
+
+    #[error("Decode base64 error: {0}")]
+    Base64DecodeFound(String)
 
 }
 

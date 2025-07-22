@@ -120,3 +120,5 @@ flate2 = "1.1.2"
 zip = "4.2.0"
 bytes = "1.10.1"
 actix-multipart = "0.7.2"
+zeroize = { version = "1.6", features = ["derive"] }
+subtle = "2.5"
