@@ -93,7 +93,8 @@ mod tests {
         // Test null attester_data
         let request = TokenRequest {
             attester_info: Some(vec![AttesterInfo {
-                attester_type: Some("tpm_boot".to_string()),
+                attester_type: "tpm_boot".to_string(),
+                log_types: Some(vec!["TcgEventLog".to_string()]),
                 policy_ids: None,
             }]),
             challenge: Some(true),
@@ -105,8 +106,9 @@ mod tests {
         // Test valid request
         let request = TokenRequest {
             attester_info: Some(vec![AttesterInfo {
-                attester_type: Some("tpm_boot".to_string()),
+                attester_type: "tpm_boot".to_string(),
                 policy_ids: Some(vec!["policy1".to_string()]),
+                log_types: Some(vec!["TcgEventLog".to_string()]),
             }]),
             challenge: Some(false),
             attester_data: Some(json!({"key": "value"})),
@@ -132,8 +134,9 @@ mod tests {
     fn test_token_request_serialization() {
         let request = TokenRequest {
             attester_info: Some(vec![AttesterInfo {
-                attester_type: Some("tpm_boot".to_string()),
+                attester_type: "tpm_boot".to_string(),
                 policy_ids: Some(vec!["policy1".to_string(), "policy2".to_string()]),
+                log_types: Some(vec!["TcgEventLog".to_string()]),
             }]),
             challenge: Some(true),
             attester_data: Some(json!({"test": "data"})),
@@ -177,8 +180,9 @@ mod tests {
     #[test]
     fn test_attester_info_serialization() {
         let attester_info = AttesterInfo {
-            attester_type: Some("tpm_boot".to_string()),
+            attester_type: "tpm_boot".to_string(),
             policy_ids: Some(vec!["policy1".to_string(), "policy2".to_string()]),
+            log_types: Some(vec!["TcgEventLog".to_string()]),
         };
 
         let serialized = serde_json::to_string(&attester_info).unwrap();
@@ -191,18 +195,21 @@ mod tests {
     #[test]
     fn test_attester_info_partial_eq() {
         let info1 = AttesterInfo {
-            attester_type: Some("tpm_boot".to_string()),
+            attester_type: "tpm_boot".to_string(),
             policy_ids: Some(vec!["policy1".to_string()]),
+            log_types: Some(vec!["TcgEventLog".to_string()]),
         };
 
         let info2 = AttesterInfo {
-            attester_type: Some("tpm_boot".to_string()),
+            attester_type: "tpm_boot".to_string(),
             policy_ids: Some(vec!["policy1".to_string()]),
+            log_types: Some(vec!["TcgEventLog".to_string()]),
         };
 
         let info3 = AttesterInfo {
-            attester_type: Some("tpm_ima".to_string()),
+            attester_type: "tpm_ima".to_string(),
             policy_ids: Some(vec!["policy1".to_string()]),
+            log_types: Some(vec!["ImaLog".to_string()]),
         };
 
         assert_eq!(info1, info2);
@@ -236,8 +243,9 @@ mod tests {
         // Test with null attester_data
         let request = TokenRequest {
             attester_info: Some(vec![AttesterInfo {
-                attester_type: Some("tpm_boot".to_string()),
+                attester_type: "tpm_boot".to_string(),
                 policy_ids: None,
+                log_types: None,
             }]),
             challenge: Some(false),
             attester_data: Some(json!(null)),
@@ -250,12 +258,14 @@ mod tests {
         // Test with very large attester_info
         let large_attester_info = vec![
             AttesterInfo {
-                attester_type: Some("tpm_boot".to_string()),
+                attester_type: "tpm_boot".to_string(),
                 policy_ids: Some(vec!["policy1".to_string(), "policy2".to_string()]),
+                log_types: Some(vec!["TcgEventLog".to_string()]),
             },
             AttesterInfo {
-                attester_type: Some("tpm_ima".to_string()),
+                attester_type: "tpm_ima".to_string(),
                 policy_ids: Some(vec!["policy3".to_string(), "policy4".to_string()]),
+                log_types: Some(vec!["ImaLog".to_string()]),
             },
         ];
         let request = TokenRequest {
@@ -288,8 +298,9 @@ mod tests {
 
         let request = TokenRequest {
             attester_info: Some(vec![AttesterInfo {
-                attester_type: Some("tpm_boot".to_string()),
+                attester_type: "tpm_boot".to_string(),
                 policy_ids: Some(vec!["policy1".to_string(), "policy2".to_string()]),
+                log_types: Some(vec!["TcgEventLog".to_string()]),
             }]),
             challenge: Some(true),
             attester_data: Some(complex_data.clone()),
@@ -342,9 +353,9 @@ mod tests {
 
         let attester_info = request.attester_info.unwrap();
         assert_eq!(attester_info.len(), 2);
-        assert_eq!(attester_info[0].attester_type, Some("tpm_boot".to_string()));
+        assert_eq!(attester_info[0].attester_type, "tpm_boot".to_string());
         assert_eq!(attester_info[0].policy_ids, Some(vec!["policy1".to_string(), "policy2".to_string()]));
-        assert_eq!(attester_info[1].attester_type, Some("tpm_ima".to_string()));
+        assert_eq!(attester_info[1].attester_type, "tpm_ima".to_string());
         assert!(attester_info[1].policy_ids.is_none());
     }
 
@@ -376,8 +387,9 @@ mod tests {
     fn test_token_request_comparison() {
         let request1 = TokenRequest {
             attester_info: Some(vec![AttesterInfo {
-                attester_type: Some("tpm_boot".to_string()),
+                attester_type: "tpm_boot".to_string(),
                 policy_ids: Some(vec!["policy1".to_string()]),
+                log_types: Some(vec!["TcgEventLog".to_string()]),
             }]),
             challenge: Some(true),
             attester_data: Some(json!({"key": "value"})),
@@ -385,8 +397,9 @@ mod tests {
 
         let request2 = TokenRequest {
             attester_info: Some(vec![AttesterInfo {
-                attester_type: Some("tpm_boot".to_string()),
+                attester_type: "tpm_boot".to_string(),
                 policy_ids: Some(vec!["policy1".to_string()]),
+                log_types: Some(vec!["TcgEventLog".to_string()]),
             }]),
             challenge: Some(true),
             attester_data: Some(json!({"key": "value"})),
@@ -394,8 +407,9 @@ mod tests {
 
         let request3 = TokenRequest {
             attester_info: Some(vec![AttesterInfo {
-                attester_type: Some("tpm_ima".to_string()),
+                attester_type: "tpm_ima".to_string(),
                 policy_ids: Some(vec!["policy1".to_string()]),
+                log_types: Some(vec!["ImaLog".to_string()]),
             }]),
             challenge: Some(true),
             attester_data: Some(json!({"key": "value"})),
@@ -414,8 +428,9 @@ mod tests {
     fn test_attester_info_edge_cases() {
         // Test with None values
         let attester_info = AttesterInfo {
-            attester_type: None,
+            attester_type: "tpm_boot".to_string(),
             policy_ids: None,
+            log_types: None,
         };
 
         let serialized = serde_json::to_string(&attester_info).unwrap();
@@ -426,8 +441,9 @@ mod tests {
 
         // Test with empty strings and vectors
         let attester_info = AttesterInfo {
-            attester_type: Some("".to_string()),
+            attester_type: ("".to_string()),
             policy_ids: Some(vec![]),
+            log_types: None,
         };
 
         let serialized = serde_json::to_string(&attester_info).unwrap();
@@ -439,8 +455,9 @@ mod tests {
         // Test with special characters
         let special_chars = "!@#$%^&*()_+-=[]{}|;':\",./<>?";
         let attester_info = AttesterInfo {
-            attester_type: Some(special_chars.to_string()),
+            attester_type: special_chars.to_string(),
             policy_ids: Some(vec![special_chars.to_string()]),
+            log_types: None,
         };
 
         let serialized = serde_json::to_string(&attester_info).unwrap();

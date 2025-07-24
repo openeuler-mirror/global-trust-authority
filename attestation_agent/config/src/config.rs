@@ -229,11 +229,6 @@ impl Config {
                 PluginParams::TpmIma(config) => {
                     // Validate TPM base configuration
                     Self::validate_tpm_base_config(&config.tpm_base, &plugin.name, idx)?;
-
-                    // Validate IMA log path
-                    if config.log_file_path.is_empty() {
-                        return Err(format!("Plugin #{} '{}' IMA log path cannot be empty", idx, plugin.name));
-                    }
                 },
             }
         }

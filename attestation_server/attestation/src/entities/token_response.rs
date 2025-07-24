@@ -12,7 +12,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::entities::attest_request::Nonce;
 use serde_json::Value;
 
 #[derive(Debug, Serialize, Deserialize)]

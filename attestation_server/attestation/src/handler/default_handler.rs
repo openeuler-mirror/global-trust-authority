@@ -22,7 +22,7 @@ use policy::api::{get_export_policy::get_export_policy, get_policy_by_ids, query
 use policy_engine::evaluate_policy;
 use rdb::get_connection;
 use token_management::manager::TokenManager;
-use base64::{Engine as _, engine::general_purpose::STANDARD};
+use base64::engine::general_purpose::STANDARD;
 use openssl::sha::Sha256;
 
 use crate::{

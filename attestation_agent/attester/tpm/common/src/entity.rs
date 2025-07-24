@@ -24,7 +24,8 @@ pub struct Evidence {
     pub ak_certs: Vec<AkCertData>,
     pub quote: Quote,
     pub pcrs: Pcrs,
-    pub logs: Vec<Log>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logs: Option<Vec<Log>>,
 }
 
 // quote structure

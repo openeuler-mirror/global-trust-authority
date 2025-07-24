@@ -63,9 +63,9 @@ impl PluginBase for TpmImaPlugin {
 }
 
 impl AgentPlugin for TpmImaPlugin {
-    fn collect_evidence(&self, node_id: Option<&str>, nonce: Option<&[u8]>) -> Result<serde_json::Value, PluginError> {
+    fn collect_evidence(&self, node_id: Option<&str>, nonce: Option<&[u8]>, log_types: Option<Vec<String>>) -> Result<serde_json::Value, PluginError> {
         // Use the common implementation from the trait
-        self.collect_evidence_impl(node_id, nonce)
+        self.collect_evidence_impl(node_id, nonce, log_types)
     }
 }
 
@@ -75,12 +75,27 @@ impl TpmPluginBase for TpmImaPlugin {
     }
     
     // Implement the collect_log method for IMA plugin
-    fn collect_log(&self) -> Result<Vec<Log>, PluginError> {
-        // Open the IMA log file
-        let file = File::open(&self.config.log_file_path).map_err(|e| {
-            PluginError::InternalError(format!("Failed to open IMA log file: {}", e))
-        })?;
-        
+    fn collect_log(&self, log_types: Option<Vec<String>>) -> Result<Option<Vec<Log>>, PluginError> {
+        let log_types = match log_types {
+            Some(log_types) => {
+                if log_types.is_empty() {
+                    return Ok(None);
+                }
+                if log_types.len() > 1 || log_types[0] != "ImaLog" {
+                    return Err(PluginError::InputError("Invalid log type".to_string()));
+                }
+                log_types
+            },
+            None => Vec::new(),
+        };
+        if log_types.is_empty() && self.config.log_file_path.is_empty() {
+            return Ok(None);
+        }
+        // Open the ima log file
+        let file = match File::open(&self.config.log_file_path) {
+            Ok(file) => file,
+            Err(e) => return Err(PluginError::InternalError(format!("Failed to open ima log file: {}", e))),
+        };
         let mut reader = BufReader::new(file);
         let mut line_count = 0;
         let mut buffer = Vec::new();
@@ -105,10 +120,10 @@ impl TpmPluginBase for TpmImaPlugin {
         // Encode the binary data as base64 string
         let log_data = STANDARD.encode(&buffer);
         
-        Ok(vec![Log {
+        Ok(Some(vec![Log {
             log_type: String::from("ImaLog"),
             log_data,
-        }])
+        }]))
     }
 }
 

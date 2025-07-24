@@ -52,8 +52,8 @@ impl PluginBase for MockTpmPlugin {
 }
 
 impl AgentPlugin for MockTpmPlugin {
-    fn collect_evidence(&self, node_id: Option<&str>, nonce: Option<&[u8]>) -> Result<Value, PluginError> {
-        self.collect_evidence_impl(node_id, nonce)
+    fn collect_evidence(&self, node_id: Option<&str>, nonce: Option<&[u8]>, log_types: Option<Vec<String>>) -> Result<Value, PluginError> {
+        self.collect_evidence_impl(node_id, nonce, log_types)
     }
 }
 
@@ -88,13 +88,13 @@ impl TpmPluginBase for MockTpmPlugin {
         Ok((quote, pcr))
     }
     
-    fn collect_log(&self) -> Result<Vec<Log>, PluginError> {
-        Ok(vec![
+    fn collect_log(&self, _log_types: Option<Vec<String>>) -> Result<Option<Vec<Log>>, PluginError> {
+        Ok(Some(vec![
             Log {
                 log_type: "TcgEventLog".to_string(),
                 log_data: "mock_event_log_data".to_string(),
             },
-        ])
+        ]))
     }
 }
 
@@ -103,7 +103,7 @@ fn test_collect_evidence_impl() {
     let plugin = MockTpmPlugin::new();
     
     // Test with valid inputs
-    let result = plugin.collect_evidence(Some("test_node"), Some("123456".as_bytes()));
+    let result = plugin.collect_evidence(Some("test_node"), Some("123456".as_bytes()), Some(vec!["TcgEventLog".to_string()]));
     assert!(result.is_ok());
     
     let evidence_json = result.unwrap();
@@ -116,7 +116,7 @@ fn test_collect_evidence_impl() {
     assert_eq!(evidence_json["logs"].as_array().unwrap().len(), 1);
     assert_eq!(evidence_json["logs"][0]["log_type"], "TcgEventLog");
     
-    let result = plugin.collect_evidence(None, Some("123456".as_bytes()));
+    let result = plugin.collect_evidence(None, Some("123456".as_bytes()), None);
     assert!(result.is_ok());
 
     let evidence_out = result.unwrap();

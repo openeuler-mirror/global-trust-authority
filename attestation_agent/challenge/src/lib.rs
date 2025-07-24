@@ -14,6 +14,7 @@ pub mod challenge;
 pub mod challenge_error;
 pub mod evidence;
 pub mod token;
+pub mod nonce_util;
 
 pub use challenge::{do_challenge, get_cached_token_for_current_node, set_cached_tokens, AttesterInfo};
 pub use challenge_error::ChallengeError;
