@@ -20,13 +20,14 @@ secure_boot = "yes" {
     lower(event.event.variable_data.enabled) == "yes"
 }
 
-# Extract is_log_valid from first TcgEventLog log
-is_log_valid = valid {
+# Extract log_status from first TcgEventLog log
+log_status = status {
     some i
     logs := input.evidence.logs
     logs[i].log_type == "TcgEventLog"
-    valid := logs[i].is_log_valid
+    status := logs[i].log_status
 }
+
 
 # Check if pcrs 0-7 are present in any hash algorithm (sha1, sha256, sha384, sha512)
 pcr_present {
@@ -40,7 +41,7 @@ pcr_present {
 default attestation_valid = false
 attestation_valid {
     secure_boot == "yes"
-    is_log_valid == true
+    log_status == "replay_success"
     pcr_present
 }
 
@@ -59,12 +60,19 @@ result = {
 ```
 package verification
 
-# Extract is_log_valid from first tpm_ima log
-is_log_valid = valid {
+# Extract log_status from first tpm_ima log
+log_status = status {
     some i
     logs := input.evidence.logs
     logs[i].log_type == "ImaLog"
-    valid := logs[i].is_log_valid
+    status := logs[i].log_status
+}
+
+ref_value_match_status = status {
+    some i
+    logs := input.evidence.logs
+    logs[i].log_type == "ImaLog"
+    status := logs[i].ref_value_match_status
 }
 
 # Check if pcrs 10 is present in any hash algorithm (sha1, sha256, sha384, sha512)
@@ -78,7 +86,8 @@ pcr_present {
 # Attestation valid if all conditions met
 default attestation_valid = false
 attestation_valid {
-    is_log_valid == true
+    log_status == "replay_success"
+    ref_value_match_status == "matched"
     pcr_present
 }
 
@@ -422,7 +431,7 @@ curl -X POST http://localhost:8088/global-trust-authority/agent/v1/evidences \
   -H "Content-Type: application/json" \
   -d '{
     "attester_types": ["tpm_boot", "tpm_ima"],
-    "nonce_type": "default",
+    "nonce_type": "verifier",
     "nonce": {
       "iat": 1749721474,
       "value": "ImQiIm+6vwdKhAH6FC58XFxfuQ8TWvGxO6qlYwQK6P11Fi/ole/VMN9+4PJodOGt8E6+sbkfJOmuU96/Wc0JSw==",

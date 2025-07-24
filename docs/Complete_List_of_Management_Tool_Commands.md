@@ -135,12 +135,19 @@ sudo attestation_cli -u "test_01" policy set \
 	--name "test_policy{{$number.int}}" \
 	--content "package verification
 
-# Extract is_log_valid from first tpm_ima log
-is_log_valid = valid {
+# Extract log_status from first tpm_ima log
+log_status = status {
     some i
     logs := input.evidence.logs
     logs[i].log_type == \"tpm_ima\"
-    valid := logs[i].is_log_valid
+    status := logs[i].log_status
+}
+
+ref_value_match_status = status {
+    some i
+    logs := input.evidence.logs
+    logs[i].log_type == \"tpm_ima\"
+    status := logs[i].ref_value_match_status
 }
 
 # Check if pcrs 10 is present in any hash algorithm (sha1, sha256, sha384, sha512)
@@ -154,7 +161,8 @@ pcr_present {
 # Attestation valid if all conditions met
 default attestation_valid = false
 attestation_valid {
-    is_log_valid == true
+    log_status == "replay_success"
+    ref_value_match_status == "matched"
     pcr_present
 }
 
@@ -388,12 +396,12 @@ sudo attestation_cli evidence get \
 	--out "/tmp/evidence.txt"
 
 sudo attestation_cli evidence get \
-	--nonce-type "default" \
+	--nonce-type "verifier" \
 	--content "{\"iat\": 1745850626, \"value\": \"8g5t/g5xfMJq5duxDaOB3WcCS4UVUlzXb4w4A9TBmmaFBCwokG6Ypsv82IQb0jRjD6ouinoUiwFYYxq/04qI5Q==\", \"signature\": \"mTHGMz62jf2v4MLf151S9Y3sMW80ebwJDn+Fgq7UKJKcABTw5tVx2ewX8tY6eIxBXjaV5BiGcT6Ujnu7W6OWsfydl3YqspJyN4t0VD4rZb498zztKyDuV7RkktlhILxYI8zbAMxfbrSXBsnqnoKcikyBG41O6A3hf7PYW41VV7R2/vHQo/ETUjFa0Ie5oaHYPbTeTrJIUCv+cTL4otM2cyfFtWhHcynVlALmSvkW1fibUaO057ovwJUApRBCu1XPpj9LMP2LZEvl+BselxH5aiayZ9BM7UHqDPeSgT8HdIYjDnq01IhJdiy7SW5QgO3QS9rUyhQhotC9jnqzaLETOzYqlwabAyB4d8PhhUaRYcAo2E95E+yXoviHujik93EGgW6qoP0spdrr3mi/nWhhP329bihI+dIjxy8vL2kTIpbvjZWzfc6wVuBLeQJU6WtrZ8h06UKdloUi57ntFS96GwsJHb85vsXF16kuTYPsL0uUZhXNzlYbmo1PMK1SL+t3\" }" \
 	--out "/tmp/evidence.txt"
 	
 sudo attestation_cli evidence get \
-	--nonce-type "default" \
+	--nonce-type "verifier" \
 	--content @/tmp/nonce.txt \
 	--out "/tmp/evidence.txt"
 	
