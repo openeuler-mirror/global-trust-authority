@@ -99,7 +99,7 @@ pub enum ContentType {
 pub enum NonceType {
     Ignore,
     User,
-    Default,
+    Verifier,
 }
 
 impl fmt::Display for NonceType {
@@ -107,7 +107,7 @@ impl fmt::Display for NonceType {
         match self {
             NonceType::Ignore => write!(f, "ignore"),
             NonceType::User => write!(f, "user"),
-            NonceType::Default => write!(f, "default"),
+            NonceType::Verifier => write!(f, "verifier"),
         }
     }
 }
