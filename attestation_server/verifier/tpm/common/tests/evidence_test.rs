@@ -39,13 +39,13 @@ impl GenerateEvidence for TestTpmBootPlugin {
     async fn generate_evidence(
         &self,
         _user_id: &str,
-        _logs: &Vec<Logs>,
+        _logs: Option<&Vec<Logs>>,
         pcr_values: &mut PcrValues
     ) -> Result<Value, PluginError> {
         let logs = vec![
             LogResult {
                 log_type: "tpm_boot".to_string(),
-                log_data: serde_json::json!([
+                log_data: Some(serde_json::json!([
                     {
                         "event_number": 0,
                         "pcr_index": 1,
@@ -60,8 +60,9 @@ impl GenerateEvidence for TestTpmBootPlugin {
                         "digest": "9876543210fedcba9876543210fedcba98765432",
                         "event": {}
                     }
-                ]),
-                is_log_valid: true
+                ])),
+                log_status: "replay_success".to_string(),
+                ref_value_match_status: "ignore".to_string(),
             }
         ];
         let evidence_result = EvidenceResult::new(logs, pcr_values.clone());

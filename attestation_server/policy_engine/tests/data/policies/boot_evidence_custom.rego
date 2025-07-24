@@ -12,12 +12,12 @@ secure_boot = "yes" {
     lower(event.event.variable_data.SecureBoot.enabled) == "yes"
 }
 
-# Extract is_log_valid from first TcgEventLog log
-is_log_valid = valid {
+# Extract log status from first TcgEventLog log
+log_status = status {
     some i
     logs := input.evidence.logs
     logs[i].log_type == "TcgEventLog"
-    valid := logs[i].is_log_valid
+    status := logs[i].log_status
 }
 
 # Check if pcrs 0-7 are present in any hash algorithm (sha1, sha256, sha384, sha512)
@@ -32,7 +32,7 @@ pcr_present {
 default attestation_valid = false
 attestation_valid {
     secure_boot == "yes"
-    is_log_valid == true
+    log_status == "replay_success"
     pcr_present
 }
 

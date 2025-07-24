@@ -103,16 +103,24 @@ impl GenerateEvidence for TpmBootPlugin {
     async fn generate_evidence(
         &self,
         _user_id: &str,
-        logs: &Vec<Logs>,
+        logs: Option<&Vec<Logs>>,
         pcr_values: &mut PcrValues
     ) -> Result<Value, PluginError> {
         // Check if logs is empty or has more than one log. Just support one log for now.
-        if logs.is_empty() || logs.len() > 1 {
-            return Err(PluginError::InputError(
-                format!("Expected exactly one log, but found {}", logs.len())
-            ));
-        }
-
+        let logs = match logs {
+            Some(logs) => logs,
+            None => {
+                let log_result = LogResult {
+                    log_status: "no_log".to_string(),
+                    ref_value_match_status: "ignore".to_string(),
+                    log_type: "TcgEventLog".to_string(),
+                    log_data: None,
+                };
+                let evidence_result = EvidenceResult::new(vec![log_result], pcr_values.clone());
+                let result: Value = evidence_result.to_json_value();
+                return Ok(result);
+            }
+        };
         let pcr_digest_algorithm: &str = pcr_values.get_pcr_digest_algorithm();
         let log_data: &Logs = logs
             .first()
@@ -138,15 +146,22 @@ impl GenerateEvidence for TpmBootPlugin {
         let event_log: Value = event_data.to_json_value()?;
         let updated_pcr_values = pcr_values_mutex.lock().unwrap().clone();
 
+        let log_status = if is_match {
+            "replay_success".to_string()
+        } else {
+            "replay_failure".to_string()
+        };
+
         // Generate result
         let logs_json: Vec<LogResult> = vec![
             LogResult {
-                is_log_valid: is_match,
+                log_status: log_status,
+                ref_value_match_status: "ignore".to_string(),
                 log_type: log_data.log_type.clone(),
-                log_data: event_log
+                log_data: Some(event_log)
             }
         ];
-        let evidence_result = EvidenceResult::new(logs_json, updated_pcr_values);
+        let evidence_result: EvidenceResult = EvidenceResult::new(logs_json, updated_pcr_values);
         let result: Value = evidence_result.to_json_value();
         Ok(result)
     }
@@ -187,7 +202,8 @@ impl ServicePlugin for TpmBootPlugin {
         serde_json::from_str(
             r#"{
                 "evidence": {
-                    "is_log_valid": true,
+                    "log_status": "replay_success",
+                    "ref_value_match_status": "ignore",
                     "logs": [
                         {
                             "log_type": "tpm_boot",
@@ -217,28 +233,20 @@ impl ServicePlugin for TpmBootPlugin {
                         "hash_alg": "sha256",
                         "pcr_values": [
                             {
-                                "is_matched": true,
                                 "pcr_index": 0,
-                                "pcr_value": "9d7504bb0d32f62d43310f38df37cdd5e42bdb83dd0c0592fd9b1c3b16770c35",
-                                "replay_value": "9d7504bb0d32f62d43310f38df37cdd5e42bdb83dd0c0592fd9b1c3b16770c35"
+                                "pcr_value": "9d7504bb0d32f62d43310f38df37cdd5e42bdb83dd0c0592fd9b1c3b16770c35"
                             },
                             {
-                                "is_matched": true,
                                 "pcr_index": 1,
-                                "pcr_value": "38846271e2a86d6bf43ef388be2d1cb83a89f1c0bb154fe494a1dda198da29be",
-                                "replay_value": "38846271e2a86d6bf43ef388be2d1cb83a89f1c0bb154fe494a1dda198da29be"
+                                "pcr_value": "38846271e2a86d6bf43ef388be2d1cb83a89f1c0bb154fe494a1dda198da29be"
                             },
                             {
-                                "is_matched": null,
                                 "pcr_index": 2,
-                                "pcr_value": "3d458cfe55cc03ea1f443f1562beec8df51c75e14a9fcf9a7234a13f198e7969",
-                                "replay_value": "3d458cfe55cc03ea1f443f1562beec8df51c75e14a9fcf9a7234a13f198e7969"
+                                "pcr_value": "3d458cfe55cc03ea1f443f1562beec8df51c75e14a9fcf9a7234a13f198e7969"
                             },
                             {
-                                "is_matched": true,
                                 "pcr_index": 3,
-                                "pcr_value": "3d458cfe55cc03ea1f443f1562beec8df51c75e14a9fcf9a7234a13f198e7969",
-                                "replay_value": "3d458cfe55cc03ea1f443f1562beec8df51c75e14a9fcf9a7234a13f198e7969"
+                                "pcr_value": "3d458cfe55cc03ea1f443f1562beec8df51c75e14a9fcf9a7234a13f198e7969"
                             }
                         ]
                     }

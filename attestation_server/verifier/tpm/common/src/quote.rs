@@ -186,12 +186,7 @@ impl QuoteVerifier {
 
         // 2. Verify nonce (if provided)
         if let Some(nonce_data) = nonce {
-            if nonce_data.len() > MAX_NONCE_SIZE {
-                let truncated = nonce_data[0..MAX_NONCE_SIZE].to_vec();
-                if self.quote_data.extra_data != truncated {
-                    return Err(PluginError::InputError("Nonce in Quote does not match provided nonce".to_string()));
-                }
-            } else if self.quote_data.extra_data != nonce_data {
+            if self.quote_data.extra_data != nonce_data {
                 return Err(PluginError::InputError("Nonce in Quote does not match provided nonce".to_string()));
             }
         }

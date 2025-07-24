@@ -189,17 +189,17 @@ impl ImaLog {
     /// 
     /// # Returns
     /// 
-    /// * `Result<bool, PluginError>` - Success or error
+    /// * `Result<(bool, bool), PluginError>` - (PCR replay result, Reference value match result)
     /// 
     /// # Errors
     /// 
     /// * `PluginError::InternalError` - Failed to get unmatched measurements
-    pub async fn verify(&mut self, pcr_values: &mut PcrValues, service_host_functions: &ServiceHostFunctions, user_id: &str) -> Result<bool, PluginError> {
+    pub async fn verify(&mut self, pcr_values: &mut PcrValues, service_host_functions: &ServiceHostFunctions, user_id: &str) -> Result<(bool, bool), PluginError> {
         // First, replay using template_hash values to update PCR replay values
         self.replay_pcr_values(pcr_values)?;
         
         // Check if PCR values match replay values and update is_matched fields
-        let mut pcr_match_result = pcr_values.check_is_matched()?;
+        let replay_result = pcr_values.check_is_matched()?;
         
         // Extract file hashes from logs, skipping 'boot_aggregate' entries
         let file_hashes: Vec<String> = self.logs.iter()
@@ -220,11 +220,9 @@ impl ImaLog {
         }
 
         // If there are any unmatched hashes, set pcr_match_result to false
-        if !unmatched_hashes.is_empty() {
-            pcr_match_result = false;
-        }
+        let ref_value_result = if !unmatched_hashes.is_empty() { false } else { true };
         
-        Ok(pcr_match_result)
+        Ok((replay_result, ref_value_result))
     }
 
     /// Convert ImaLog to JSON Value

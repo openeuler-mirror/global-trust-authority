@@ -22,6 +22,8 @@ use policy::api::{get_export_policy::get_export_policy, get_policy_by_ids, query
 use policy_engine::evaluate_policy;
 use rdb::get_connection;
 use token_management::manager::TokenManager;
+use base64::{Engine as _, engine::general_purpose::STANDARD};
+use openssl::sha::Sha256;
 
 use crate::{
     entities::{
@@ -87,13 +89,48 @@ impl DefaultHandler {
         }
     }
 
+    /// Generate aggregate nonce bytes from nonce and attester data
+    /// 
+    /// # Arguments
+    /// * `nonce` - Option containing nonce bytes
+    /// * `attester_data` - Option containing attester data
+    /// 
+    /// # Returns
+    /// * `Option<Vec<u8>>` - Aggregate nonce bytes if both inputs are Some, otherwise None
+    pub fn get_aggregate_nonce_bytes(nonce: &Option<Vec<u8>>, attester_data: &Option<serde_json::Value>) -> Option<Vec<u8>> {
+        // If both inputs are None, return None
+        if attester_data.is_none() && nonce.is_none() {
+            return None;
+        }
+
+        // Create a new SHA-256 hasher
+        let mut hasher = Sha256::new();
+
+        // Update with nonce if it exists
+        if let Some(nonce) = nonce {
+            hasher.update(nonce);
+        }
+
+        // Update with attester_data if it exists
+        if let Some(data) = attester_data {
+            // Convert to string and then to bytes
+            let data_str = data.to_string();
+            // Base64 encode the string
+            let base64_data = STANDARD.encode(&data_str);
+            hasher.update(base64_data.as_bytes());
+        }
+
+        let result = hasher.finish();
+        Some(result.to_vec())
+    }
+
     pub fn get_nonce_bytes(
         nonce_type: &str,
         nonce: &Option<AttestNonce>,
         user_nonce: Option<&String>,
     ) -> Result<Option<Vec<u8>>, AttestationError> {
         match nonce_type {
-            "default" => {
+            "verifier" => {
                 if let Some(n) = nonce {
                     match BASE64.decode(&n.value) {
                         Ok(bytes) => Ok(Some(bytes)),
@@ -103,8 +140,8 @@ impl DefaultHandler {
                         }
                     }
                 } else {
-                    error!("Missing nonce for default type");
-                    Err(AttestationError::NonceVerificationError("missing nonce for default type".into()))
+                    error!("Missing nonce for verifier type");
+                    Err(AttestationError::NonceVerificationError("missing nonce for verifier type".into()))
                 }
             },
             "user" => {
@@ -159,6 +196,9 @@ impl DefaultHandler {
                 return Err(AttestationError::PolicyNotFoundError(e.to_string()));
             },
         };
+
+        info!("Verify evidence: {}", verify_evidence.to_string());
+
 
         match evaluate_policy(verify_evidence, &export_policy) {
             Ok(result) => {
@@ -277,11 +317,29 @@ impl DefaultHandler {
     pub fn create_attestation_response(
         evidence_token_responses: &HashMap<String, AttesterResult>,
         nonce_type: &str,
+        user_nonce: &Option<String>,
         measurement: &Measurement,
     ) -> AttestationResponse {
         AttestationResponse {
-            eat_nonce: if nonce_type == "default" { measurement.nonce.clone() } else { None },
-            attester_data: measurement.attester_data.clone(),
+            eat_nonce: match nonce_type {
+                "verifier" => match serde_json::to_value(&measurement.nonce.clone().unwrap_or_default().value) {
+                    Ok(value) => Some(value),
+                    Err(e) => {
+                        error!("Failed to serialize verifier nonce: {}", e);
+                        None
+                    },
+                },
+                "user" => match serde_json::to_value(&user_nonce) {
+                    Ok(value) => Some(value),
+                    Err(e) => {
+                        error!("Failed to serialize user nonce: {}", e);
+                        None
+                    },
+                },
+                _ => None,
+            },
+            nonce_type: nonce_type.to_string(),
+            attester_data: measurement.attester_data.clone(), 
             results: evidence_token_responses.clone(),
             intuse: Some("Generic".to_string()),
             ueid: Some(measurement.node_id.clone()),

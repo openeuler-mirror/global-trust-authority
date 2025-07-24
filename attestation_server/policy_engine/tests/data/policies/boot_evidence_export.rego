@@ -2,7 +2,7 @@ package verification
 
 default secure_boot = "NA"
 
-# 1. Extract secure_boot status
+# Extract secure_boot status
 secure_boot = "enabled" {
     some i
     logs := input.evidence.logs
@@ -25,15 +25,23 @@ secure_boot = "disabled" {
     lower(event.event.variable_data.SecureBoot.enabled) == "no"
 }
 
-# 2. Extract is_log_valid
-is_log_valid = valid {
+# Extract log status
+log_status = status {
     some i
     logs := input.evidence.logs
     logs[i].log_type == "TcgEventLog"
-    valid := logs[i].is_log_valid
+    status := logs[i].log_status
 }
 
-# 3. Extract pcrs (if present)
+# Extract ref_value_match_status
+ref_value_match_status = status {
+    some i
+    logs := input.evidence.logs
+    logs[i].log_type == "TcgEventLog"
+    status := logs[i].ref_value_match_status
+}
+
+# Extract pcrs (if present)
 pcrs = pcrs_out {
     pcrs_out := input.evidence.pcrs
 } else = pcrs_out {
@@ -45,6 +53,7 @@ pcrs = pcrs_out {
 # Output object
 result = {
     "secure_boot": secure_boot,
-    "is_log_valid": is_log_valid,
+    "log_status": log_status,
+    "ref_value_match_status": ref_value_match_status,
     "pcrs": pcrs,
 }

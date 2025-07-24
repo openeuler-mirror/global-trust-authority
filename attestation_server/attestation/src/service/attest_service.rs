@@ -45,7 +45,7 @@ impl AttestationService {
             return Err(AttestationError::InvalidParameter(e.to_string()));
         }
         info!("Start processing default attestation request, user_id: {}", user_id);
-        let nonce_type = request.nonce_type.as_deref().unwrap_or("default");
+        let nonce_type = request.nonce_type.as_deref().unwrap_or("verifier");
         info!("Using nonce type: {}", nonce_type);
         let mut token_list = Vec::new();
         for measurement in &request.measurements {
@@ -58,14 +58,18 @@ impl AttestationService {
                 let attester_type = &evidence.attester_type;
                 let nonce_bytes =
                     DefaultHandler::get_nonce_bytes(nonce_type, &measurement.nonce, request.user_nonce.as_ref())?;
+                
+                let aggregate_nonce_bytes = DefaultHandler::get_aggregate_nonce_bytes(&nonce_bytes, &measurement.attester_data);
+
                 info!("Start verifying evidence, attester_type: {}", attester_type);
                 // Verify evidence
                 let verify_evidence = DefaultHandler::verify_evidence(
                     &user_id,
                     Some(measurement.node_id.clone()),
                     evidence,
-                    nonce_bytes,
+                    aggregate_nonce_bytes,
                 ).await?;
+
                 // Evaluate export policy
                 let raw_evidence = DefaultHandler::evaluate_export_policy(&verify_evidence, attester_type)?;
                 // Evaluate custom policies
@@ -83,6 +87,7 @@ impl AttestationService {
             let attestation_response = DefaultHandler::create_attestation_response(
                 &evidence_token_responses,
                 nonce_type,
+                &request.user_nonce,
                 &measurement,
             );
             // Generate token

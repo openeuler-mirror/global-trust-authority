@@ -17,4 +17,4 @@ pub mod constants;
 pub mod facade;
 pub mod factory;
 pub mod strategy;
-mod handler;
+pub mod handler;

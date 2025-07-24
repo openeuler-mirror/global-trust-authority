@@ -23,7 +23,9 @@ use crate::quote::QuoteVerifier;
 pub struct PcrValueEntry {
     pub pcr_index: u32,
     pub pcr_value: String,
+    #[serde(skip_serializing)]
     pub replay_value: Option<String>,
+    #[serde(skip_serializing)]
     pub is_matched: Option<bool>,  // Verification result
 }
 

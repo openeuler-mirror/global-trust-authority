@@ -20,4 +20,4 @@ pub const YAML_CONFIG_FILE_PATH: &str = "server_config.yaml";
 pub const NONCE_PERIOD: &str = "attestation_service.nonce.nonce_valid_period";
 
 /// valid types
-pub const VALID_TYPES: &[&str] = &["ignore", "user", "default"];
+pub const VALID_TYPES: &[&str] = &["ignore", "user", "verifier"];

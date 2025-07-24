@@ -86,7 +86,6 @@ pub async fn validate_nonce(input: ValidateNonceParams) -> ValidateResult {
 }
 
 async fn check_nonce_validity(input: ValidateNonceParams, msg: &mut String) -> bool {
-    info!("check nonce validity begin.");
     let current_time = get_system_time();
     if current_time.saturating_sub(input.nonce.iat) > input.valid_period {
         *msg = "Nonce expired.".to_string();
@@ -97,7 +96,6 @@ async fn check_nonce_validity(input: ValidateNonceParams, msg: &mut String) -> b
         *msg = "Invalid nonce.".to_string();
         return false;
     }
-    info!("check nonce validity end.");
     true
 }
 
@@ -146,7 +144,7 @@ mod tests {
 
     #[test]
     fn test_create_secure_rng_uniqueness() {
-        // 创建多个RNG实例并验证它们生成的数字是否不同
+        // Create multiple RNG instances and verify that they generate different numbers
         let mut rng1 = create_secure_rng();
         let mut rng2 = create_secure_rng();
 
@@ -155,7 +153,7 @@ mod tests {
 
         rng1.fill_bytes(&mut numbers1);
         rng2.fill_bytes(&mut numbers2);
-        assert_ne!(numbers1, numbers2, "两个RNG实例生成的数字序列不应相同");
+        assert_ne!(numbers1, numbers2, "Two RNG instances should generate different sequences of numbers");
     }
 
     #[test]
@@ -163,20 +161,20 @@ mod tests {
         let mut rng = create_secure_rng();
         let mut numbers = HashSet::new();
 
-        // 生成100个随机数并检查其分布
+        // Generate 100 random numbers and check their distribution
         for _ in 0..100 {
             let mut byte = [0u8; 1];
             rng.fill_bytes(&mut byte);
             numbers.insert(byte[0]);
         }
 
-        // 验证生成的随机数具有足够的随机性（至少产生了25个不同的值）
-        assert!(numbers.len() > 25, "随机数分布应该足够分散");
+        // Verify that the generated random numbers have sufficient randomness (at least 25 different values)
+        assert!(numbers.len() > 25, "Random number distribution should be sufficiently dispersed");
     }
 
     #[test]
     fn test_create_secure_rng_reproducibility() {
-        // 使用相同的种子创建两个RNG实例
+        // Create two RNG instances with the same seed
         let seed = [42u8; SEED_SIZE];
         let mut rng1 = ChaCha20Rng::from_seed(seed);
         let mut rng2 = ChaCha20Rng::from_seed(seed);
@@ -187,60 +185,60 @@ mod tests {
         rng1.fill_bytes(&mut bytes1);
         rng2.fill_bytes(&mut bytes2);
 
-        // 相同种子的RNG应产生相同的序列
-        assert_eq!(bytes1, bytes2, "相同种子的RNG应产生相同的序列");
+        // The RNG should generate the same sequence with the same seed
+        assert_eq!(bytes1, bytes2, "The RNG should generate the same sequence with the same seed");
     }
 
     #[test]
     fn test_create_secure_rng_seed_size() {
-        // 验证种子大小是否正确
+        // Verify that the seed size is correct
         let mut rng = create_secure_rng();
         let mut bytes = vec![0u8; SEED_SIZE];
         rng.fill_bytes(&mut bytes);
 
-        assert_eq!(bytes.len(), SEED_SIZE, "生成的种子大小应该等于SEED_SIZE");
+        assert_eq!(bytes.len(), SEED_SIZE, "The seed size should equal SEED_SIZE");
     }
 
     use std::time::{Duration, SystemTime};
 
     #[test]
     fn test_get_system_time() {
-        // 获取当前时间作为参考
+        // Get the current time as a reference
         let reference_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        // 调用被测试函数
+        // Call the tested function
         let result = get_system_time();
 
-        // 验证返回的时间戳在合理范围内
-        // 时间戳应该不小于参考时间
+        // Verify that the returned timestamp is within a reasonable range
+        // The timestamp should not be less than the reference time
         assert!(result >= reference_time);
 
-        // 时间戳与参考时间的差值不应超过1秒
+        // The difference between the timestamp and the reference time should not exceed 1 second
         assert!(result - reference_time <= 1);
     }
 
     #[test]
     fn test_get_system_time_not_zero() {
-        // 验证返回的时间戳不为0
+        // Verify that the returned timestamp is not zero
         let result = get_system_time();
         assert!(result > 0);
 
-        // 验证返回的时间戳大于某个合理的最小值（例如：2023年的时间戳）
+        // Verify that the returned timestamp is greater than a reasonable minimum value (e.g., the timestamp of 2023-01-01 00:00:00)
         let min_expected_time = 1672531200; // 2023-01-01 00:00:00
         assert!(result > min_expected_time);
     }
 
     #[test]
     fn test_get_system_time_monotonic() {
-        // 验证时间的单调性
+        // Verify the monotonicity of the time
         let first_call = get_system_time();
         std::thread::sleep(Duration::from_secs(1));
         let second_call = get_system_time();
 
-        // 第二次调用应该大于第一次调用
+        // The second call should be greater than the first call
         assert!(second_call > first_call);
     }
 
@@ -249,13 +247,13 @@ mod tests {
     async fn test_check_nonce_validity_expired() {
         let current_time = get_system_time();
         let test_nonce = Nonce {
-            iat: current_time - 100,  // 100秒前创建
+            iat: current_time - 100,  // 100 seconds ago
             value: "test_value".to_string(),
             signature: "valid_signature".to_string(),
         };
 
         let input = ValidateNonceParams {
-            valid_period: 30,  // 30秒有效期
+            valid_period: 30,  // 30 seconds validity period
             nonce: test_nonce,
         };
 
@@ -270,13 +268,13 @@ mod tests {
     async fn test_check_nonce_validity_invalid_signature() {
         let current_time = get_system_time();
         let test_nonce = Nonce {
-            iat: current_time - 10,  // 10秒前创建
+            iat: current_time - 10,  // 10 seconds ago
             value: "test_value".to_string(),
             signature: "invalid_signature".to_string(),
         };
 
         let input = ValidateNonceParams {
-            valid_period: 30,  // 30秒有效期
+            valid_period: 30,  // 30 seconds validity period
             nonce: test_nonce,
         };
 
@@ -291,13 +289,13 @@ mod tests {
     async fn test_validate_nonce_invalid_empty() {
         let current_time = get_system_time();
         let test_nonce = Nonce {
-            iat: current_time - 10,  // 10秒前创建
+            iat: current_time - 10,  // 10 seconds ago
             value: "test_value".to_string(),
             signature: "invalid_signature".to_string(),
         };
 
         let params = ValidateNonceParams {
-            valid_period: 30,  // 30秒有效期
+            valid_period: 30,  // 30 seconds validity period
             nonce: test_nonce,
         };
 
