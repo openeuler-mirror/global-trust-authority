@@ -17,6 +17,7 @@ tpm_common_attester = { path = "../attester/tpm/common" }
 tpm_boot_attester = { path = "../attester/tpm/boot" }
 tpm_ima_attester = { path = "../attester/tpm/ima" }
 agent_utils = { path = "../utils", features = ["client"] }
+openssl.workspace = true
 
 [dev-dependencies]
 futures.workspace = true

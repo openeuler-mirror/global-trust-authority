@@ -12,7 +12,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::entities::attest_request::Nonce;
+use serde_json::Value;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenResponse {
@@ -22,10 +22,11 @@ pub struct TokenResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AttestationResponse {
+    pub nonce_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub intuse: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub eat_nonce: Option<Nonce>,
+    pub eat_nonce: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attester_data: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]

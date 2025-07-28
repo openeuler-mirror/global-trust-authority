@@ -164,9 +164,9 @@ fn test_boot_evidence_export_policy() {
     let secure_boot = result_obj["secure_boot"].as_str().expect("Missing or invalid 'secure_boot'");
     assert_eq!(secure_boot, "disabled", "secure_boot should be 'disabled'");
 
-    // Validate is_log_valid: should be true
-    let is_log_valid = result_obj["is_log_valid"].as_bool().expect("Missing or invalid 'is_log_valid'");
-    assert!(is_log_valid, "is_log_valid should be true");
+    // Validate log_status: should be true
+    let log_status = result_obj["log_status"].as_str().expect("Missing or invalid 'log_status'");
+    assert_eq!(log_status, "replay_success", "log_status should be 'replay_success'");
 
     // Validate pcrs: should match input.evidence.pcrs
     let expected_pcrs = &input["evidence"]["pcrs"];
@@ -206,9 +206,9 @@ fn test_ima_evidence_export_policy() {
     // Use the result directly (no "result" key)
     let result_obj = &result;
 
-    // Validate is_log_valid: should be true
-    let is_log_valid = result_obj["is_log_valid"].as_bool().expect("Missing or invalid 'is_log_valid'");
-    assert!(is_log_valid, "is_log_valid should be true");
+    // Validate log status: should be replay succeeded
+    let log_status = result_obj["log_status"].as_str().expect("Missing or invalid 'log_status'");
+    assert_eq!(log_status, "replay_success", "log_status should be 'replay_success'");
 
     // Validate pcrs: should match input.evidence.pcrs
     let expected_pcrs = &input["evidence"]["pcrs"];

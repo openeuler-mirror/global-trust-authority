@@ -22,7 +22,7 @@ use agent_utils::load_plugins::load_plugins;
 use agent_utils::AgentError;
 use base64::{engine::general_purpose, Engine as _};
 use challenge::challenge::Nonce;
-use challenge::evidence::{EvidenceManager, GetEvidenceRequest};
+use challenge::evidence::{Attester, EvidenceManager, GetEvidenceRequest};
 use clap::{Parser, Subcommand};
 use config::config::ConfigManager;
 use config::{Config, AGENT_CONFIG};
@@ -553,7 +553,19 @@ async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
                 .unwrap();
             println!("Plugins loaded successfully");
             let attester_type = get_attester_types(config);
-
+            let mut attesters = Vec::new();
+            for attester_type in attester_type {
+                attesters.push(Attester {
+                    attester_type: attester_type.clone(),
+                    log_types: if attester_type == "tpm_ima" {
+                        Some(vec!["ImaLog".to_string()])
+                    } else if attester_type == "tpm_boot" {
+                        Some(vec!["TcgEventLog".to_string()])
+                    } else {
+                        None
+                    },
+                });
+            }
             let nonce: Option<Nonce> = match content {
                 None => None,
                 Some(content) => {
@@ -567,7 +579,7 @@ async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
                 },
             };
             let evidence_request = GetEvidenceRequest {
-                attester_types: Option::from(attester_type),
+                attesters: attesters,
                 nonce_type: Option::from(nonce_type.to_string()),
                 user_nonce: user_nonce.clone(),
                 nonce,

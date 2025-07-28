@@ -49,8 +49,6 @@ use tss_esapi::{
 };
 use std::io::Error as IoError;
 
-const MAX_QUOTE_NONCE_SIZE: usize = 32;
-
 pub trait TpmPluginBase: PluginBase + AgentPlugin {
     fn config(&self) -> &TpmPluginConfig;
 
@@ -453,9 +451,6 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         pcr_selection_list: PcrSelectionList,
         nonce: &[u8]
     ) -> Result<Quote, PluginError> {
-        // Trim the nonce to 32 bytes if it exceeds 32 bytes
-        let nonce: &[u8] = &nonce[..std::cmp::min(nonce.len(), MAX_QUOTE_NONCE_SIZE)];
-
         // Get the AK cert based on configuration
         let ak_cert: &AkCert = if self.config().ak_certs.len() == 1 {
             &self.config().ak_certs[0]
@@ -541,7 +536,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
     /// # Errors
     ///
     /// Returns an error if the log cannot be collected.
-    fn collect_log(&self) -> Result<Vec<Log>, PluginError>;
+    fn collect_log(&self, log_types: Option<Vec<String>>) -> Result<Option<Vec<Log>>, PluginError>;
     
     /// Collects the evidence.
     ///
@@ -552,7 +547,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
     /// # Errors
     ///
     /// Returns an error if the evidence cannot be collected.
-    fn collect_evidence_impl(&self, node_id: Option<&str>, nonce: Option<&[u8]>) -> Result<serde_json::Value, PluginError> {
+    fn collect_evidence_impl(&self, node_id: Option<&str>, nonce: Option<&[u8]>, log_types: Option<Vec<String>>) -> Result<serde_json::Value, PluginError> {
         let nonce = nonce.unwrap_or(&[]);
 
         let mut ak_cert_data: Vec<AkCertData> = Vec::new();
@@ -569,7 +564,7 @@ pub trait TpmPluginBase: PluginBase + AgentPlugin {
         let (quote, pcrs) = self.collect_pcrs_quote(nonce)?;
 
         // Use the plugin's own collect_log implementation
-        let logs = self.collect_log()?;
+        let logs = self.collect_log(log_types)?;
 
         // Create Evidence struct instance
         let evidence = Evidence {

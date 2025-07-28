@@ -1,11 +1,19 @@
 package verification
 
-# Extract is_log_valid from first tpm_ima log
-is_log_valid = valid {
+# Extract log_status from first tpm_ima log
+log_status = status {
     some i
     logs := input.evidence.logs
     logs[i].log_type == "tpm_ima"
-    valid := logs[i].is_log_valid
+    status := logs[i].log_status
+}
+
+# Extract ref_value_match_status from first tpm_ima log
+ref_value_match_status = status {
+    some i
+    logs := input.evidence.logs
+    logs[i].log_type == "tpm_ima"
+    status := logs[i].ref_value_match_status
 }
 
 # Check if pcrs 10 is present in any hash algorithm (sha1, sha256, sha384, sha512)
@@ -19,7 +27,8 @@ pcr_present {
 # Attestation valid if all conditions met
 default attestation_valid = false
 attestation_valid {
-    is_log_valid == true
+    log_status == "replay_success"
+    ref_value_match_status == "matched"
     pcr_present
 }
 

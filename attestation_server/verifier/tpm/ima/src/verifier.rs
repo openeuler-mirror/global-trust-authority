@@ -51,29 +51,49 @@ impl GenerateEvidence for TpmImaPlugin {
     async fn generate_evidence(
         &self,
         user_id: &str,
-        logs: &Vec<Logs>,
+        logs: Option<&Vec<Logs>>,
         pcr_values: &mut PcrValues,
     ) -> Result<Value, PluginError> {
-        // Check if logs is empty or has more than one log. Only support one log for now.
-        if logs.is_empty() || logs.len() > 1 {
-            return Err(PluginError::InputError("Number of log object is not 1.".to_string()));
-        }
+        let logs = match logs {
+            Some(logs) => logs,
+            None => {
+                let log_result = LogResult {
+                    log_status: "no_log".to_string(),
+                    ref_value_match_status: "ignore".to_string(),
+                    log_type: "tpm_ima".to_string(),
+                    log_data: None,
+                };
+                let evidence_result = EvidenceResult::new(vec![log_result], pcr_values.clone());
+                let result: Value = evidence_result.to_json_value();
+                return Ok(result);
+            }
+        };
 
         let log_data = logs.first().ok_or_else(|| PluginError::InputError("Failed to get log data".to_string()))?;
         if log_data.log_type != "ImaLog" {
             return Err(PluginError::InputError("Log type is not ImaLog".to_string()));
         }
         let mut ima_log = ImaLog::new(&log_data.log_data, &pcr_values.hash_alg)?;
-        let is_log_valid: bool = match ima_log.verify(pcr_values, &self.service_host_functions, user_id).await {
+        let (replay_result, ref_value_result) = match ima_log.verify(pcr_values, &self.service_host_functions, user_id).await {
             Ok(res) => res,
-            Err(_) => false
+            Err(_) => (false, false)
         };
         let ima_log_json = ima_log.to_json_value()?;
+        
+        let ref_value_match_result = if !replay_result {
+            "ignore".to_string()
+        } else if ref_value_result {
+            "matched".to_string()
+        } else {
+            "unmatched".to_string()
+        };
+
         let logs_json = vec![
             LogResult {
                 log_type: log_data.log_type.clone(),
-                log_data: ima_log_json,
-                is_log_valid,
+                log_data: Some(ima_log_json),
+                log_status: if replay_result { "replay_success".to_string() } else { "replay_failure".to_string() },
+                ref_value_match_status: ref_value_match_result,
             }
         ];
         let evidence_result = EvidenceResult::new(logs_json, pcr_values.clone());
@@ -101,15 +121,14 @@ static SAMPLE_OUTPUT: Lazy<Value> = Lazy::new(|| {
         r#"{
             "evidence": {
                 "log_type": "tpm_ima",
-                "is_log_valid": true,
+                "log_status": "replay_success",
+                "ref_value_match_status": "matched",
                 "pcrs": {
                     "hash_alg": "sha256",
                     "pcr_values": [
                         {
-                            "is_matched": true,
                             "pcr_index": 10,
-                            "pcr_value": "be00517f0f1e46f33a39e0a2c21f8f0ae681c647be00517f0f1e46f33a39e0a2",
-                            "replay_value": "be00517f0f1e46f33a39e0a2c21f8f0ae681c647be00517f0f1e46f33a39e0a2"
+                            "pcr_value": "be00517f0f1e46f33a39e0a2c21f8f0ae681c647be00517f0f1e46f33a39e0a2"
                         }
                     ]
                 },

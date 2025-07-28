@@ -158,7 +158,7 @@ curl -X POST http://localhost:8080/global-trust-authority/agent/v1/evidences \
   -H "Content-Type: application/json" \
   -d '{
     "attester_types": ["tpm_boot", "tpm_ima"],
-    "nonce_type": "default",
+    "nonce_type": "verifier",
     "nonce": {
       "iat": 1749721474,
       "value": "ImQiIm+6vwdKhAH6FC58XFxfuQ8TWvGxO6qlYwQK6P11Fi/ole/VMN9+4PJodOGt8E6+sbkfJOmuU96/Wc0JSw==",

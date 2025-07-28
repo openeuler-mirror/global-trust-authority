@@ -60,7 +60,7 @@ pub trait GenerateEvidence: Send + Sync {
     async fn generate_evidence(
         &self,
         user_id: &str,
-        logs: &Vec<Logs>,
+        logs: Option<&Vec<Logs>>,
         pcr_values: &mut PcrValues
     ) -> Result<Value, PluginError>;
 
@@ -93,7 +93,7 @@ pub struct Evidence {
     pub marshalled_quote: Vec<u8>,
     pub quote: QuoteVerifier,
     pub pcrs: PcrValues,
-    pub logs: Vec<Logs>,
+    pub logs: Option<Vec<Logs>>,
     pub ak_certs: Vec<AkCertData>,
 }
 
@@ -140,7 +140,7 @@ impl Evidence {
     /// 
     /// * `PluginError::InputError` - If the JSON value is missing required fields or has invalid data.
     pub fn from_json_value(json_value: &Value) -> Result<Self, PluginError> {
-        let required_fields = &["quote", "pcrs", "logs", "ak_certs"];
+        let required_fields = &["quote", "pcrs", "ak_certs"];
         Self::validate_json_fields(json_value, required_fields)
             .map_err(|e| PluginError::InputError(e))?;
 
@@ -163,8 +163,12 @@ impl Evidence {
             return Err(PluginError::InputError("Missing PCR values".to_string()));
         };
 
-        let logs: Vec<Logs> = serde_json::from_value(json_value["logs"].clone())
-            .map_err(|e| PluginError::InputError(format!("Failed to parse log: {}", e)))?;
+        let logs: Option<Vec<Logs>> = if let Some(logs) = json_value.get("logs") {
+            serde_json::from_value(logs.clone())
+                .map_err(|e| PluginError::InputError(format!("Failed to parse log: {}", e)))?
+        } else {
+            None
+        };
 
         let ak_certs_array = json_value["ak_certs"].as_array()
             .ok_or_else(|| PluginError::InternalError("AK certs array not found or invalid".to_string()))?;
@@ -380,7 +384,7 @@ impl Evidence {
         // Verify PCR values
         self.pcrs.verify(&self.quote)?;
 
-        let evidence = generator.generate_evidence(user_id, &self.logs, &mut self.pcrs).await?;
+        let evidence = generator.generate_evidence(user_id, self.logs.as_ref(), &mut self.pcrs).await?;
 
         Ok(evidence)
     }
@@ -388,9 +392,11 @@ impl Evidence {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LogResult {
-    pub is_log_valid: bool,
+    pub log_status: String,
+    pub ref_value_match_status: String,
     pub log_type: String,
-    pub log_data: Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub log_data: Option<Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -403,7 +409,6 @@ impl EvidenceResult {
     /// Create a new EvidenceResult instance. Provide this struct to the plugin manager to generate evidence result.
     ///
     /// # Arguments
-    /// * `is_log_valid` - A boolean indicating if the log is valid.
     /// * `log_result` - A vector of LogResult instances.
     /// * `pcr_values` - A PcrValues instance.
     ///
@@ -426,11 +431,20 @@ impl EvidenceResult {
     pub fn to_json_value(&self) -> Value {
         let mut log_results = Vec::new();
         for log in &self.log_result {
-            log_results.push(serde_json::json!({
-                "is_log_valid": log.is_log_valid,
-                "log_type": log.log_type,
-                "log_data": log.log_data
-            }));
+            let mut log_entry = serde_json::Map::new();
+        
+            // Always include these fields
+            log_entry.insert("log_status".to_string(), Value::String(log.log_status.clone()));
+            log_entry.insert("ref_value_match_status".to_string(), Value::String(log.ref_value_match_status.clone()));
+            log_entry.insert("log_type".to_string(), Value::String(log.log_type.clone()));
+            
+            
+            // Only include log_data if it's Some
+            if let Some(log_data) = &log.log_data {
+                log_entry.insert("log_data".to_string(), log_data.clone());
+            }
+            
+            log_results.push(Value::Object(log_entry));
         }
 
         let pcrs_json = serde_json::json!({

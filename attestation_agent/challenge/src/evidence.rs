@@ -16,14 +16,23 @@ use crate::challenge_error::ChallengeError;
 use crate::challenge::{
     collect_evidences_core, get_node_id, validate_nonce_fields, AttesterInfo, GetEvidenceResponse, Nonce,
 };
+use base64::{Engine as _, engine::general_purpose::STANDARD};
+use crate::nonce_util::NonceUtil;
+
+/// Attester information, including attester type and log types
+#[derive(Debug, Deserialize, Default, Eq, PartialEq)]
+pub struct Attester {
+    pub attester_type: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub log_types: Option<Vec<String>>,
+}
 
 /// Request structure for evidence collection, including nonce and attester info
 #[derive(Debug, Deserialize, Default)]
 pub struct GetEvidenceRequest {
     // Optional list of attester types to collect evidence from
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub attester_types: Option<Vec<String>>,
+    pub attesters: Vec<Attester>,
 
     // Type of nonce to use (default or user-provided)
     #[serde(default)]
@@ -54,7 +63,7 @@ impl GetEvidenceRequest {
     /// - Keeps nonce field as is (handled separately)
     pub fn sanitize(self) -> Self {
         GetEvidenceRequest {
-            attester_types: self.attester_types.filter(|types| !types.is_empty()),
+            attesters: self.attesters,
             nonce_type: self.nonce_type.filter(|t| !t.trim().is_empty()),
             user_nonce: self.user_nonce.filter(|n| !n.trim().is_empty()),
             nonce: self.nonce,
@@ -74,7 +83,7 @@ impl EvidenceManager {
         user_nonce: Option<&String>,
         nonce: Option<&Nonce>,
     ) -> Result<(String, Option<String>), ChallengeError> {
-        let nonce_type = nonce_type.map_or_else(|| "default".to_string(), |t| t.to_lowercase());
+        let nonce_type = nonce_type.map_or_else(|| "verifier".to_string(), |t| t.to_lowercase());
 
         let nonce_value = match nonce_type.as_str() {
             "ignore" => None,
@@ -85,21 +94,26 @@ impl EvidenceManager {
                     log::error!("User nonce not provided but nonce_type is 'user'");
                     return Err(ChallengeError::UserNonceNotProvided);
                 };
-                let user_nonce_len = user_nonce_str.len();
-                if !(64..=1024).contains(&user_nonce_len) {
-                    log::error!("user_nonce length invalid: {} bytes", user_nonce_len);
+                let nonce_bytes = match STANDARD.decode(user_nonce_str) {
+                    Ok(bytes) => bytes,
+                    Err(_) => return Err(ChallengeError::NonceInvalid("nonce decode error".to_string())),
+                };
+            
+                let value_len = nonce_bytes.len();
+                if !(1..=1024).contains(&value_len) {
+                    log::error!("user_nonce length invalid: {} bytes", value_len);
                     return Err(ChallengeError::NonceInvalid(format!(
-                        "user_nonce length must be between 64 and 1024 bytes, got {} bytes",
-                        user_nonce_len
+                        "user_nonce length must be between 1 and 1024 bytes, got {} bytes",
+                        value_len
                     )));
                 }
                 user_nonce_str.clone().into()
             },
-            "default" => {
+            "verifier" => {
                 let nonce = if let Some(n) = nonce {
                     n
                 } else {
-                    log::error!("Nonce not provided but nonce_type is 'default'");
+                    log::error!("Nonce not provided but nonce_type is 'verifier'");
                     return Err(ChallengeError::NonceNotProvided);
                 };
                 if let Err(e) = validate_nonce_fields(nonce) {
@@ -111,7 +125,7 @@ impl EvidenceManager {
             _ => {
                 log::error!("Invalid nonce_type: '{}'", nonce_type);
                 return Err(ChallengeError::NonceTypeError(format!(
-                    "Invalid nonce_type: '{}'. Must be one of: ignore, user, default",
+                    "Invalid nonce_type: '{}'. Must be one of: ignore, user, verifier",
                     nonce_type
                 )));
             },
@@ -131,11 +145,18 @@ impl EvidenceManager {
         let (nonce_type, nonce_value) =
             Self::process_nonce(request.nonce_type.as_deref(), request.user_nonce.as_ref(), request.nonce.as_ref())?;
 
-        let attester_info = request.attester_types.as_ref().map(|types| {
-            types.iter().map(|t| AttesterInfo { attester_type: Some(t.clone()), policy_ids: None }).collect::<Vec<_>>()
-        });
-
-        let evidences = collect_evidences_core(&attester_info, &nonce_value)?;
+        let attester_info = request.attesters.iter().map(|att| 
+                AttesterInfo { 
+                    attester_type: att.attester_type.clone(), 
+                    log_types: if att.log_types.is_none() { Some(Vec::new()) } else { att.log_types.clone() }, 
+                    policy_ids: None 
+                }).collect::<Vec<_>>();
+        if attester_info.is_empty() {
+            log::error!("No valid attester_type provided");
+            return Err(ChallengeError::RequestParseError("No attester_type provided".to_string()));
+        }
+        let aggregate_nonce = NonceUtil::update_nonce(&request.attester_data, nonce_value.as_ref())?;
+        let evidences = collect_evidences_core(&Some(attester_info), &aggregate_nonce)?;
 
         let node_id = get_node_id()?;
 
@@ -160,18 +181,18 @@ mod tests {
     fn test_get_evidence_request_sanitize() {
         // Test empty attester_types
         let request = GetEvidenceRequest {
-            attester_types: Some(vec![]),
-            nonce_type: Some("default".to_string()),
+            attesters: vec![],
+            nonce_type: Some("verifier".to_string()),
             user_nonce: Some("test_nonce".to_string()),
             nonce: None,
             attester_data: Some(json!({"key": "value"})),
         };
         let sanitized = request.sanitize();
-        assert!(sanitized.attester_types.is_none());
+        assert!(sanitized.attesters.is_empty());
 
         // Test empty nonce_type
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["tpm_boot".to_string()]),
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("   ".to_string()),
             user_nonce: Some("test_nonce".to_string()),
             nonce: None,
@@ -182,7 +203,7 @@ mod tests {
 
         // Test empty user_nonce
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["tpm_boot".to_string()]),
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("user".to_string()),
             user_nonce: Some("".to_string()),
             nonce: None,
@@ -193,8 +214,8 @@ mod tests {
 
         // Test null attester_data
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["tpm_boot".to_string()]),
-            nonce_type: Some("default".to_string()),
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
+            nonce_type: Some("verifier".to_string()),
             user_nonce: None,
             nonce: None,
             attester_data: Some(json!(null)),
@@ -204,8 +225,8 @@ mod tests {
 
         // Test valid request
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["tpm_boot".to_string()]),
-            nonce_type: Some("default".to_string()),
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
+            nonce_type: Some("verifier".to_string()),
             user_nonce: None,
             nonce: Some(Nonce {
                 iat: 1234567890,
@@ -215,8 +236,8 @@ mod tests {
             attester_data: Some(json!({"key": "value"})),
         };
         let sanitized = request.sanitize();
-        assert_eq!(sanitized.attester_types, Some(vec!["tpm_boot".to_string()]));
-        assert_eq!(sanitized.nonce_type, Some("default".to_string()));
+        assert_eq!(sanitized.attesters, vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }]);
+        assert_eq!(sanitized.nonce_type, Some("verifier".to_string()));
         assert!(sanitized.user_nonce.is_none());
         assert!(sanitized.nonce.is_some());
         assert!(sanitized.attester_data.is_some());
@@ -250,12 +271,11 @@ mod tests {
 
     #[test]
     fn test_evidence_manager_process_nonce_user_invalid_length() {
-        let user_nonce = "a".repeat(32); // Too short
+        let user_nonce = "".to_string(); // Too short
         let result = EvidenceManager::process_nonce(Some("user"), Some(&user_nonce), None);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
-
-        let user_nonce = "a".repeat(1025); // Too long
+        let user_nonce = STANDARD.encode("a".repeat(1025));
         let result = EvidenceManager::process_nonce(Some("user"), Some(&user_nonce), None);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
@@ -265,19 +285,19 @@ mod tests {
     fn test_evidence_manager_process_nonce_default_success() {
         let nonce = Nonce {
             iat: 1234567890,
-            value: "test_nonce_value".repeat(5), // 70 bytes
-            signature: "test_signature".repeat(6), // 78 bytes
+            value: "dGVzdF9ub25jZV92YWx1ZXRlc3Rfbm9uY2VfdmFsdWU=".to_string(),
+            signature: "dGVzdF9ub25jZV92YWx1ZXRlc3Rfbm9uY2VfdmFsdWU=".to_string(),
         };
-        let result = EvidenceManager::process_nonce(Some("default"), None, Some(&nonce));
+        let result = EvidenceManager::process_nonce(Some("verifier"), None, Some(&nonce));
         assert!(result.is_ok());
         let (nonce_type, nonce_value) = result.unwrap();
-        assert_eq!(nonce_type, "default");
+        assert_eq!(nonce_type, "verifier");
         assert_eq!(nonce_value, Some(nonce.value));
     }
 
     #[test]
     fn test_evidence_manager_process_nonce_default_missing() {
-        let result = EvidenceManager::process_nonce(Some("default"), None, None);
+        let result = EvidenceManager::process_nonce(Some("verifier"), None, None);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), ChallengeError::NonceNotProvided));
     }
@@ -289,7 +309,7 @@ mod tests {
             value: "test_nonce_value".repeat(5),
             signature: "test_signature".repeat(6),
         };
-        let result = EvidenceManager::process_nonce(Some("default"), None, Some(&invalid_nonce));
+        let result = EvidenceManager::process_nonce(Some("verifier"), None, Some(&invalid_nonce));
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
     }
@@ -303,14 +323,14 @@ mod tests {
 
     #[test]
     fn test_evidence_manager_process_nonce_case_insensitive() {
-        let result = EvidenceManager::process_nonce(Some("DEFAULT"), None, None);
+        let result = EvidenceManager::process_nonce(Some("VERIFIER"), None, None);
         assert!(result.is_err()); // Still fails because no nonce provided, but type is converted to lowercase
-        let (nonce_type, _) = EvidenceManager::process_nonce(Some("DEFAULT"), None, Some(&Nonce {
+        let (nonce_type, _) = EvidenceManager::process_nonce(Some("VERIFIER"), None, Some(&Nonce {
             iat: 1234567890,
-            value: "test_nonce_value".repeat(5),
-            signature: "test_signature".repeat(6),
+            value: "dGVzdF9ub25jZV92YWx1ZXRlc3Rfbm9uY2VfdmFsdWU=".to_string(),
+            signature: "dGVzdF9ub25jZV92YWx1ZXRlc3Rfbm9uY2VfdmFsdWU=".to_string(),
         })).unwrap();
-        assert_eq!(nonce_type, "default");
+        assert_eq!(nonce_type, "verifier");
     }
 
     #[test]
@@ -324,14 +344,14 @@ mod tests {
     fn test_get_evidence_request_edge_cases() {
         // Test with all None values
         let request = GetEvidenceRequest {
-            attester_types: None,
+            attesters: vec![],
             nonce_type: None,
             user_nonce: None,
             nonce: None,
             attester_data: None,
         };
         let sanitized = request.sanitize();
-        assert!(sanitized.attester_types.is_none());
+        assert!(sanitized.attesters.is_empty());
         assert!(sanitized.nonce_type.is_none());
         assert!(sanitized.user_nonce.is_none());
         assert!(sanitized.nonce.is_none());
@@ -339,14 +359,14 @@ mod tests {
 
         // Test with whitespace-only strings
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["   ".to_string()]),
+            attesters: vec![Attester { attester_type: "   ".to_string(), log_types: None }],
             nonce_type: Some("   ".to_string()),
             user_nonce: Some("   ".to_string()),
             nonce: None,
             attester_data: Some(json!("   ")),
         };
         let sanitized = request.sanitize();
-        assert!(sanitized.attester_types.is_some());
+        assert!(!sanitized.attesters.is_empty());
         assert!(sanitized.nonce_type.is_none());
         assert!(sanitized.user_nonce.is_none());
         assert!(sanitized.attester_data.is_some());
@@ -354,14 +374,14 @@ mod tests {
         // Test with very large strings
         let large_string = "a".repeat(1000);
         let request = GetEvidenceRequest {
-            attester_types: Some(vec![large_string.clone()]),
+            attesters: vec![Attester { attester_type: large_string.clone(), log_types: None }],
             nonce_type: Some(large_string.clone()),
             user_nonce: Some(large_string.clone()),
             nonce: None,
             attester_data: Some(json!(large_string)),
         };
         let sanitized = request.sanitize();
-        assert!(sanitized.attester_types.is_some());
+        assert!(!sanitized.attesters.is_empty());
         assert!(sanitized.nonce_type.is_some());
         assert!(sanitized.user_nonce.is_some());
         assert!(sanitized.attester_data.is_some());
@@ -370,8 +390,8 @@ mod tests {
     #[test]
     fn test_get_evidence_request_serialization() {
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["tpm_boot".to_string(), "tpm_ima".to_string()]),
-            nonce_type: Some("default".to_string()),
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
+            nonce_type: Some("verifier".to_string()),
             user_nonce: Some("user_nonce_value".to_string()),
             nonce: Some(Nonce {
                 iat: 1234567890,
@@ -383,8 +403,8 @@ mod tests {
 
         // Since GetEvidenceRequest doesn't implement Serialize, we test deserialization only
         let json_str = r#"{
-            "attester_types": ["tpm_boot", "tpm_ima"],
-            "nonce_type": "default",
+            "attesters": [{"attester_type": "tpm_boot"}],
+            "nonce_type": "verifier",
             "user_nonce": "user_nonce_value",
             "nonce": {
                 "iat": 1234567890,
@@ -396,7 +416,7 @@ mod tests {
 
         let deserialized: GetEvidenceRequest = serde_json::from_str(json_str).unwrap();
 
-        assert_eq!(request.attester_types, deserialized.attester_types);
+        assert_eq!(request.attesters, deserialized.attesters);
         assert_eq!(request.nonce_type, deserialized.nonce_type);
         assert_eq!(request.user_nonce, deserialized.user_nonce);
         // Since Nonce doesn't implement PartialEq, we compare individual fields
@@ -420,7 +440,7 @@ mod tests {
     #[test]
     fn test_get_evidence_request_deserialization() {
         let json_str = r#"{
-            "attester_types": ["tpm_boot", "tpm_ima"],
+            "attesters": [{"attester_type": "tpm_boot", "log_types": ["TcgEventLog"]}, {"attester_type": "tpm_ima", "log_types": ["ima"]}],
             "nonce_type": "user",
             "user_nonce": "user_nonce_value",
             "nonce": {
@@ -432,7 +452,7 @@ mod tests {
         }"#;
 
         let request: GetEvidenceRequest = serde_json::from_str(json_str).unwrap();
-        assert!(request.attester_types.is_some());
+        assert!(!request.attesters.is_empty());
         assert_eq!(request.nonce_type, Some("user".to_string()));
         assert_eq!(request.user_nonce, Some("user_nonce_value".to_string()));
         assert!(request.nonce.is_some());
@@ -462,7 +482,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), ChallengeError::UserNonceNotProvided));
 
-        // Test with None nonce_type - should become "default" but fail because no nonce provided
+        // Test with None nonce_type - should become "verifier" but fail because no nonce provided
         let result = EvidenceManager::process_nonce(None, None, None);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), ChallengeError::NonceNotProvided));
@@ -470,13 +490,13 @@ mod tests {
         // Test with None nonce_type but with valid nonce
         let nonce = Nonce {
             iat: 1234567890,
-            value: "test_nonce_value".repeat(5),
-            signature: "test_signature".repeat(6),
+            value: "dGVzdF9ub25jZV92YWx1ZXRlc3Rfbm9uY2VfdmFsdWU=".to_string(),
+            signature: "dGVzdF9ub25jZV92YWx1ZXRlc3Rfbm9uY2VfdmFsdWU=".to_string(),
         };
         let result = EvidenceManager::process_nonce(None, None, Some(&nonce));
         assert!(result.is_ok());
         let (nonce_type, nonce_value) = result.unwrap();
-        assert_eq!(nonce_type, "default");
+        assert_eq!(nonce_type, "verifier");
         assert!(nonce_value.is_some());
     }
 
@@ -484,7 +504,7 @@ mod tests {
     fn test_evidence_manager_get_evidence_error_cases() {
         // Test with invalid nonce_type
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["tpm_boot".to_string()]),
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("invalid_type".to_string()),
             user_nonce: None,
             nonce: None,
@@ -496,7 +516,7 @@ mod tests {
 
         // Test with user nonce_type but no user_nonce
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["tpm_boot".to_string()]),
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("user".to_string()),
             user_nonce: None,
             nonce: None,
@@ -506,10 +526,10 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), ChallengeError::UserNonceNotProvided));
 
-        // Test with default nonce_type but no nonce
+        // Test with verifier nonce_type but no nonce
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["tpm_boot".to_string()]),
-            nonce_type: Some("default".to_string()),
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
+            nonce_type: Some("verifier".to_string()),
             user_nonce: None,
             nonce: None,
             attester_data: None,
@@ -523,7 +543,7 @@ mod tests {
     fn test_evidence_manager_get_evidence_success_cases() {
         // Test with ignore nonce_type
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["tpm_boot".to_string()]),
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("ignore".to_string()),
             user_nonce: None,
             nonce: None,
@@ -536,7 +556,7 @@ mod tests {
 
         // Test with user nonce_type and valid user_nonce
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["tpm_boot".to_string()]),
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("user".to_string()),
             user_nonce: Some("a".repeat(64)), // Valid length
             nonce: None,
@@ -546,10 +566,10 @@ mod tests {
         // This would require mocking the plugin manager to succeed
         assert!(result.is_err()); // Expected to fail due to missing plugin manager
 
-        // Test with default nonce_type and valid nonce
+        // Test with verifier nonce_type and valid nonce
         let request = GetEvidenceRequest {
-            attester_types: Some(vec!["tpm_boot".to_string()]),
-            nonce_type: Some("default".to_string()),
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
+            nonce_type: Some("verifier".to_string()),
             user_nonce: None,
             nonce: Some(Nonce {
                 iat: 1234567890,

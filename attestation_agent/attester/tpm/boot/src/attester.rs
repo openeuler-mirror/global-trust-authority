@@ -59,9 +59,9 @@ impl PluginBase for TpmBootPlugin {
 }
 
 impl AgentPlugin for TpmBootPlugin {
-    fn collect_evidence(&self, node_id: Option<&str>, nonce: Option<&[u8]>) -> Result<serde_json::Value, PluginError> {
+    fn collect_evidence(&self, node_id: Option<&str>, nonce: Option<&[u8]>, log_types: Option<Vec<String>>) -> Result<serde_json::Value, PluginError> {
         // Use the common implementation from the trait
-        self.collect_evidence_impl(node_id, nonce)
+        self.collect_evidence_impl(node_id, nonce, log_types)
     }
 }
 
@@ -71,12 +71,27 @@ impl TpmPluginBase for TpmBootPlugin {
     }
     
     // Implement the collect_log method for boot plugin
-    fn collect_log(&self) -> Result<Vec<Log>, PluginError> {
+    fn collect_log(&self, log_types: Option<Vec<String>>) -> Result<Option<Vec<Log>>, PluginError> {
+        let log_types = match log_types {
+            Some(log_types) => {
+                if log_types.is_empty() {
+                    return Ok(None);
+                }
+                if log_types.len() > 1 || log_types[0] != "TcgEventLog" {
+                    return Err(PluginError::InputError("Invalid log type".to_string()));
+                }
+                log_types
+            },
+            None => Vec::new(),
+        };
+        if log_types.is_empty() && self.config.log_file_path.is_empty() {
+            return Ok(None);
+        }
         // Open the boot log file
-        let file = File::open(&self.config.log_file_path).map_err(|e| {
-            PluginError::InternalError(format!("Failed to open boot log file: {}", e))
-        })?;
-
+        let file = match File::open(&self.config.log_file_path) {
+            Ok(file) => file,
+            Err(e) => return Err(PluginError::InternalError(format!("Failed to open boot log file: {}", e))),
+        };
         // Check file size before reading
         let metadata = file.metadata().map_err(|e| {
             PluginError::InternalError(format!("Failed to get file metadata: {}", e))
@@ -100,10 +115,10 @@ impl TpmPluginBase for TpmBootPlugin {
         // Encode the binary data as base64 string using the new API
         let log_data = STANDARD.encode(&buffer);
         
-        Ok(vec![Log {
+        Ok(Some(vec![Log {
             log_type: String::from("TcgEventLog"),
             log_data,
-        }])
+        }]))
     }
 }
 

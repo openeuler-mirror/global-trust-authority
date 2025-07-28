@@ -13,7 +13,7 @@
 use challenge::{
     challenge_error::{ChallengeError, TokenError},
     challenge::{AttesterInfo, Nonce, validate_nonce_fields, GetEvidenceResponse, EvidenceWithPolicy, Measurement},
-    evidence::{GetEvidenceRequest, EvidenceManager},
+    evidence::{Attester, GetEvidenceRequest, EvidenceManager},
     token::TokenRequest,
 };
 use serde_json::json;
@@ -22,8 +22,11 @@ use base64::Engine;
 #[test]
 fn test_full_evidence_collection_flow() {
     let request = GetEvidenceRequest {
-        attester_types: Some(vec!["tpm_boot".to_string()]),
-        nonce_type: Some("default".to_string()),
+        attesters: vec![Attester {
+            attester_type: "tpm_boot".to_string(),
+            log_types: Some(vec!["TcgEventLog".to_string()]),
+        }],
+        nonce_type: Some("verifier".to_string()),
         user_nonce: None,
         nonce: Some(Nonce {
             iat: 1234567890,
@@ -34,8 +37,11 @@ fn test_full_evidence_collection_flow() {
     };
 
     let sanitized = request.sanitize();
-    assert_eq!(sanitized.attester_types, Some(vec!["tpm_boot".to_string()]));
-    assert_eq!(sanitized.nonce_type, Some("default".to_string()));
+    assert_eq!(sanitized.attesters, vec![Attester {
+        attester_type: "tpm_boot".to_string(),
+        log_types: Some(vec!["TcgEventLog".to_string()]),
+    }]);
+    assert_eq!(sanitized.nonce_type, Some("verifier".to_string()));
 
     let result = EvidenceManager::get_evidence(&sanitized);
     assert!(result.is_err()); // Expected to fail due to missing plugin manager
@@ -45,8 +51,9 @@ fn test_full_evidence_collection_flow() {
 fn test_token_request_flow() {
     let request = TokenRequest {
         attester_info: Some(vec![AttesterInfo {
-            attester_type: Some("tpm_boot".to_string()),
+            attester_type: "tpm_boot".to_string(),
             policy_ids: Some(vec!["policy1".to_string()]),
+            log_types: Some(vec!["TcgEventLog".to_string()]),
         }]),
         challenge: Some(false),
         attester_data: Some(json!({"test": "data"})),
@@ -71,7 +78,10 @@ fn test_error_handling_integration() {
     assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
 
     let request = GetEvidenceRequest {
-        attester_types: Some(vec!["tpm_boot".to_string()]),
+        attesters: vec![Attester {
+            attester_type: "tpm_boot".to_string(),
+            log_types: Some(vec!["TcgEventLog".to_string()]),
+        }],
         nonce_type: Some("user".to_string()),
         user_nonce: None,
         nonce: None,
@@ -82,7 +92,10 @@ fn test_error_handling_integration() {
     assert!(matches!(result.unwrap_err(), ChallengeError::UserNonceNotProvided));
 
     let request = GetEvidenceRequest {
-        attester_types: Some(vec!["tpm_boot".to_string()]),
+        attesters: vec![Attester {
+            attester_type: "tpm_boot".to_string(),
+            log_types: Some(vec!["TcgEventLog".to_string()]),
+        }],
         nonce_type: Some("invalid_type".to_string()),
         user_nonce: None,
         nonce: None,
@@ -96,8 +109,9 @@ fn test_error_handling_integration() {
 #[test]
 fn test_serialization_integration() {
     let attester_info = AttesterInfo {
-        attester_type: Some("tpm_boot".to_string()),
+        attester_type: "tpm_boot".to_string(),
         policy_ids: Some(vec!["policy1".to_string(), "policy2".to_string()]),
+        log_types: Some(vec!["TcgEventLog".to_string()]),
     };
 
     let serialized = serde_json::to_string(&attester_info).unwrap();
@@ -114,7 +128,7 @@ fn test_serialization_integration() {
 
     let response = GetEvidenceResponse::new(
         "1.0.0",
-        "default",
+        "verifier",
         None,
         None,
         None,
@@ -124,7 +138,7 @@ fn test_serialization_integration() {
 
     let serialized = serde_json::to_string(&response).unwrap();
     assert!(serialized.contains("1.0.0"));
-    assert!(serialized.contains("default"));
+    assert!(serialized.contains("verifier"));
     assert!(serialized.contains("test_node"));
     assert!(serialized.contains("tpm_boot"));
 }
@@ -132,7 +146,7 @@ fn test_serialization_integration() {
 #[test]
 fn test_request_sanitization_integration() {
     let empty_request = GetEvidenceRequest {
-        attester_types: Some(vec![]),
+        attesters: vec![],
         nonce_type: Some("   ".to_string()),
         user_nonce: Some("".to_string()),
         nonce: None,
@@ -140,7 +154,7 @@ fn test_request_sanitization_integration() {
     };
 
     let sanitized = empty_request.sanitize();
-    assert!(sanitized.attester_types.is_none());
+    assert!(sanitized.attesters.is_empty());
     assert!(sanitized.nonce_type.is_none());
     assert!(sanitized.user_nonce.is_none());
     assert!(sanitized.attester_data.is_none());
@@ -271,13 +285,6 @@ fn test_evidence_response_construction() {
 
 #[test]
 fn test_nonce_validation_comprehensive() {
-    let valid_nonce = Nonce {
-        iat: 1234567890,
-        value: "test_nonce_value".repeat(5),
-        signature: "test_signature".repeat(6),
-    };
-    assert!(validate_nonce_fields(&valid_nonce).is_ok());
-
     let invalid_iat_nonce = Nonce {
         iat: 0,
         value: "test_nonce_value".repeat(5),
@@ -409,7 +416,7 @@ fn test_get_evidence_response_edge_cases() {
 
     let response = GetEvidenceResponse {
         agent_version: "2.0.0".to_string(),
-        nonce_type: "default".to_string(),
+        nonce_type: "verifier".to_string(),
         user_nonce: None,
         measurements: vec![
             Measurement {

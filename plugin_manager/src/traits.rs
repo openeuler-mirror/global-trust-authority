@@ -30,7 +30,7 @@ pub trait ServicePlugin: PluginBase {
 }
 
 pub trait AgentPlugin: PluginBase {
-    fn collect_evidence(&self, node_id: Option<&str>, nonce: Option<&[u8]>) -> Result<Value, PluginError>;
+    fn collect_evidence(&self, node_id: Option<&str>, nonce: Option<&[u8]>, log_types: Option<Vec<String>>) -> Result<Value, PluginError>;
 }
 
 /// Trait for getting singleton instances of plugin managers

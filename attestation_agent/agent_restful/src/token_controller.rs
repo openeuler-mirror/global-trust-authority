@@ -58,7 +58,7 @@ pub fn get_token(body: Option<Value>) -> HttpResponse {
     match handle.join() {
         Ok(result) => match result {
             Ok(token) => HttpResponse::Ok().json(json!({ "token": token })),
-            Err(error) => create_error_response(error, StatusCode::SERVICE_UNAVAILABLE),
+            Err(error) => create_error_response(error, StatusCode::INTERNAL_SERVER_ERROR),
         },
         Err(_) => create_error_response("Thread execution failed", StatusCode::INTERNAL_SERVER_ERROR),
     }

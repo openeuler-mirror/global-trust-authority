@@ -16,7 +16,7 @@ mod tests {
         web::Json(AttestRequest {
             message: None,
             agent_version: Option::from("".to_string()),
-            nonce_type: Some("default".to_string()),
+            nonce_type: Some("verifier".to_string()),
             user_nonce: None,
             measurements: vec![]
         })

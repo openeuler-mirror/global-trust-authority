@@ -45,7 +45,7 @@ pub struct Measurement {
     pub evidences: Vec<Evidence>,
 }
 
-#[derive(Deserialize, Serialize, Validate, Debug, Clone)]
+#[derive(Deserialize, Serialize, Validate, Debug, Clone, Default)]
 pub struct Nonce {
     pub iat: u64,
     pub value: String,
@@ -73,9 +73,9 @@ fn validate_nonce_type(nonce_type: &str) -> Result<(), ValidationError> {
 }
 
 fn validate_user_nonce(user_nonce: &str) -> Result<(), ValidationError> {
-    if user_nonce.len() < 64 || user_nonce.len() > 1024 {
+    if user_nonce.len() < 1 || user_nonce.len() > 1024 {
         let mut err = ValidationError::new("length");
-        err.message = Some(std::borrow::Cow::Owned("user_nonce length must be between 64 and 1024 bytes".to_string()));
+        err.message = Some(std::borrow::Cow::Owned("user_nonce length must be between 1 and 1024 bytes".to_string()));
         return Err(err);
     }
 

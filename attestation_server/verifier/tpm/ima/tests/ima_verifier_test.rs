@@ -69,7 +69,7 @@ async fn test_generate_evidence_with_valid_log() {
     let plugin = TpmImaPlugin::new("tpm_ima".to_string(), host_functions);
     
     // Generate evidence
-    let result = plugin.generate_evidence("test_user", &logs, &mut pcr_values).await;
+    let result = plugin.generate_evidence("test_user", Some(&logs), &mut pcr_values).await;
     // Verify result
     assert!(result.is_ok());
     let evidence_json = result.unwrap();
@@ -82,6 +82,49 @@ async fn test_generate_evidence_with_valid_log() {
     let logs_result = evidence.get("logs").expect("Missing logs in evidence");
     assert!(logs_result.is_array());
     assert_eq!(logs_result.as_array().unwrap().len(), 1);
+    
+    // Check if the evidence contains PCR values
+    let pcrs = evidence.get("pcrs").expect("Missing PCRs in evidence");
+    assert!(pcrs.is_object());
+}
+
+#[tokio::test]
+async fn test_generate_evidence_with_no_log() {
+    // Create PCR values
+    let mut pcr_values = PcrValues {
+        hash_alg: "sha256".to_string(),
+        pcr_values: vec![PcrValueEntry {
+            pcr_index: 10,
+            pcr_value: "be00517f0f1e46f33a39e0a2c21f8f0ae681c647be00517f0f1e46f33a39e0a2".to_string(),
+            replay_value: None,
+            is_matched: None,
+        }],
+    };
+    
+    // Create service host functions
+    let host_functions = get_test_host_functions();
+    
+    // Create plugin
+    let plugin = TpmImaPlugin::new("tpm_ima".to_string(), host_functions);
+    
+    // Generate evidence
+    let result = plugin.generate_evidence("test_user", None, &mut pcr_values).await;
+    // Verify result
+    assert!(result.is_ok());
+    let evidence_json = result.unwrap();
+    assert!(evidence_json.is_object());
+    
+    // Check if the evidence contains the evidence wrapper
+    let evidence = evidence_json.get("evidence").expect("Missing evidence wrapper");
+    
+    // Check if the evidence contains log status
+    let logs_result = evidence.get("logs").expect("Missing logs in evidence");
+    assert!(logs_result.is_array());
+    assert_eq!(logs_result.as_array().unwrap().len(), 1);
+    assert!(logs_result.as_array().unwrap().first().unwrap().get("ImaLog").is_none());
+    assert!(logs_result.as_array().unwrap().first().unwrap().get("log_data").is_none());
+    assert_eq!(logs_result.as_array().unwrap().first().unwrap().get("log_status").unwrap().as_str(), Some("no_log"));
+    assert_eq!(logs_result.as_array().unwrap().first().unwrap().get("ref_value_match_status").unwrap().as_str(), Some("ignore"));
     
     // Check if the evidence contains PCR values
     let pcrs = evidence.get("pcrs").expect("Missing PCRs in evidence");
@@ -114,7 +157,7 @@ async fn test_generate_evidence_with_invalid_log_type() {
     let plugin = TpmImaPlugin::new("tpm_ima".to_string(), host_functions);
     
     // Generate evidence
-    let result = plugin.generate_evidence("test_user", &logs, &mut pcr_values).await;
+    let result = plugin.generate_evidence("test_user", Some(&logs), &mut pcr_values).await;
     
     // Verify result is an error
     assert!(result.is_err());

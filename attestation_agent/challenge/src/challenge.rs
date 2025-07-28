@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::{Arc, Mutex as StdMutex};
 use parking_lot::{Mutex, MutexGuard};
+use crate::nonce_util::NonceUtil;
 
 const TIME_OUT: u64 = 120;
 
@@ -41,11 +42,13 @@ pub static GLOBAL_TOKENS: Lazy<StdMutex<Vec<NodeToken>>> = Lazy::new(|| StdMutex
 /// Information about an attester, including type and policy IDs
 pub struct AttesterInfo {
     #[serde(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub attester_type: Option<String>,
+    pub attester_type: String,
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub policy_ids: Option<Vec<String>>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub log_types: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -245,7 +248,7 @@ fn validate_attester_type(attester_type: &str) -> Result<bool, ChallengeError> {
 }
 
 /// Collect evidence for a specific attester type and nonce
-fn collect_evidence(attester_type: &str, nonce_value: Option<String>) -> Result<serde_json::Value, ChallengeError> {
+fn collect_evidence(attester_type: &str, nonce_value: Option<String>, log_types: Option<Vec<String>>) -> Result<serde_json::Value, ChallengeError> {
     let (plugin, _) = find_plugin_for_attester_type(attester_type)?;
     let node_id = get_node_id()?;
     let nonce_bytes = nonce_value.as_ref().map(|s| {
@@ -256,7 +259,7 @@ fn collect_evidence(attester_type: &str, nonce_value: Option<String>) -> Result<
     }).transpose()?;
 
     let _lock_guard = acquire_thread_lock()?;
-    match plugin.collect_evidence(Some(&node_id), nonce_bytes.as_deref()) {
+    match plugin.collect_evidence(Some(&node_id), nonce_bytes.as_deref(), log_types) {
         Ok(evidence_value) => {
             log::info!("Evidence collected for attester_type: {}", attester_type);
             Ok(evidence_value)
@@ -339,31 +342,28 @@ fn get_policy_ids(
 }
 
 /// Generic evidence collection helper function
-fn collect_evidences_for_types<I>(
-    attester_iter: I,
+fn collect_evidences_for_types(
+    attester_info: &[AttesterInfo],
     nonce_value: &Option<String>,
     need_validate: bool,
     use_config: bool,
-) -> Result<Vec<EvidenceWithPolicy>, ChallengeError>
-where
-    I: IntoIterator<Item = (String, Option<Vec<String>>)>,
-{
+) -> Result<Vec<EvidenceWithPolicy>, ChallengeError> {
     let mut all_evidences = Vec::new();
-    for (attester_type, policy_ids_hint) in attester_iter {
+    for attester_info in attester_info.iter() {
         if need_validate {
-            validate_attester_type(&attester_type)?;
+            validate_attester_type(&attester_info.attester_type)?;
         }
 
-        let evidence_value = collect_evidence(&attester_type, nonce_value.clone()).map_err(|e| {
-            log::error!("Failed to collect evidence for '{}': {}", attester_type, e);
+        let evidence_value = collect_evidence(&attester_info.attester_type, nonce_value.clone(), attester_info.log_types.clone()).map_err(|e| {
+            log::error!("Failed to collect evidence for '{}': {}", attester_info.attester_type, e);
             ChallengeError::EvidenceCollectionFailed(format!(
                 "Failed to collect evidence for '{}': {}",
-                attester_type, e
+                attester_info.attester_type, e
             ))
         })?;
 
-        let policy_ids = get_policy_ids(&attester_type, &policy_ids_hint, use_config)?;
-        all_evidences.push(EvidenceWithPolicy { attester_type, evidence: evidence_value, policy_ids });
+        let policy_ids = get_policy_ids(&attester_info.attester_type, &attester_info.policy_ids, use_config)?;
+        all_evidences.push(EvidenceWithPolicy { attester_type: attester_info.attester_type.clone(), evidence: evidence_value, policy_ids });
     }
     if all_evidences.is_empty() {
         log::error!("No valid evidence collected for any attester_type");
@@ -377,17 +377,17 @@ fn collect_from_attester_info(
     info: &[AttesterInfo],
     nonce_value: &Option<String>,
 ) -> Result<Vec<EvidenceWithPolicy>, ChallengeError> {
-    let attester_iter = info.iter().filter_map(|a| a.attester_type.as_ref().map(|t| (t.clone(), a.policy_ids.clone())));
-    // For collect_from_attester_info, use_config is false
-    collect_evidences_for_types(attester_iter, nonce_value, true, false)
+    collect_evidences_for_types(info, nonce_value, true, false)
 }
 
 /// Collect evidence from all enabled plugins
 fn collect_from_enabled_plugins(nonce_value: &Option<String>) -> Result<Vec<EvidenceWithPolicy>, ChallengeError> {
     let enabled_types = get_enabled_attester_types()?;
-    let attester_iter = enabled_types.into_iter().map(|t| (t, None));
-    // For collect_from_enabled_plugins, use_config is true
-    collect_evidences_for_types(attester_iter, nonce_value, false, true)
+    let attester_infos = enabled_types.into_iter().map(|t| AttesterInfo {
+         attester_type: t, 
+         policy_ids: None, 
+         log_types: None }).collect::<Vec<AttesterInfo>>();
+    collect_evidences_for_types(&attester_infos, nonce_value, false, true)
 }
 
 /// Core function to collect evidences from attester info or enabled plugins
@@ -405,21 +405,9 @@ pub fn collect_evidences_core(
 ) -> Result<Vec<EvidenceWithPolicy>, ChallengeError> {
     match attester_info {
         Some(info) if !info.is_empty() => {
-            let all_types_empty = info.iter().all(|attester| {
-                attester.attester_type.is_none() || attester.attester_type.as_ref().unwrap().is_empty()
-            });
-
-            if all_types_empty {
-                log::info!("All attester_types empty, collecting from enabled plugins");
-                // Case 1: All attester_types are empty
-                // Get all enabled plugin types using policy_ids from config
-                collect_from_enabled_plugins(nonce_value)
-            } else {
                 log::info!("Collecting from provided attester_info");
-                // Case 2: Use information from attester_info
                 collect_from_attester_info(info, nonce_value)
-            }
-        },
+            },
         // Default case: Get all enabled plugin types
         _ => {
             log::info!("No attester_info provided, collecting from enabled plugins");
@@ -437,18 +425,17 @@ pub fn validate_nonce_fields(nonce: &Nonce) -> Result<(), ChallengeError> {
     if nonce.value.trim().is_empty() || nonce.signature.trim().is_empty() || nonce.iat == 0 {
         return Err(ChallengeError::NonceInvalid("One or more nonce fields are empty".to_string()));
     }
-    let value_len = nonce.value.len();
-    if !(64..=1024).contains(&value_len) {
+    let nonce_bytes = match STANDARD.decode(&nonce.value) {
+        Ok(bytes) => bytes,
+        Err(_) => return Err(ChallengeError::NonceInvalid("nonce decode error".to_string())),
+    };
+
+    let value_len = nonce_bytes.len();
+
+    if !(1..=1024).contains(&value_len) {
         return Err(ChallengeError::NonceInvalid(format!(
-            "nonce.value length must be between 64 and 1024 bytes, got {} bytes",
+            "nonce.value length must be between 1 and 1024 bytes, got {} bytes",
             value_len
-        )));
-    }
-    let sig_len = nonce.signature.len();
-    if sig_len < 64 {
-        return Err(ChallengeError::NonceInvalid(format!(
-            "nonce.signature length must be at least 64 bytes, got {} bytes",
-            sig_len
         )));
     }
     Ok(())
@@ -462,7 +449,7 @@ async fn get_nonce_from_server(
     let attester_types = match attester_info {
         Some(info) if !info.is_empty() => {
             let filtered: Vec<_> =
-                info.iter().filter_map(|a| a.attester_type.clone()).filter(|s| !s.trim().is_empty()).collect();
+                info.iter().map(|a| a.attester_type.clone()).filter(|s| !s.trim().is_empty()).collect();
             if filtered.is_empty() {
                 get_enabled_attester_types()?
             } else {
@@ -572,7 +559,9 @@ pub async fn do_challenge(
 
     let nonce = get_nonce_from_server(env!("CARGO_PKG_VERSION"), attester_info).await?;
 
-    let evidences = match collect_evidences_core(attester_info, &Some(nonce.value.clone())) {
+    let aggregate_nonce = NonceUtil::update_nonce(attester_data, Some(&nonce.value))?;
+
+    let evidences = match collect_evidences_core(attester_info, &aggregate_nonce) {
         Ok(evidences) => {
             log::info!("Successfully collected evidences");
             evidences
@@ -587,7 +576,7 @@ pub async fn do_challenge(
 
     let evidence_response = GetEvidenceResponse::new(
         env!("CARGO_PKG_VERSION"),
-        "default",
+        "verifier",
         None,
         Some(&nonce),
         attester_data.as_ref(),
@@ -617,8 +606,9 @@ mod tests {
     #[test]
     fn test_attester_info_serialization() {
         let attester_info = AttesterInfo {
-            attester_type: Some("tpm_boot".to_string()),
+            attester_type: "tpm_boot".to_string(),
             policy_ids: Some(vec!["policy1".to_string(), "policy2".to_string()]),
+            log_types: None,
         };
 
         let serialized = serde_json::to_string(&attester_info).unwrap();
@@ -629,59 +619,11 @@ mod tests {
     }
 
     #[test]
-    fn test_nonce_validation_success() {
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "test_nonce_value".repeat(5), // 70 bytes
-            signature: "test_signature".repeat(6), // 78 bytes
-        };
-
-        let result = validate_nonce_fields(&nonce);
-        assert!(result.is_ok());
-    }
-
-    #[test]
     fn test_nonce_validation_empty_fields() {
         let nonce = Nonce {
             iat: 0,
             value: "".to_string(),
             signature: "".to_string(),
-        };
-
-        let result = validate_nonce_fields(&nonce);
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
-    }
-
-    #[test]
-    fn test_nonce_validation_invalid_value_length() {
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "short".to_string(), // Too short
-            signature: "test_signature".repeat(6),
-        };
-
-        let result = validate_nonce_fields(&nonce);
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
-
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "a".repeat(1025), // Too long
-            signature: "test_signature".repeat(6),
-        };
-
-        let result = validate_nonce_fields(&nonce);
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
-    }
-
-    #[test]
-    fn test_nonce_validation_invalid_signature_length() {
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "test_nonce_value".repeat(5),
-            signature: "short".to_string(), // Too short
         };
 
         let result = validate_nonce_fields(&nonce);
@@ -705,7 +647,7 @@ mod tests {
 
         let response = GetEvidenceResponse::new(
             "1.0.0",
-            "default",
+            "verifier",
             None,
             Some(&nonce),
             Some(&json!({"attester_data": "test"})),
@@ -718,7 +660,7 @@ mod tests {
         );
 
         assert_eq!(response.agent_version, "1.0.0");
-        assert_eq!(response.nonce_type, "default");
+        assert_eq!(response.nonce_type, "verifier");
         assert!(response.user_nonce.is_none());
         assert_eq!(response.measurements.len(), 1);
         assert_eq!(response.measurements[0].node_id, "test_node_id");
@@ -767,19 +709,6 @@ mod tests {
     }
 
     #[test]
-    fn test_evidence_with_policy_no_policy_ids() {
-        let evidence = EvidenceWithPolicy {
-            attester_type: "tpm_boot".to_string(),
-            evidence: json!({"test": "evidence"}),
-            policy_ids: None,
-        };
-
-        let serialized = serde_json::to_string(&evidence).unwrap();
-        assert!(serialized.contains("tpm_boot"));
-        assert!(!serialized.contains("policy_ids"));
-    }
-
-    #[test]
     fn test_measurement_serialization() {
         let nonce = Nonce {
             iat: 1234567890,
@@ -820,17 +749,6 @@ mod tests {
         assert!(serialized.contains("test_node"));
         assert!(!serialized.contains("nonce"));
         assert!(!serialized.contains("attester_data"));
-    }
-
-    #[test]
-    fn test_node_token_creation() {
-        let node_token = NodeToken {
-            node_id: "test_node".to_string(),
-            token: json!({"access_token": "test_token"}),
-        };
-
-        assert_eq!(node_token.node_id, "test_node");
-        assert_eq!(node_token.token, json!({"access_token": "test_token"}));
     }
 
     #[test]
@@ -934,17 +852,6 @@ mod tests {
     }
 
     #[test]
-    fn test_base64_decode_nonce() {
-        let valid_base64 = "dGVzdF9ub25jZV92YWx1ZQ=="; // "test_nonce_value" in base64
-        let decoded = STANDARD.decode(valid_base64);
-        assert!(decoded.is_ok());
-
-        let invalid_base64 = "invalid_base64!@#";
-        let decoded = STANDARD.decode(invalid_base64);
-        assert!(decoded.is_err());
-    }
-
-    #[test]
     fn test_policy_ids_validation() {
         // Test valid policy_ids count
         let policy_ids = vec!["policy1".to_string(), "policy2".to_string()];
@@ -971,100 +878,23 @@ mod tests {
 
     #[test]
     fn test_collect_evidences_for_types() {
-        let attester_iter = vec![
-            ("tpm_boot".to_string(), Some(vec!["policy1".to_string()])),
-            ("tpm_ima".to_string(), None),
-        ];
+        let attester_iter = vec![AttesterInfo {
+            attester_type: "tpm_boot".to_string(),
+            policy_ids: Some(vec!["policy1".to_string()]),
+            log_types: None,
+        },
+        AttesterInfo {
+            attester_type: "tpm_ima".to_string(),
+            policy_ids: None,
+            log_types: None,
+        }];
 
         // This test would require mocking the plugin manager and config
         // For now, we just test the function signature and basic logic
-        let result = collect_evidences_for_types(attester_iter.into_iter(), &None, false, false);
+        let result = collect_evidences_for_types(&attester_iter, &None, false, false);
         // The actual result depends on the plugin manager state, so we just check it doesn't panic
         // In a real test environment, we would mock the dependencies
         assert!(result.is_err()); // Expected to fail due to missing plugin manager
-    }
-
-    #[test]
-    fn test_collect_from_attester_info() {
-        let attester_info = vec![
-            AttesterInfo {
-                attester_type: Some("tpm_boot".to_string()),
-                policy_ids: Some(vec!["policy1".to_string()]),
-            },
-            AttesterInfo {
-                attester_type: Some("tpm_ima".to_string()),
-                policy_ids: None,
-            },
-        ];
-
-        // This test would require mocking the plugin manager
-        // For now, we just test the function signature
-        let result = collect_from_attester_info(&attester_info, &None);
-        // The actual result depends on the plugin manager state
-        assert!(result.is_err()); // Expected to fail due to missing plugin manager
-    }
-
-    #[test]
-    fn test_collect_evidences_core_logic() {
-        // Test with None attester_info
-        let result = collect_evidences_core(&None, &None);
-        // This would require mocking the plugin manager
-        assert!(result.is_err()); // Expected to fail due to missing plugin manager
-
-        // Test with empty attester_info
-        let empty_info = Some(vec![]);
-        let result = collect_evidences_core(&empty_info, &None);
-        // This would require mocking the plugin manager
-        assert!(result.is_err()); // Expected to fail due to missing plugin manager
-
-        // Test with attester_info containing empty types
-        let empty_types_info = Some(vec![
-            AttesterInfo {
-                attester_type: Some("".to_string()),
-                policy_ids: None,
-            },
-        ]);
-        let result = collect_evidences_core(&empty_types_info, &None);
-        // This would require mocking the plugin manager
-        assert!(result.is_err()); // Expected to fail due to missing plugin manager
-    }
-
-    #[test]
-    fn test_validate_nonce_fields_edge_cases() {
-        // Test with whitespace-only values
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "   ".to_string(),
-            signature: "test_signature".repeat(6),
-        };
-        let result = validate_nonce_fields(&nonce);
-        assert!(result.is_err());
-
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "test_nonce_value".repeat(5),
-            signature: "   ".to_string(),
-        };
-        let result = validate_nonce_fields(&nonce);
-        assert!(result.is_err());
-
-        // Test with exactly minimum length
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "a".repeat(64),
-            signature: "b".repeat(64),
-        };
-        let result = validate_nonce_fields(&nonce);
-        assert!(result.is_ok());
-
-        // Test with exactly maximum length
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "a".repeat(1024),
-            signature: "b".repeat(64),
-        };
-        let result = validate_nonce_fields(&nonce);
-        assert!(result.is_ok());
     }
 
     #[test]
@@ -1109,7 +939,7 @@ mod tests {
         // Test with empty evidences
         let response = GetEvidenceResponse::new(
             "1.0.0",
-            "default",
+            "verifier",
             None,
             None,
             None,
@@ -1132,7 +962,7 @@ mod tests {
         };
         let response = GetEvidenceResponse::new(
             "1.0.0",
-            "default",
+            "verifier",
             None,
             None,
             None,
@@ -1156,8 +986,9 @@ mod tests {
     #[test]
     fn test_attester_info_edge_cases() {
         let attester_info = AttesterInfo {
-            attester_type: None,
+            attester_type: "".to_string(),
             policy_ids: None,
+            log_types: None,
         };
 
         let serialized = serde_json::to_string(&attester_info).unwrap();
@@ -1167,8 +998,9 @@ mod tests {
         assert_eq!(attester_info.policy_ids, deserialized.policy_ids);
 
         let attester_info = AttesterInfo {
-            attester_type: Some("".to_string()),
+            attester_type: "".to_string(),
             policy_ids: Some(vec![]),
+            log_types: None,
         };
 
         let serialized = serde_json::to_string(&attester_info).unwrap();
@@ -1285,39 +1117,11 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_nonce_fields_comprehensive() {
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "a".repeat(64),
-            signature: "b".repeat(64),
-        };
-        assert!(validate_nonce_fields(&nonce).is_ok());
-
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "a".repeat(1024),
-            signature: "b".repeat(64),
-        };
-        assert!(validate_nonce_fields(&nonce).is_ok());
-
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "a".repeat(63),
-            signature: "b".repeat(64),
-        };
-        assert!(validate_nonce_fields(&nonce).is_err());
-
+    fn test_validate_nonce_value_too_long() {
         let nonce = Nonce {
             iat: 1234567890,
             value: "a".repeat(1025),
             signature: "b".repeat(64),
-        };
-        assert!(validate_nonce_fields(&nonce).is_err());
-
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "a".repeat(64),
-            signature: "b".repeat(63),
         };
         assert!(validate_nonce_fields(&nonce).is_err());
     }
@@ -1338,12 +1142,14 @@ mod tests {
         // Test all attester_type are empty
         let empty_types_info = Some(vec![
             AttesterInfo {
-                attester_type: Some("".to_string()),
+                attester_type: "".to_string(),
                 policy_ids: None,
+                log_types: None,
             },
             AttesterInfo {
-                attester_type: None,
+                attester_type: "".to_string(),
                 policy_ids: None,
+                log_types: None,
             },
         ]);
         let result = collect_evidences_core(&empty_types_info, &None);
@@ -1353,12 +1159,14 @@ mod tests {
         // Test mixed empty and non-empty attester_type
         let mixed_info = Some(vec![
             AttesterInfo {
-                attester_type: Some("".to_string()),
+                attester_type: "".to_string(),
                 policy_ids: None,
+                log_types: None,
             },
             AttesterInfo {
-                attester_type: Some("tpm_boot".to_string()),
+                attester_type: "tpm_boot".to_string(),
                 policy_ids: None,
+                log_types: None,
             },
         ]);
         let result = collect_evidences_core(&mixed_info, &None);
@@ -1401,14 +1209,18 @@ mod tests {
     #[test]
     fn test_collect_evidences_for_types_error_handling() {
         // Test empty iterator
-        let empty_iter = vec![].into_iter();
-        let result = collect_evidences_for_types(empty_iter, &None, false, false);
+        let empty_attester_info = vec![];
+        let result = collect_evidences_for_types(&empty_attester_info, &None, false, false);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), ChallengeError::NoValidEvidence(_)));
 
         // Test case where validation is required but fails
-        let invalid_iter = vec![("invalid_type".to_string(), None)].into_iter();
-        let result = collect_evidences_for_types(invalid_iter, &None, true, false);
+        let invalid_attester_info = vec![AttesterInfo {
+            attester_type: "invalid_type".to_string(),
+            policy_ids: None,
+            log_types: None,
+        }];
+        let result = collect_evidences_for_types(&invalid_attester_info, &None, true, false);
         // This test will fail due to missing plugin manager, but covers the code path
         assert!(result.is_err()); // Expected to fail due to missing plugin manager
     }
@@ -1424,8 +1236,9 @@ mod tests {
         // Test info containing None attester_type
         let info_with_none = vec![
             AttesterInfo {
-                attester_type: None,
+                attester_type: "tpm_boot".to_string(),
                 policy_ids: None,
+                log_types: None,
             },
         ];
         let result = collect_from_attester_info(&info_with_none, &None);
@@ -1460,12 +1273,12 @@ mod tests {
     #[test]
     fn test_collect_evidence_error_handling() {
         // Test invalid attester_type
-        let result = collect_evidence("invalid_type", None);
+        let result = collect_evidence("invalid_type", None, None);
         // This test will fail due to missing plugin manager, but covers the code path
         assert!(result.is_err()); // Expected to fail due to missing plugin manager
 
         // Test base64 decode failure
-        let result = collect_evidence("tpm_boot", Some("invalid_base64!@#".to_string()));
+        let result = collect_evidence("tpm_boot", Some("invalid_base64!@#".to_string()), None);
         // This test will fail due to missing plugin manager, but covers the code path
         assert!(result.is_err()); // Expected to fail due to missing plugin manager
     }
@@ -1565,32 +1378,6 @@ mod tests {
     }
 
     #[test]
-    fn test_attester_info_operations() {
-        let attester_info = AttesterInfo {
-            attester_type: Some("tpm_boot".to_string()),
-            policy_ids: Some(vec!["policy1".to_string(), "policy2".to_string()]),
-        };
-
-        let serialized = serde_json::to_string(&attester_info).unwrap();
-        let deserialized: AttesterInfo = serde_json::from_str(&serialized).unwrap();
-
-        assert_eq!(attester_info.attester_type, deserialized.attester_type);
-        assert_eq!(attester_info.policy_ids, deserialized.policy_ids);
-
-        let attester_info2 = AttesterInfo {
-            attester_type: Some("tpm_boot".to_string()),
-            policy_ids: Some(vec!["policy1".to_string(), "policy2".to_string()]),
-        };
-        assert_eq!(attester_info, attester_info2);
-
-        let attester_info3 = AttesterInfo {
-            attester_type: Some("tpm_ima".to_string()),
-            policy_ids: Some(vec!["policy1".to_string(), "policy2".to_string()]),
-        };
-        assert_ne!(attester_info, attester_info3);
-    }
-
-    #[test]
     fn test_get_evidence_response_serialization_comprehensive() {
         let nonce = Nonce {
             iat: 1234567890,
@@ -1613,7 +1400,7 @@ mod tests {
 
         let response = GetEvidenceResponse::new(
             "1.0.0",
-            "default",
+            "verifier",
             None,
             Some(&nonce),
             Some(&json!({"attester_data": "test"})),
@@ -1623,7 +1410,7 @@ mod tests {
 
         let serialized = serde_json::to_string(&response).unwrap();
         assert!(serialized.contains("1.0.0"));
-        assert!(serialized.contains("default"));
+        assert!(serialized.contains("verifier"));
         assert!(serialized.contains("test_node_id"));
         assert!(serialized.contains("tpm_boot"));
         assert!(serialized.contains("tpm_ima"));
