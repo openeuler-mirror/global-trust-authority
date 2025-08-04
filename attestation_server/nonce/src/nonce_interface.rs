@@ -12,13 +12,15 @@
 
 use base64::{engine::general_purpose, Engine as _};
 use log::{error, info};
-use rand::{RngCore, SeedableRng};
+use ring::rand::{SecureRandom, SystemRandom};
 use rand_chacha::ChaCha20Rng;
+use rand_chacha::rand_core::{RngCore, SeedableRng};
 use std::time::{SystemTime, UNIX_EPOCH};
 use key_management::api::impls::default_crypto_impl::DefaultCryptoImpl;
 use key_management::api::CryptoOperations;
 use serde::Serialize;
 use config_manager::types::CONFIG;
+use crate::error::NonceError;
 
 const SEED_SIZE: usize = 32; // seed size
 
@@ -45,35 +47,45 @@ pub struct ValidateResult {
 
 impl Nonce {
     // generate Nonce
-    pub async fn generate() -> Self {
+    pub async fn generate() -> Result<Self, NonceError> {
         info!("generate nonce begin");
         let iat = get_system_time();
-        let value = generate_random_base64();
-        Self {
+        let value = generate_random_base64()?;
+        let sig = get_signature(iat, value.clone()).await?;
+        Ok(Self {
             iat,
             value: value.clone(),
-            signature:  get_signature(iat, value).await
-        }
+            signature: sig,
+        })
     }
 }
 
 // base64 encode
-fn generate_random_base64() -> String {
-    let mut rng = create_secure_rng();
+fn generate_random_base64() -> Result<String, NonceError> {
+    let mut rng = match create_secure_rng() {
+        Ok(rng) => rng,
+        Err(error) => {
+            error!("Failed to create secure RNG: {}", error);
+            return Err(NonceError::RngError);
+        }
+    };
     let config = CONFIG.get_instance().expect("Failed to get config instance");
-    let nonce_bytes = config.attestation_service.nonce.nonce_bytes;
-    let mut random_bytes = vec![0u8; nonce_bytes as usize];
+    let nonce_bytes = config.attestation_service.nonce.nonce_bytes as usize;
+    let mut random_bytes = vec![0u8; nonce_bytes];
     rng.fill_bytes(&mut random_bytes);
-    general_purpose::STANDARD.encode(random_bytes)
+    Ok(general_purpose::STANDARD.encode(random_bytes))
 }
 
 // get signature
-async fn get_signature(iat: u64, value: String) -> String {
+async fn get_signature(iat: u64, value: String) -> Result<String, NonceError> {
     let str1 = iat.to_string() + &value;
     let data = str1.as_bytes().to_vec();
     match DefaultCryptoImpl::sign(&DefaultCryptoImpl, &data, "NSK").await {
-        Ok(res) => general_purpose::STANDARD.encode(&res.signature),
-        Err(_error) => Err(_error).expect("Failed to generate signature"),
+        Ok(res) => Ok(general_purpose::STANDARD.encode(&res.signature)),
+        Err(error) => {
+            error!("Failed to sign data: {}", error);
+            Err(NonceError::SignatureError)
+        }
     }
 }
 
@@ -100,10 +112,10 @@ async fn check_nonce_validity(input: ValidateNonceParams, msg: &mut String) -> b
 }
 
 // create secure rng
-fn create_secure_rng() -> ChaCha20Rng {
+fn create_secure_rng() -> Result<ChaCha20Rng, String> {
     let mut seed = [0u8; SEED_SIZE];
-    rand::thread_rng().fill_bytes(&mut seed);
-    ChaCha20Rng::from_seed(seed)
+    SystemRandom::new().fill(&mut seed).map_err(|_| "Failed to generate random bytes")?;
+    Ok(ChaCha20Rng::from_seed(seed.into()))
 }
 
 /// Gets the current system time as seconds since the Unix epoch.
@@ -145,8 +157,8 @@ mod tests {
     #[test]
     fn test_create_secure_rng_uniqueness() {
         // Create multiple RNG instances and verify that they generate different numbers
-        let mut rng1 = create_secure_rng();
-        let mut rng2 = create_secure_rng();
+        let mut rng1 = create_secure_rng().unwrap();
+        let mut rng2 = create_secure_rng().unwrap();
 
         let mut numbers1 = [0u8; 32];
         let mut numbers2 = [0u8; 32];
@@ -158,7 +170,7 @@ mod tests {
 
     #[test]
     fn test_create_secure_rng_distribution() {
-        let mut rng = create_secure_rng();
+        let mut rng = create_secure_rng().unwrap();
         let mut numbers = HashSet::new();
 
         // Generate 100 random numbers and check their distribution
@@ -192,7 +204,7 @@ mod tests {
     #[test]
     fn test_create_secure_rng_seed_size() {
         // Verify that the seed size is correct
-        let mut rng = create_secure_rng();
+        let mut rng = create_secure_rng().unwrap();
         let mut bytes = vec![0u8; SEED_SIZE];
         rng.fill_bytes(&mut bytes);
 

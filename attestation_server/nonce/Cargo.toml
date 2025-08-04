@@ -7,7 +7,6 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
-rand.workspace = true
 rand_chacha.workspace = true
 base64.workspace = true
 key_management.workspace = true
@@ -15,3 +14,5 @@ log.workspace = true
 serde.workspace = true
 config_manager.workspace = true
 tokio.workspace = true
+ring.workspace = true
+thiserror.workspace = true

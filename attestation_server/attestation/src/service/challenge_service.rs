@@ -52,7 +52,13 @@ impl ChallengeService {
         }
 
         info!("Plugins verified, start generating nonce");
-        let nonce = Nonce::generate().await;
+        let nonce = match Nonce::generate().await {
+            Ok(nonce) => nonce,
+            Err(error) => {
+                error!("Failed to generate nonce: {}", error);
+                return Err(AttestationError::InternalError(error.to_string()));
+            }
+        };
         info!("Nonce generated successfully");
         Ok(HttpResponse::Ok().json(json!({
             "service_version": SERVICE_VERSION,
