@@ -36,28 +36,28 @@ The .env file configures key configurations such as database, middleware, flow l
 
 Configuration of nonce, token, policy, certificate, baseline on server side
 
-| Configuration Level |         Field Name         |                              Field Meaning                              | Field Type |                                    Default/Example Values                                     |
-|:-------------------:|:--------------------------:|:-----------------------------------------------------------------------:|:----------:|:---------------------------------------------------------------------------------------------:|
-|   key_management    |     vault_get_key_url      | Vault service URL for getting signing keys<br/>(Fill in actual details) |   string   |                      "https://127.0.0.1:8082/v1/vault/get_signing_keys"                       |
-|   key_management    |      is_require_sign       |     Whether to request a signature, this setting cannot be changed      |  boolean   |                                             true                                              |
-|  token_management   |            jku             |                               JWK Set URL                               |   string   |                                             "jku"                                             |
-|  token_management   |            kid             |                                 Key ID                                  |   string   |                                             "kid"                                             |
-|  token_management   |         exist_time         |                   Token Existence Time (milliseconds)                   |  integer   |                                            600000                                             |
-|  token_management   |            iss             |                                 Issuer                                  |   string   |                                             "iss"                                             |
-|  token_management   |        eat_profile         |                               EAT profile                               |   string   |                                         "eat_profile"                                         |
-|  token_management   |         mq_enabled         |                   Whether message queuing is enabled                    |  boolean   |                                             false                                             |
-|  token_management   |        token_topic         |             Token subject name<br/>(Fill in actual details)             |   string   |                                       "gta_token_topic"                                       |
-|       policy        |  export_policy_file.name   |                            Policy File Name                             |  string[]  |                                    ["tpm_boot", "tpm_ima"]                                    |
+| Configuration Level |         Field Name         |                              Field Meaning                              | Field Type |                                         Default/Example Values                                          |
+|:-------------------:|:--------------------------:|:-----------------------------------------------------------------------:|:----------:|:-------------------------------------------------------------------------------------------------------:|
+|   key_management    |     vault_get_key_url      | Vault service URL for getting signing keys<br/>(Fill in actual details) |   string   |                           "https://127.0.0.1:8082/v1/vault/get_signing_keys"                            |
+|   key_management    |      is_require_sign       |     Whether to request a signature, this setting cannot be changed      |  boolean   |                                                  true                                                   |
+|  token_management   |            jku             |                               JWK Set URL                               |   string   |                                                  "jku"                                                  |
+|  token_management   |            kid             |                                 Key ID                                  |   string   |                                                  "kid"                                                  |
+|  token_management   |         exist_time         |                   Token Existence Time (milliseconds)                   |  integer   |                                                 600000                                                  |
+|  token_management   |            iss             |                                 Issuer                                  |   string   |                                                  "iss"                                                  |
+|  token_management   |        eat_profile         |                               EAT profile                               |   string   |                                              "eat_profile"                                              |
+|  token_management   |         mq_enabled         |                   Whether message queuing is enabled                    |  boolean   |                                                  false                                                  |
+|  token_management   |        token_topic         |             Token subject name<br/>(Fill in actual details)             |   string   |                                            "gta_token_topic"                                            |
+|       policy        |  export_policy_file.name   |                            Policy File Name                             |  string[]  |                                         ["tpm_boot", "tpm_ima"]                                         |
 |       policy        |  export_policy_file.path   |              Policy File Path<br/>(Fill in actual details)              |  string[]  | ["/var/test_docker/app/export_policy/tpm_boot.rego", "/var/test_docker/app/export_policy/tpm_ima.rego"] |
-|       policy        | is_verify_policy_signature |                   Whether to verify policy signatures                   |  boolean   |                                             false                                             |
-|       policy        |  single_user_policy_limit  |                    Limit number of policies per user                    |  integer   |                                              30                                               |
-|       policy        | policy_content_size_limit  |                    Policy content size limit (bytes)                    |  integer   |                                              500                                              |
-|       policy        |  query_user_policy_limit   |                         Query user policy limit                         |  integer   |                                              10                                               |
-|        cert         |   single_user_cert_limit   |                Limit number of single-user certificates                 |  integer   |                                              10                                               |
-|        nonce        |     nonce_valid_period     |                     Nonce validity period (seconds)                     |  integer   |                                              120                                              |
-|        nonce        |        nonce_bytes         |                            nonce byte length                            |  integer   |                                              64                                               |
-|       plugins       |            name            |                               Plugin Name                               |  string[]  |                                    ["tpm_boot", "tpm_ima"]                                    |
-|       plugins       |            path            |          Plugin library file path<br/>(Fill in actual details)          |  string[]  |      ["/usr/local/lib/libtpm_boot_verifier.so", "/usr/local/lib/libtpm_ima_verifier.so"]      |
+|       policy        | is_verify_policy_signature |                   Whether to verify policy signatures                   |  boolean   |                                                  false                                                  |
+|       policy        |  single_user_policy_limit  |                    Limit number of policies per user                    |  integer   |                                                   30                                                    |
+|       policy        | policy_content_size_limit  |                     Policy content size limit (KB)                      |  integer   |                                                   500                                                   |
+|       policy        |  query_user_policy_limit   |                         Query user policy limit                         |  integer   |                                                   10                                                    |
+|        cert         |   single_user_cert_limit   |                Limit number of single-user certificates                 |  integer   |                                                   10                                                    |
+|        nonce        |     nonce_valid_period     |                     Nonce validity period (seconds)                     |  integer   |                                                   120                                                   |
+|        nonce        |        nonce_bytes         |                            nonce byte length                            |  integer   |                                                   64                                                    |
+|       plugins       |            name            |                               Plugin Name                               |  string[]  |                                         ["tpm_boot", "tpm_ima"]                                         |
+|       plugins       |            path            |          Plugin library file path<br/>(Fill in actual details)          |  string[]  |           ["/usr/local/lib/libtpm_boot_verifier.so", "/usr/local/lib/libtpm_ima_verifier.so"]           |
 
 #### attestation_server/api/Cargo.toml
 
@@ -101,6 +101,8 @@ Configuration of agent ip, server url, log file and plugins information on agent
 | plugins              | params.quote_signature_scheme.signature_alg | Signature algorithm for quotes                                                                                                                                                                                                      | string     | "rsassa" (options: rsapss, rsassa, ecdsa)                                                                                            |
 | plugins              | params.quote_signature_scheme.hash_alg      | Hash algorithm for quotes                                                                                                                                                                                                           | string     | "sha256" (options: sha1, sha256, sha384, sha512, sm3)                                                                                |
 | plugins              | params.log_file_path                        | Measurement log file path                                                                                                                                                                                                           | string     | "/sys/kernel/security/tpm0/binary_bios_measurements" for tpm_boot, "/sys/kernel/security/ima/ascii_runtime_measurements" for tpm_ima |
+| plugins              | params.ima_log_file_path                    | Measurement ima log file path                                                                                                                                                                                                       | string     | "/sys/kernel/security/ima/ascii_runtime_measurements" for virt_cca                                                                   |
+| plugins              | params.ccel_data_path                       | Measurement CCEL log file path                                                                                                                                                                                                      | string     | "/sys/firmware/acpi/tables/data/CCEL" for virt_cca                                                                                   |
 | schedulers           | name                                        | Scheduler task name                                                                                                                                                                                                                 | string     | "challenge", "config_sync"                                                                                                           |
 | schedulers           | retry_enabled                               | Whether to enable retry mechanism                                                                                                                                                                                                   | boolean    | true/false                                                                                                                           |
 | schedulers           | intervals                                   | Task execution interval in seconds                                                                                                                                                                                                  | integer    | 86400 (24 hours) for challenge, 300 (5 minutes) for config_sync                                                                      |
@@ -395,3 +397,59 @@ All of the above data is in the Challenge_Request_Challenge_Response_Environment
 ### Interact with Rest API
 
 Refer to the Complete_List_of_Management_Tool_Commands.md documentation to Interact with the Rest API using the cli_tool.
+
+## Generate reference value
+
+### Introduction
+
+In the scripts directory, there is a baseline creation tool, reference_value_generate_tool.sh, which supports rim baseline (virtCCA) and ima baseline generation.
+
+### Dependencies
+
+1. gen_rim_ref
+
+   A tool for generating rim baselines. After downloading virtCCA_sdk, it will be generated in the /usr/bin directory.
+
+2. DTB device tree binary file
+
+   The rim baseline depends on the DTB device tree binary file. You need to edit the cVM XML configuration and add the following QEMU parameters:
+
+   ```
+   <qemu:arg value=‘-machine’/>
+   <qemu:arg value=‘dumpdtb=/path/to/dump.dtb’>
+   ```
+
+   Start the cVM virtual machine, and the dtb file will be generated in the specified path
+
+   ```
+   virsh define <cvm.xml>
+   virsh start <cvm>
+   ```
+
+   Edit the cVM virtual machine XML configuration and remove the added QEMU pass-through parameters
+   Obtain the cVM baseline metrics using gen_rim_ref. Depending on the startup method, different execution commands are used
+   Kernel direct startup: Configure the kernel image and initramfs startup method within the virtual machine
+   GRUB startup: Configure the UEFI path and qcow2 image startup method
+
+### Parameter Description
+
+| Script parameter | Meaning                                                                                                                                                                                                                                   | Required |
+|------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| -m               | virtCCA baseline or IMA baseline, ima/rim                                                                                                                                                                                                 | Yes      |
+| -f               | In IMA mode, the file path specified for IMA metrics; <br/>in rim mode, the firmware_path, which is the UEFI firmware path configured for CVM                                                                                             | No       |
+| -a               | Selects the algorithm specified by the IMA baseline measurement. <br/>The default is SHA256, and it supports SHA256, SHA384, SHA512, and SM3 (requires installation of the national cryptographic algorithm library). Only IMA uses this. | No       |
+| -d               | Path to the DTB file                                                                                                                                                                                                                      | No       |
+| -v               | vcpu_nums: Number of virtual CPUs configured for the cVM virtual machine                                                                                                                                                                  | No       |
+| -k               | kernel_path: Path to the guest kernel file used by the cVM virtual machine. Required when booting directly from the kernel                                                                                                                | No       |
+| -i               | initramfs_path: Path to the initial RAM file system. Required when booting directly from the kernel                                                                                                                                       | No       |
+| -h               | Explains the meaning and usage of each parameter                                                                                                                                                                                          | No       |
+
+Translated with DeepL.com (free version)
+
+### Usage example
+
+```
+sh reference_value_generate_tool.sh -m ima -f /root -a sha256
+
+sh reference_value_generate_tool.sh -m rim -f /path/to/firmware_path -d /path/to/dump.dtb -v 4
+```

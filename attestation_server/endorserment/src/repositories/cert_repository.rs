@@ -558,6 +558,7 @@ impl CertRepository {
                     cert_service::CertificateType::POLICY,
                     cert_service::CertificateType::TPM_BOOT,
                     cert_service::CertificateType::TPM_IMA,
+                    cert_service::CertificateType::VIRT_CCA,
                 ];
                 if let Some(cert_type) = &cert_type {
                     if !valid_types.contains(&cert_type.as_str()) {

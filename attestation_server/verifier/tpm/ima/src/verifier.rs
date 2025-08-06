@@ -13,7 +13,7 @@
 use serde_json::Value;
 use plugin_manager::{ServicePlugin, PluginError, PluginBase, ServiceHostFunctions};
 use tpm_common_verifier::{GenerateEvidence, Evidence, EvidenceResult, PcrValues, LogResult, Logs};
-use crate::measurement_log::ImaLog;
+use common_verifier::ImaLog;
 use once_cell::sync::Lazy;
 use async_trait::async_trait;
 use std::error::Error;

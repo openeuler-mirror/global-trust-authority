@@ -90,7 +90,7 @@ impl RefValueTrait for RvRedisImpl {
                 .map(|rv_dtl| {
                     RvRedisModelBuilder::new()
                         .user_id(user_id)
-                        .attester_type("tpm_ima")
+                        .attester_type(update_req_body.attester_type.clone())
                         .rv_id(&rv_dtl.ref_value_id)
                         .file_name(&rv_dtl.file_name)
                         .sha256(&rv_dtl.sha256)

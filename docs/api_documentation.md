@@ -79,32 +79,32 @@
 **Request Method**: `POST /global-trust-authority/agent/v1/evidences`
 
 #### Request Parameters
-| Field         | Sub-field     | Type            | Required | parameter constraint                       | Description                                                  |
-| ------------- | ------------- | --------------- | -------- | ------------------------------------------ | ------------------------------------------------------------ |
-| attesters     |               | list of objects | Yes      | Fill in either tpm_boot or tpm_ima or both | challenge information                                        |
-|               | attester_type | string          | yes      | tpm_boot/tpm_ima/virtCCA                   | challenge types                                              |
-|               | log_types     | list of strings | No       | ImaLog/TcgEventLog                         | types of log to collect                                      |
-| nonce_type    |               | string          | No       | ignore、user or verifier                   | ignore/user/verifier(default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
-| user_nonce    |               | string          | No       | Lenght 1-1024 bytes                        | Filled when nonce_type is user, Format: Base64               |
-| nonce         |               | object          | No       |                                            | Nonce value structure / required if nonce_type not filled    |
-|               | iat           | u64             | No       |                                            | Issue time                                                   |
-|               | value         | string          | No       | Lenght 1-1024 bytes                        | Nonce value                                                  |
-|               | signature     | string          | No       |                                            | Signature value                                              |
-| attester_data |               | object          | No       |                                            | User data, reserved field                                    |
+| Field         | Sub-field     | Type            | Required | parameter constraint                       | Description                                                                                                              |
+|---------------|---------------|-----------------|----------|--------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| attesters     |               | list of objects | Yes      | Fill in either tpm_boot or tpm_ima or both | challenge information                                                                                                    |
+|               | attester_type | string          | yes      | tpm_boot/tpm_ima/virt_cca                  | challenge types                                                                                                          |
+|               | log_types     | list of strings | No       | ImaLog/TcgEventLog/CCEL                    | types of log to collect                                                                                                  |
+| nonce_type    |               | string          | No       | ignore、user or verifier                    | ignore/user/verifier(default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
+| user_nonce    |               | string          | No       | Lenght 1-1024 bytes                        | Filled when nonce_type is user, Format: Base64                                                                           |
+| nonce         |               | object          | No       |                                            | Nonce value structure / required if nonce_type not filled                                                                |
+|               | iat           | u64             | No       |                                            | Issue time                                                                                                               |
+|               | value         | string          | No       | Lenght 1-1024 bytes                        | Nonce value                                                                                                              |
+|               | signature     | string          | No       |                                            | Signature value                                                                                                          |
+| attester_data |               | object          | No       |                                            | User data, reserved field                                                                                                |
 
 #### Response Parameters
-| Field         | Sub-field     | Second-level Sub-field | Type            | Required | Description                                                  |
-| ------------- | ------------- | ---------------------- | --------------- | -------- | ------------------------------------------------------------ |
-| agent_version |               |                        | string          | No       | Client version number                                        |
+| Field         | Sub-field     | Second-level Sub-field | Type            | Required | Description                                                                                                              |
+|---------------|---------------|------------------------|-----------------|----------|--------------------------------------------------------------------------------------------------------------------------|
+| agent_version |               |                        | string          | No       | Client version number                                                                                                    |
 | nonce_type    |               |                        | string          | No       | ignore/user/verifier(default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
-| user_nonce    |               |                        | string          | No       | Filled when nonce_type is user                               |
-| measurements  |               |                        | list of objects | No       | Measurement data                                             |
-|               | node_id       |                        | string          | No       | Node ID, corresponds to ueid                                 |
-|               | nonce         |                        | object          | No       | Nonce object, see /challenge definition                      |
-|               | attester_data |                        | object          | No       | User-defined data to be passed through, must be placed in token as-is |
-|               | evidences     |                        | list of objects | No       | Challenge report                                             |
-|               |               | attester_type          | string          | No       | Challenge type                                               |
-|               |               | evidence               | list of objects | No       | Specific evidence                                            |
+| user_nonce    |               |                        | string          | No       | Filled when nonce_type is user                                                                                           |
+| measurements  |               |                        | list of objects | No       | Measurement data                                                                                                         |
+|               | node_id       |                        | string          | No       | Node ID, corresponds to ueid                                                                                             |
+|               | nonce         |                        | object          | No       | Nonce object, see /challenge definition                                                                                  |
+|               | attester_data |                        | object          | No       | User-defined data to be passed through, must be placed in token as-is                                                    |
+|               | evidences     |                        | list of objects | No       | Challenge report                                                                                                         |
+|               |               | attester_type          | string          | No       | Challenge type                                                                                                           |
+|               |               | evidence               | list of objects | No       | Specific evidence                                                                                                        |
 
 ##### Example of request
 

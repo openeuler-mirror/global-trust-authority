@@ -44,7 +44,7 @@ fn validate_attester_type(attester_type: &str) -> Result<(), ValidationError> {
     if attester_type.is_empty() {
         return Err(ValidationError::new("attester_type is empty"));
     }
-    let allowed_attester_types = vec!["tpm_ima"];
+    let allowed_attester_types = vec!["tpm_ima", "virt_cca"];
     if !allowed_attester_types.contains(&attester_type) {
         let mut error = ValidationError::new("invalid_attester_type")
             .with_message(

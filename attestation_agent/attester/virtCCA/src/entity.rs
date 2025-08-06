@@ -10,6 +10,18 @@
  * See the Mulan PSL v2 for more details.
  */
 
-mod verifier;
+use serde::{Serialize, Deserialize};
 
-pub use verifier::TpmImaPlugin;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Log {
+    pub log_type: String,
+    pub log_data: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VritCCAEvidence {
+    pub vcca_token: String,
+    pub dev_cert: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logs: Option<Vec<Log>>,
+}

@@ -28,8 +28,6 @@ pub struct QuoteVerifier {
     signature: TpmtSignature,
 }
 
-const MAX_NONCE_SIZE: usize = 32;
-
 impl QuoteVerifier {
     /// Create QuoteVerifier from raw Quote and signature data
     ///

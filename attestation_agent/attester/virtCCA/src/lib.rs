@@ -10,6 +10,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
-mod verifier;
-
-pub use verifier::TpmImaPlugin;
+pub mod attester;
+pub mod config;
+pub mod entity;
+mod vcca_sdk;
+pub use attester::VirtCCAPlugin;

@@ -19,7 +19,7 @@ use std::io::{BufRead, BufReader};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 /// Maximum number of lines allowed in an IMA log file
-const MAX_IMA_LOG_LINES: usize = 20000;
+const MAX_IMA_LOG_LINES: usize = 100000;
 
 #[derive(Debug)]
 pub struct TpmImaPlugin {
@@ -108,7 +108,7 @@ impl TpmPluginBase for TpmImaPlugin {
             line_count += 1;
 
             // Check line count after reading
-            if line_count > MAX_IMA_LOG_LINES {
+            if line_count >= MAX_IMA_LOG_LINES {
                 return Err(PluginError::InternalError(
                     format!("IMA log file exceeds maximum allowed lines: {} > {}", line_count, MAX_IMA_LOG_LINES)
                 ));

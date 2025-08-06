@@ -10,7 +10,7 @@ License:  MulanPSL-2.0
 Source0: %{_source_dir}.tar.gz
 Source1: vendor.tar.gz
 
-Requires: systemd, openssl, tpm2-tss
+Requires: systemd, openssl, tpm2-tss, virtCCA_sdk, virtCCA_sdk-devel
 
 %description
 Global Trust Authority Agent, including main process and plugins
@@ -37,7 +37,7 @@ cargo clean
 
 export RUST_MIN_STACK=33554432
 
-CARGO_BUILD_JOBS=4 cargo build -p attestation_agent -p tpm_boot_attester -p tpm_ima_attester
+CARGO_BUILD_JOBS=4 cargo build -p attestation_agent -p tpm_boot_attester -p tpm_ima_attester -p virtcca_attester
 
 %install
 rm -rf %{buildroot}
@@ -52,6 +52,7 @@ install -pm 640 config/agent_config.yaml                      %{buildroot}%{_sys
 
 install -pm 550 %{agent_output_dir}/libtpm_boot_attester.so   %{buildroot}%{_libdir}
 install -pm 550 %{agent_output_dir}/libtpm_ima_attester.so    %{buildroot}%{_libdir}
+install -pm 550 %{agent_output_dir}/libvirtcca_attester.so   %{buildroot}%{_libdir}
 
 %files
 %dir %attr(0750, root, root) %{_sysconfdir}/attestation_agent
@@ -61,6 +62,7 @@ install -pm 550 %{agent_output_dir}/libtpm_ima_attester.so    %{buildroot}%{_lib
 %{_bindir}/attestation_agent
 %{_libdir}/libtpm_boot_attester.so
 %{_libdir}/libtpm_ima_attester.so
+%{_libdir}/libvirtcca_attester.so
 
 %post
 %systemd_post attestation_agent.service

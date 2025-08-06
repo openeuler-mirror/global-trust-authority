@@ -7,6 +7,7 @@ members = [
     "attestation_agent/utils",
     "attestation_agent/attester/tpm/ima",
     "attestation_agent/attester/tpm/boot",
+    "attestation_agent/attester/virtCCA",
     "attestation_server/policy",
     "attestation_server/ref_value",
     "attestation_server/endorserment",
@@ -20,6 +21,7 @@ members = [
     "attestation_server/resource_provider",
     "attestation_server/verifier/tpm/boot",
     "attestation_server/verifier/tpm/ima",
+    "attestation_server/verifier/virtCCA",
     "attestation_common/cache",
     "attestation_common/config_manager",
     "attestation_common/distributed_lock",
@@ -122,3 +124,6 @@ bytes = "1.10.1"
 actix-multipart = "0.7.2"
 zeroize = { version = "1.6", features = ["derive"] }
 subtle = "2.5"
+# TODO:Use the official secGear code repository and specify the commit ID.
+sec_gear = { git = "https://gitee.com/lyyyze/secGear.git", package = "verifier", branch = "master", features = ["virtcca-verifier"], default-features = false }
+eventlog-rs = { git = "https://gitee.com/lyyyze/secGear.git", package = "eventlog-rs", branch = "master" }
