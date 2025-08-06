@@ -189,6 +189,7 @@ fn get_enabled_attester_types() -> Result<Vec<String>, ChallengeError> {
                 let attester_type = match params {
                     config::PluginParams::TpmBoot(_) => "tpm_boot",
                     config::PluginParams::TpmIma(_) => "tpm_ima",
+                    config::PluginParams::VirtCCA(_) => "virt_cca",
                 };
                 enabled_attester_types.push(attester_type.to_string());
             }
@@ -217,7 +218,7 @@ fn find_plugin_for_attester_type(attester_type: &str) -> Result<(Arc<dyn AgentPl
                 && p.params.as_ref().is_some_and(|params| {
                     matches!(
                         (params, attester_type),
-                        (config::PluginParams::TpmBoot(_), "tpm_boot") | (config::PluginParams::TpmIma(_), "tpm_ima")
+                        (config::PluginParams::TpmBoot(_), "tpm_boot") | (config::PluginParams::TpmIma(_), "tpm_ima") | (config::PluginParams::VirtCCA(_), "virt_cca")
                     )
                 })
         })

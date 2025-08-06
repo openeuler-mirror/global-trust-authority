@@ -71,12 +71,20 @@ pub struct ImaConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VirtCCAConfig {
+    pub ccel_data_path: String,
+    pub ima_log_file_path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "attester_type")]
 pub enum PluginParams {
     #[serde(rename = "tpm_boot")]
     TpmBoot(TpmConfig),
     #[serde(rename = "tpm_ima")]
     TpmIma(ImaConfig),
+    #[serde(rename = "virt_cca")]
+    VirtCCA(VirtCCAConfig),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -230,14 +238,14 @@ impl Config {
                     // Validate TPM base configuration
                     Self::validate_tpm_base_config(&config.tpm_base, &plugin.name, idx)?;
                 },
+                PluginParams::VirtCCA(_) => {},
             }
         }
 
         Ok(())
     }
 
-    /// Validate TPM base configuration
-    fn validate_tpm_base_config(tpm_base: &TpmBaseConfig, plugin_name: &str, idx: usize) -> Result<(), String> {
+fn validate_tpm_base_config(tpm_base: &TpmBaseConfig, plugin_name: &str, idx: usize) -> Result<(), String> {
         // Validate TCTI configuration
         let valid_tcti = ["device", "mssim", "swtpm", "tabrmd", "libtpm"];
         if !valid_tcti.contains(&tpm_base.tcti_config.as_str()) {

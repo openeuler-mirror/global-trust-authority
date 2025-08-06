@@ -1,0 +1,17 @@
+[package]
+name = "virt_cca_attester"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["rlib", "dylib"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+plugin_manager.workspace = true
+base64.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+lazy_static = "1"
