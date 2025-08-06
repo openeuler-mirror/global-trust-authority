@@ -47,10 +47,10 @@ fn test_vcca_token_verify_cvm_token_nonce_mismatch() {
     let wrong_nonce = b"wrong_nonce";
     let result = vcca_token.verify_cvm_token(Some(wrong_nonce));
     assert!(result.is_err());
-    if let Err(PluginError::InternalError(msg)) = result {
+    if let Err(PluginError::InputError(msg)) = result {
         assert!(msg.contains("Cvm token challenge does not match nonce"));
     } else {
-        panic!("Expected InternalError for nonce mismatch");
+        panic!("Expected InputError for nonce mismatch");
     }
 }
 

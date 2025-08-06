@@ -12,12 +12,14 @@
 
 use base64::{engine::general_purpose, Engine as _};
 use openssl::x509::X509;
+use openssl::asn1::Asn1Time;
 use plugin_manager::PluginError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::cmp::Ordering::{Greater, Less};
 
 use super::log_verifier::LogResult;
-use crate::constants::{EQUIPMENT_ROOT_CA_ECCP521, EQUIPMENT_ROOT_CA_RSA, IT_PRODUCT_CA_ECCP521, IT_PRODUCT_CA_RSA};
+use crate::constants::{VCCA_EQUIPMENT_ROOT_CA_ECCP521, VCCA_EQUIPMENT_ROOT_CA_RSA, VCCA_IT_PRODUCT_CA_ECCP521, VCCA_IT_PRODUCT_CA_RSA};
 use crate::tokens::VccaToken;
 use crate::verifier::VirtCCAPlugin;
 use crate::log_verifier::verify_all_logs;
@@ -105,14 +107,34 @@ impl VritCCAEvidence {
             .public_key()
             .map_err(|e| PluginError::InternalError(format!("Failed to get device public key: {}", e)))?;
         let is_rsa = dev_pk.rsa().is_ok();
-        let root_ca_pem = if is_rsa { EQUIPMENT_ROOT_CA_RSA } else { EQUIPMENT_ROOT_CA_ECCP521 };
-        let product_ca_pem = if is_rsa { IT_PRODUCT_CA_RSA } else { IT_PRODUCT_CA_ECCP521 };
+        let root_ca_pem = if is_rsa { VCCA_EQUIPMENT_ROOT_CA_RSA } else { VCCA_EQUIPMENT_ROOT_CA_ECCP521 };
+        let product_ca_pem = if is_rsa { VCCA_IT_PRODUCT_CA_RSA } else { VCCA_IT_PRODUCT_CA_ECCP521 };
 
         let device_cert = dev_cert_x509;
         let product_cert = X509::from_pem(product_ca_pem.as_bytes())
             .map_err(|e| PluginError::InternalError(format!("Failed to parse product CA: {}", e)))?;
         let root_cert = X509::from_pem(root_ca_pem.as_bytes())
             .map_err(|e| PluginError::InternalError(format!("Failed to parse root CA: {}", e)))?;
+
+        let now = Asn1Time::days_from_now(0).map_err(|e| PluginError::InternalError(format!("Failed to get current time: {}", e)))?;
+
+        // Check device cert validity
+        if now.compare(&device_cert.not_before()).map_err(|e| PluginError::InputError(e.to_string()))? != Greater ||
+           now.compare(&device_cert.not_after()).map_err(|e| PluginError::InputError(e.to_string()))? != Less {
+            return Err(PluginError::InputError("Device certificate is expired or not yet valid".to_string()));
+        }
+
+        // Check product cert validity
+        if now.compare(&product_cert.not_before()).map_err(|e| PluginError::InputError(e.to_string()))? != Greater ||
+           now.compare(&product_cert.not_after()).map_err(|e| PluginError::InputError(e.to_string()))? != Less {
+            return Err(PluginError::InputError("Product certificate is expired or not yet valid".to_string()));
+        }
+
+        // Check root cert validity
+        if now.compare(&root_cert.not_before()).map_err(|e| PluginError::InputError(e.to_string()))? != Greater ||
+           now.compare(&root_cert.not_after()).map_err(|e| PluginError::InputError(e.to_string()))? != Less {
+            return Err(PluginError::InputError("Root certificate is expired or not yet valid".to_string()));
+        }
 
         // verify dev_cert by product_cert
         let product_pk = product_cert.public_key().map_err(|e| PluginError::InternalError(e.to_string()))?;
@@ -167,7 +189,7 @@ impl VritCCAEvidence {
         // verify cvm_token
         let decoded_evidence = general_purpose::STANDARD
             .decode(&self.vcca_token)
-            .map_err(|e| PluginError::InternalError(format!("Failed to decode base64 token: {}", e)))?;
+            .map_err(|e| PluginError::InputError(format!("Failed to decode base64 token: {}", e)))?;
         let mut vcca_token = VccaToken::new(&decoded_evidence)?;
         vcca_token.verify_cvm_token(nonce)?;
         let token_info = vcca_token.to_json_value();

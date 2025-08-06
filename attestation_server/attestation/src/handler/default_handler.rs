@@ -197,9 +197,6 @@ impl DefaultHandler {
             },
         };
 
-        info!("Verify evidence: {}", verify_evidence.to_string());
-
-
         match evaluate_policy(verify_evidence, &export_policy) {
             Ok(result) => {
                 if result == serde_json::json!({}) {

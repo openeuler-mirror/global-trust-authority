@@ -127,7 +127,7 @@ impl UefiVerify {
         replayed_rtmr: &HashMap<u32, Vec<u8>>,
         uefi_log_hash: &[Vec<u8>; CVM_REM_ARR_SIZE],
     ) -> bool {
-        // UEFI only uses PCRs with subscripts 0, 1, and 2.
+        // UEFI only uses rem with index 0, 1, and 2.
         (1..CVM_REM_ARR_SIZE as u32).all(|i| {
             let index = i as usize - 1;
             replayed_rtmr

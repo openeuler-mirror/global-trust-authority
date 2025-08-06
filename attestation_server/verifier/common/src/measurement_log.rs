@@ -162,7 +162,7 @@ impl ImaLog {
 
         let mut result = Vec::with_capacity(alg_prefix.len() + 1 + hash_bytes.len());
         result.extend_from_slice(alg_prefix.as_bytes());
-        result.push(0); // Extra null byte (bug in Java code)
+        result.push(0);
         result.extend_from_slice(&hash_bytes);
 
         Ok(result)

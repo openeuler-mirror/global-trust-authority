@@ -48,12 +48,12 @@ impl VccaToken {
             let nonce_len = nonce.len();
             let token_challenge = &self.tokens.cvm_token.challenge[..nonce_len];
             if token_challenge != nonce {
-                return Err(PluginError::InternalError("Cvm token challenge does not match nonce".to_string()));
+                return Err(PluginError::InputError("Cvm token challenge does not match nonce".to_string()));
             }
         }
         
         self.tokens.verify_cose_sign1()
-            .map_err(|e| PluginError::InternalError(e.to_string()))?;
+            .map_err(|e| PluginError::InputError(e.to_string()))?;
         Ok(())
     }
 

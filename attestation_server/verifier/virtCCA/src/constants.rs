@@ -11,7 +11,7 @@
  */
 
 // RSA-signed equipment root certificate
-pub const EQUIPMENT_ROOT_CA_RSA: &str = 
+pub const VCCA_EQUIPMENT_ROOT_CA_RSA: &str =
 "-----BEGIN CERTIFICATE-----
 MIIFPzCCAyegAwIBAgIRdiVgAipHXuymK3xorJs/KYYwDQYJKoZIhvcNAQELBQAw
 PDELMAkGA1UEBhMCQ04xDzANBgNVBAoTBkh1YXdlaTEcMBoGA1UEAxMTSHVhd2Vp
@@ -45,7 +45,7 @@ iW4z
 -----END CERTIFICATE-----";
 
 // RSA-signed IT product certificate
-pub const IT_PRODUCT_CA_RSA: &str = 
+pub const VCCA_IT_PRODUCT_CA_RSA: &str =
 "-----BEGIN CERTIFICATE-----
 MIIEsTCCApmgAwIBAgIRdjl5z9FobnagzdStBIQZVIcwDQYJKoZIhvcNAQELBQAw
 PDELMAkGA1UEBhMCQ04xDzANBgNVBAoTBkh1YXdlaTEcMBoGA1UEAxMTSHVhd2Vp
@@ -76,7 +76,7 @@ d+j7JrLzey3bncx7wceASUUL3iAzICHYr728fNzXKV6OcZpjGdYdVREpM26sbxLo
 -----END CERTIFICATE-----";
 
 // ECC-signed equipment root certificate
-pub const EQUIPMENT_ROOT_CA_ECCP521: &str = 
+pub const VCCA_EQUIPMENT_ROOT_CA_ECCP521: &str =
 "-----BEGIN CERTIFICATE-----
 MIICoDCCAgKgAwIBAgIDazWSMAoGCCqGSM49BAMEMDwxDzANBgNVBAoTBkh1YXdl
 aTEpMCcGA1UEAxMgSHVhd2VpIEVDQyBBdHRlc3RhdGlvbiBSb290IENBIDEwIBcN
@@ -96,7 +96,7 @@ rXR7Mg==
 -----END CERTIFICATE-----";
 
 // ECC-signed IT product certificate
-pub const IT_PRODUCT_CA_ECCP521: &str = 
+pub const VCCA_IT_PRODUCT_CA_ECCP521: &str =
 "-----BEGIN CERTIFICATE-----
 MIIDEzCCAnWgAwIBAgIREjwNmamCifcSzIM4CHEAvYEwCgYIKoZIzj0EAwQwPDEP
 MA0GA1UEChMGSHVhd2VpMSkwJwYDVQQDEyBIdWF3ZWkgRUNDIEF0dGVzdGF0aW9u
