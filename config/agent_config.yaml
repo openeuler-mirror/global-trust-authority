@@ -57,7 +57,7 @@ plugins:
       log_file_path: "/sys/kernel/security/ima/ascii_runtime_measurements"
 
   - name: "virt_cca"
-    path: "/usr/lib64/libvirt_cca_attester.so"
+    path: "/usr/lib64/libvirtcca_attester.so"
     policy_id: []
     enabled: false
     params:

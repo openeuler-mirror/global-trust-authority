@@ -41,7 +41,7 @@ export RUST_MIN_STACK=33554432
 CARGO_BUILD_JOBS=$(nproc) cargo build --release -p attestation_service --features rpm_build
 CARGO_BUILD_JOBS=$(nproc) cargo build --release -p tpm_boot_verifier
 CARGO_BUILD_JOBS=$(nproc) cargo build --release -p tpm_ima_verifier
-CARGO_BUILD_JOBS=$(nproc) cargo build --release -p virt_cca_verifier
+CARGO_BUILD_JOBS=$(nproc) cargo build --release -p virtcca_verifier
 
 %install
 rm -rf %{buildroot}
@@ -56,13 +56,14 @@ install -pm 550 %{server_output_dir}/libpolicy.so             %{buildroot}%{_lib
 install -pm 550 %{server_output_dir}/libkey_management.so     %{buildroot}%{_libdir}
 install -pm 550 %{server_output_dir}/libtpm_ima_verifier.so   %{buildroot}%{_libdir}
 install -pm 550 %{server_output_dir}/libtpm_boot_verifier.so  %{buildroot}%{_libdir}
-install -pm 550 %{server_output_dir}/libvirt_cca_verifier.so  %{buildroot}%{_libdir}
+install -pm 550 %{server_output_dir}/libvirtcca_verifier.so  %{buildroot}%{_libdir}
 install -pm 644 server_config_rpm.yaml                            %{buildroot}%{_sysconfdir}/attestation_server/server_config_rpm.yaml
 install -pm 644 logging.yaml                                  %{buildroot}%{_sysconfdir}/attestation_server/logging.yaml
 install -pm 644 .env.rpm                                      %{buildroot}%{_sysconfdir}/attestation_server/.env.rpm
 install -pm 644 rdb_sql/attestation_service/mysql/mysql_v1.sql         %{buildroot}%{_sysconfdir}/attestation_server/mysql_v1.sql
 install -pm 644 export_policy/tpm_ima.rego                                     %{buildroot}%{_sysconfdir}/attestation_server/export_policy/tpm_ima.rego
 install -pm 644 export_policy/tpm_boot.rego                                          %{buildroot}%{_sysconfdir}/attestation_server/export_policy/tpm_boot.rego
+install -pm 644 export_policy/virt_cca.rego                                          %{buildroot}%{_sysconfdir}/attestation_server/export_policy/virt_cca.rego
 
 
 %files
@@ -74,13 +75,14 @@ install -pm 644 export_policy/tpm_boot.rego                                     
 %dir %attr(0750, root, root) %{_sysconfdir}/attestation_server/export_policy/
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_ima.rego
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_boot.rego
+%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/virt_cca.rego
 
 %attr(0550, root, root) %{_bindir}/attestation_service
 %attr(0550, root, root) %{_libdir}/libpolicy.so
 %attr(0550, root, root) %{_libdir}/libkey_management.so
 %attr(0550, root, root) %{_libdir}/libtpm_boot_verifier.so
 %attr(0550, root, root) %{_libdir}/libtpm_ima_verifier.so
-%attr(0550, root, root) %{_libdir}/libvirt_cca_verifier.so
+%attr(0550, root, root) %{_libdir}/libvirtcca_verifier.so
 
 
 %changelog

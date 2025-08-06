@@ -37,7 +37,7 @@ cargo clean
 
 export RUST_MIN_STACK=33554432
 
-CARGO_BUILD_JOBS=4 cargo build -p attestation_agent -p tpm_boot_attester -p tpm_ima_attester -p virt_cca_attester
+CARGO_BUILD_JOBS=4 cargo build -p attestation_agent -p tpm_boot_attester -p tpm_ima_attester -p virtcca_attester
 
 %install
 rm -rf %{buildroot}
@@ -52,7 +52,7 @@ install -pm 640 config/agent_config.yaml                      %{buildroot}%{_sys
 
 install -pm 550 %{agent_output_dir}/libtpm_boot_attester.so   %{buildroot}%{_libdir}
 install -pm 550 %{agent_output_dir}/libtpm_ima_attester.so    %{buildroot}%{_libdir}
-install -pm 550 %{agent_output_dir}/libvirt_cca_attester.so   %{buildroot}%{_libdir}
+install -pm 550 %{agent_output_dir}/libvirtcca_attester.so   %{buildroot}%{_libdir}
 
 %files
 %dir %attr(0750, root, root) %{_sysconfdir}/attestation_agent
@@ -62,7 +62,7 @@ install -pm 550 %{agent_output_dir}/libvirt_cca_attester.so   %{buildroot}%{_lib
 %{_bindir}/attestation_agent
 %{_libdir}/libtpm_boot_attester.so
 %{_libdir}/libtpm_ima_attester.so
-%{_libdir}/libvirt_cca_attester.so
+%{_libdir}/libvirtcca_attester.so
 
 %post
 %systemd_post attestation_agent.service

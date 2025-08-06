@@ -13,7 +13,7 @@
 use base64::{engine::general_purpose, Engine as _};
 use plugin_manager::PluginError;
 
-use virt_cca_verifier::tokens::VccaToken;
+use virtcca_verifier::tokens::VccaToken;
 
 #[test]
 fn test_vcca_token_new_success() {

@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use plugin_manager::PluginError;
 use serde_json::{json, Value};
 
-use virt_cca_verifier::evidence::VritCCAEvidence;
+use virtcca_verifier::evidence::VritCCAEvidence;
 
 fn get_test_data_path(file_name: &str) -> PathBuf {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

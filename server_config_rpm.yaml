@@ -36,4 +36,4 @@ attestation_service:
     - name: "tpm_ima"
       path: "/usr/lib64/libtpm_ima_verifier.so"
     - name: "virt_cca"
-      path: "/usr/lib64/libvirt_cca_verifier.so"
+      path: "/usr/lib64/libvirtcca_verifier.so"

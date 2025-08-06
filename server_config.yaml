@@ -20,7 +20,7 @@ attestation_service:
       - name: "tpm_ima"
         path: "/var/test_docker/app/export_policy/tpm_ima.rego"
       - name: "virt_cca"
-        path: "/var/test_docker/app/export_policy/tpm_ima.rego"
+        path: "/var/test_docker/app/export_policy/virt_cca.rego"
     is_verify_policy_signature: false
     single_user_policy_limit: 30
     policy_content_size_limit: 500
@@ -36,4 +36,4 @@ attestation_service:
     - name: "tpm_ima"
       path: "/usr/local/lib/libtpm_ima_verifier.so"
     - name: "virt_cca"
-      path: "/usr/local/lib/libvirt_cca_verifier.so"
+      path: "/usr/local/lib/libvirtcca_verifier.so"

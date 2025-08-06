@@ -15,10 +15,10 @@ use std::collections::HashMap;
 use plugin_manager::{PluginError, ServiceHostFunctions};
 use serde_json::json;
 
-use virt_cca_verifier::constants::CVM_REM_ARR_SIZE;
-use virt_cca_verifier::evidence::Log;
-use virt_cca_verifier::log_verifier::{ImaVerify, LogResult, UefiVerify, verify_all_logs};
-use virt_cca_verifier::verifier::VirtCCAPlugin;
+use virtcca_verifier::constants::CVM_REM_ARR_SIZE;
+use virtcca_verifier::evidence::Log;
+use virtcca_verifier::log_verifier::{ImaVerify, LogResult, UefiVerify, verify_all_logs};
+use virtcca_verifier::verifier::VirtCCAPlugin;
 
 fn create_default_host_functions() -> ServiceHostFunctions {
     ServiceHostFunctions {

@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use virt_cca_attester::VirtCCAPlugin;
+use virtcca_attester::VirtCCAPlugin;
 use plugin_manager::PluginError;
 use tempfile::NamedTempFile;
 use std::io::Write;
@@ -111,7 +111,7 @@ fn test_plugin_config_not_found() {
 #[test]
 fn test_config_from_json_success() {
     let json = build_config_json("/path/ima", "/path/ccel");
-    let cfg = virt_cca_attester::config::VirtCCAConfig::from_json("virt_cca".to_string(), &json)
+    let cfg = virtcca_attester::config::VirtCCAConfig::from_json("virt_cca".to_string(), &json)
         .expect("parse json");
     assert_eq!(cfg.ima_log_file_path, "/path/ima");
     assert_eq!(cfg.ccel_data_path, "/path/ccel");
