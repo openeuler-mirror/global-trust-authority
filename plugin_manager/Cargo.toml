@@ -10,14 +10,11 @@ path = "src/lib.rs"
 log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-dotenv.workspace = true
 libloading.workspace = true
 thiserror.workspace = true
 async-trait.workspace = true
-config_manager.workspace = true
 [dev-dependencies]
 tokio.workspace = true
-rv.workspace = true
 
 [features]
 test-plugins = []

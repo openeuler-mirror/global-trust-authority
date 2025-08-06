@@ -1,0 +1,16 @@
+[package]
+name = "common_verifier"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+serde_json.workspace = true
+serde.workspace = true
+base64.workspace = true
+tpm_common_verifier = { path = "../tpm/common"}
+plugin_manager.workspace = true
+openssl.workspace = true
+hex.workspace = true

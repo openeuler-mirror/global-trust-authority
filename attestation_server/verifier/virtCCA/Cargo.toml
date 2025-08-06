@@ -1,0 +1,23 @@
+[package]
+name = "virt_cca_verifier"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["rlib", "dylib"]
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+plugin_manager = { path = "../../../plugin_manager" }
+async-trait.workspace = true
+eventlog-rs.workspace = true
+sec_gear.workspace = true
+openssl.workspace = true
+hex.workspace = true
+base64.workspace = true
+common_verifier = { path = "../common" }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }
