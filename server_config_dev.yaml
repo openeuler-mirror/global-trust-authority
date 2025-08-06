@@ -21,6 +21,8 @@ attestation_service:
         path: "/var/test_docker/app/export_policy/tpm_boot.rego"
       - name: "tpm_ima"
         path: "/var/test_docker/app/export_policy/tpm_ima.rego"
+      - name: "virt_cca"
+        path: "/var/test_docker/app/export_policy/virt_cca.rego"
     is_verify_policy_signature: false
     single_user_policy_limit: 30
     policy_content_size_limit: 500
@@ -35,3 +37,5 @@ attestation_service:
       path: "/opt/0422/target/release/libtpm_boot_verifier.so"
     - name: "tpm_ima"
       path: "/opt/0422/target/release/libtpm_ima_verifier.so"
+    - name: "virt_cca"
+      path: "/opt/0422/target/release/libvirt_cca_verifier.so"
