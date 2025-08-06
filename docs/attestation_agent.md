@@ -13,13 +13,15 @@ Attestation Agent is the client component of the remote attestation system, prov
 - Rust 1.82.0 or higher
 - libssl-dev (for OpenSSL)
 - libtss2-dev (for TPM 2.0 access)
+- virtCCA_sdk (for virtCCA)
+- virtCCA_sdk-devel (for virtCCA)
 - pkg-config
 
 ### 2.2 Environment Configuration
 
 - Install required components
 ```sh
-apt-get install -y build-essential pkg-config libssl-dev libtss2-dev
+apt-get install -y build-essential pkg-config libssl-dev libtss2-dev virtCCA_sdk virtCCA_sdk-devel
 ```
 
 - Install Rust
@@ -44,6 +46,7 @@ attestation_agent/
 │       ├── boot       # TPM boot information collection plugin
 │       ├── common     # TPM plugin shared code
 │       └── ima        # TPM IMA log collection plugin
+│   └── virtCCA        # virtCCA plugins
 ├── challenge          # Challenge request processing module
 ├── config             # Configuration management module, handles config file parsing
 └── utils              # Common utility module, including network, logging, etc.
