@@ -161,6 +161,6 @@ fn get_mysql_sql_file(db_version: &str) -> String {
     {
         return find_file(format!("mysql_{}.sql", db_version).as_str()).map(|path_buf: PathBuf| {
             path_buf.to_str().unwrap().to_string()
-        }).unwrap_or_else(|e| String::from(format!("/etc/attestation_server/mysql_{}.sql", db_version)));
+        }).unwrap_or_else(|_| String::from(format!("/etc/attestation_server/mysql_{}.sql", db_version)));
     }
 }

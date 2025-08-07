@@ -1,5 +1,4 @@
 use actix_web::web;
-use validator::Validate;
 
 #[cfg(test)]
 mod tests {
@@ -16,8 +15,6 @@ mod tests {
         web::Json(AttestRequest {
             message: None,
             agent_version: Option::from("".to_string()),
-            nonce_type: Some("verifier".to_string()),
-            user_nonce: None,
             measurements: vec![]
         })
     }

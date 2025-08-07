@@ -35,8 +35,6 @@ pub enum ChallengeError {
     NonceValueEmpty,
     /// Nonce not provided when required
     NonceNotProvided,
-    /// User nonce not provided when required
-    UserNonceNotProvided,
     /// Nonce is invalid
     NonceInvalid(String),
 
@@ -104,7 +102,6 @@ impl fmt::Display for ChallengeError {
             Self::NonceTypeError(msg) => write!(f, "Invalid nonce type: {}", msg),
             Self::NonceValueEmpty => write!(f, "Nonce value cannot be empty"),
             Self::NonceNotProvided => write!(f, "Nonce must be provided when nonce_type is 'default' or null"),
-            Self::UserNonceNotProvided => write!(f, "User nonce must be provided when nonce_type is 'user'"),
             Self::NonceInvalid(msg) => write!(f, "Invalid nonce: {}", msg),
 
             // Challenge process errors
@@ -267,9 +264,6 @@ mod tests {
 
         let nonce_not_provided = ChallengeError::NonceNotProvided;
         assert_eq!(nonce_not_provided.to_string(), "Nonce must be provided when nonce_type is 'default' or null");
-
-        let user_nonce_not_provided = ChallengeError::UserNonceNotProvided;
-        assert_eq!(user_nonce_not_provided.to_string(), "User nonce must be provided when nonce_type is 'user'");
 
         let nonce_invalid = ChallengeError::NonceInvalid("invalid nonce".to_string());
         assert_eq!(nonce_invalid.to_string(), "Invalid nonce: invalid nonce");
@@ -434,7 +428,6 @@ mod tests {
             ChallengeError::NonceTypeError("type".to_string()),
             ChallengeError::NonceValueEmpty,
             ChallengeError::NonceNotProvided,
-            ChallengeError::UserNonceNotProvided,
             ChallengeError::NonceInvalid("invalid".to_string()),
             ChallengeError::TokenNotReceived,
             ChallengeError::RequestParseError("parse".to_string()),
@@ -454,7 +447,6 @@ mod tests {
                 ChallengeError::NonceTypeError(_) => {},
                 ChallengeError::NonceValueEmpty => {},
                 ChallengeError::NonceNotProvided => {},
-                ChallengeError::UserNonceNotProvided => {},
                 ChallengeError::NonceInvalid(_) => {},
                 ChallengeError::TokenNotReceived => {},
                 ChallengeError::RequestParseError(_) => {},

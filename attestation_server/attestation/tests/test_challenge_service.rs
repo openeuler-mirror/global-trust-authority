@@ -1,5 +1,4 @@
 use actix_web::web;
-use validator::Validate;
 
 #[cfg(test)]
 mod tests {

@@ -34,13 +34,13 @@
 **Request Method**: `POST /global-trust-authority/agent/v1/tokens`
 
 #### Request Parameters
-| Field         | Sub-field     | Type           | Required | parameter constraint          | Description                                                                      |
-|---------------|---------------|----------------|----------|-------------------------------|----------------------------------------------------------------------------------|
-| attester_info |               | list of object | No       |                               | Challenge information                                                            |
-|               | attester_type | string         | No       | tpm_boot or tpm_ima character | Challenge type, defaults to traversing activated client plugins if not specified |
-|               | policy_ids    | list of string | No       | The number is less than 10    | Applied policies, uses default policy if not specified                           |
-| challenge     |               | bool           | No       |                               | Whether to challenge, defaults to no challenge                                   |
-| attester_data |               | object         | No       |                               | User data, reserved field                                                        |
+| Field         | Sub-field     | Type           | Required | parameter constraint       | Description                                                  |
+| ------------- | ------------- | -------------- | -------- | -------------------------- | ------------------------------------------------------------ |
+| attester_info |               | list of object | No       |                            | Challenge information                                        |
+|               | attester_type | string         | No       | tpm_boot/tpm_ima/virt_cca  | Challenge type, defaults to traversing activated client plugins if not specified |
+|               | policy_ids    | list of string | No       | The number is less than 10 | Applied policies, uses default policy if not specified       |
+| challenge     |               | bool           | No       |                            | Whether to challenge, defaults to no challenge               |
+| attester_data |               | object         | No       |                            | User data, reserved field                                    |
 
 #### Response Parameters
 | Field   | Type   | Required                   | Description   |
@@ -79,32 +79,27 @@
 **Request Method**: `POST /global-trust-authority/agent/v1/evidences`
 
 #### Request Parameters
-| Field         | Sub-field     | Type            | Required | parameter constraint                       | Description                                                                                                              |
-|---------------|---------------|-----------------|----------|--------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
-| attesters     |               | list of objects | Yes      | Fill in either tpm_boot or tpm_ima or both | challenge information                                                                                                    |
-|               | attester_type | string          | yes      | tpm_boot/tpm_ima/virt_cca                  | challenge types                                                                                                          |
-|               | log_types     | list of strings | No       | ImaLog/TcgEventLog/CCEL                    | types of log to collect                                                                                                  |
-| nonce_type    |               | string          | No       | ignore、user or verifier                    | ignore/user/verifier(default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
-| user_nonce    |               | string          | No       | Lenght 1-1024 bytes                        | Filled when nonce_type is user, Format: Base64                                                                           |
-| nonce         |               | object          | No       |                                            | Nonce value structure / required if nonce_type not filled                                                                |
-|               | iat           | u64             | No       |                                            | Issue time                                                                                                               |
-|               | value         | string          | No       | Lenght 1-1024 bytes                        | Nonce value                                                                                                              |
-|               | signature     | string          | No       |                                            | Signature value                                                                                                          |
-| attester_data |               | object          | No       |                                            | User data, reserved field                                                                                                |
+| Field         | Sub-field     | Type            | Required | parameter constraint      | Description                                                  |
+| ------------- | ------------- | --------------- | -------- | ------------------------- | ------------------------------------------------------------ |
+| attesters     |               | list of objects | Yes      |                           | challenge information                                        |
+|               | attester_type | string          | yes      | tpm_boot/tpm_ima/virt_cca | challenge types                                              |
+|               | log_types     | list of strings | No       | ImaLog/TcgEventLog/CCEL   | types of log to collect                                      |
+| nonce_type    |               | string          | No       | ignore、user or verifier  | ignore/user/verifier(default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
+| nonce         |               | string          | No       | Lenght 1-1024 bytes       | Nonce value, format: Base64                                  |
+| attester_data |               | object          | No       |                           | User data, reserved field                                    |
 
 #### Response Parameters
-| Field         | Sub-field     | Second-level Sub-field | Type            | Required | Description                                                                                                              |
-|---------------|---------------|------------------------|-----------------|----------|--------------------------------------------------------------------------------------------------------------------------|
-| agent_version |               |                        | string          | No       | Client version number                                                                                                    |
-| nonce_type    |               |                        | string          | No       | ignore/user/verifier(default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
-| user_nonce    |               |                        | string          | No       | Filled when nonce_type is user                                                                                           |
-| measurements  |               |                        | list of objects | No       | Measurement data                                                                                                         |
-|               | node_id       |                        | string          | No       | Node ID, corresponds to ueid                                                                                             |
-|               | nonce         |                        | object          | No       | Nonce object, see /challenge definition                                                                                  |
-|               | attester_data |                        | object          | No       | User-defined data to be passed through, must be placed in token as-is                                                    |
-|               | evidences     |                        | list of objects | No       | Challenge report                                                                                                         |
-|               |               | attester_type          | string          | No       | Challenge type                                                                                                           |
-|               |               | evidence               | list of objects | No       | Specific evidence                                                                                                        |
+| Field         | Sub-field     | Second-level Sub-field | Type            | Required | Description                                                  |
+| ------------- | ------------- | ---------------------- | --------------- | -------- | ------------------------------------------------------------ |
+| agent_version |               |                        | string          | No       | Client version number                                        |
+| measurements  |               |                        | list of objects | No       | Measurement data                                             |
+|               | node_id       |                        | string          | No       | Node ID, corresponds to ueid                                 |
+|               | nonce_type    |                        | string          | No       | Nonce type, possible values: ignore, user or verifier        |
+|               | nonce         |                        | string          | No       | Nonce value, format: Base64                                  |
+|               | attester_data |                        | object          | No       | User-defined data to be passed through, must be placed in token as-is |
+|               | evidences     |                        | list of objects | No       | Challenge report                                             |
+|               |               | attester_type          | string          | No       | Challenge type                                               |
+|               |               | evidence               | list of objects | No       | Specific evidence                                            |
 
 ##### Example of request
 
@@ -595,20 +590,28 @@ Note: To delete revoked certificates, type must specify crl.
 | attester_type | list of string | Yes      | "tpm_boot","tpm_ima"   | Plugin type, server returns error if not supported | Only supports "tpm_boot","tpm_ima" |
 
 ##### Response Parameters
-| Field           | Sub-field | Type   | Required                   | Description       | Note                                          |
-| --------------- | --------- | ------ | -------------------------- | ----------------- | --------------------------------------------- |
-| service_version |           | string | Yes                        | Server version    | Format is x.x.x, e.g., 1.0.0                  |
-| message         |           | string | Yes for failed request     | Error message     | Maximum length 1024 bytes                     |
-| nonce           |           | object | Yes for successful request | Nonce information |                                               |
-|                 | iat       | long   | Yes                        | Issue time        | Maximum uint64                                |
-|                 | value     | string | Yes                        | Nonce value       | 64~1024BYTE, base64 encoded                   |
-|                 | signature | string | Yes                        | Signature value   | Not less than 64BYTE, default BASE64 encoding |
+
+| Field           | Type   | Required                   | Description       | Note                                                         |
+| --------------- | ------ | -------------------------- | ----------------- | ------------------------------------------------------------ |
+| service_version | string | Yes                        | Server version    | Format is x.x.x, e.g., 1.0.0                                 |
+| message         | string | Yes for failed request     | Error message     | Maximum length 1024 bytes                                    |
+| nonce           | string | Yes for successful request | Nonce information | Base64 encoded of nonce struct. <br />Nonce struct is described in following table. |
+
+**nonce struct:**
+
+| Field     | Type   | Required | Description                                |
+| --------- | ------ | -------- | ------------------------------------------ |
+| iat       | number | Yes      | Timestamp for issuance                     |
+| value     | string | Yes      | Random bytes, base64 encoded               |
+| signature | string | Yes      | Signature of iat and value, base64 encoded |
+
+
 
 ##### Example of request
 
 ###### request body
 
-```
+```json
 {
     "agent_version": "1.0",
     "attester_type": ["tpm_boot"]
@@ -617,16 +620,24 @@ Note: To delete revoked certificates, type must specify crl.
 
 ###### response body
 
- ```
+ ```json
 {
     "service_version": "1.0",
-    "nonce": {
-        "iat": 1747646103,
-        "value": "alTQWp3PPVLCLVqTWBViqNgG14KeWtFF7muXoK8Pb8AGj1U5GVFyoK67z2PgNMlcQIUvnzXTzG9pqsj89+B0Gg==",
-        "signature": "UTeRydOBjPnzPljSsjIYxgYIfBOZAdY4SPe9Vz47KKRRJomWHOQICqqGic/1kul8neVRFnn9sPTAyPeOqvQw5Z8h30CrM2McVf8bJxwi5j24WJqFhUVuBBZm8zMi+iuhGiNkFF1VVbsDkf97kFsajKQsMaysQJHL+wtxbbOYSgkLy4SzpYLx39+mSsZUTRuJC6y1VdNdQs1AypgnusEGUmTO5SYU4kWiVy/l/3fnCd8vuAofClb2Xge6yKFYvoeGYeRxYwEO0DLNIpI8MTAfi/67/oarqZlr1dOFsbNzjkzzv71GjzNuXU1mBdew4dd7rxUKHIqjex0+RqXJQtg69kH0AdpgI2EAKqkB4icjxm2jX07yDSlIG2zLjlhaaa0ch/A0mxrOFhtFMhHtlyarChuk0p8E2wKdNNwDTWdyNg9F07BrqcsBHMU2R1Keq+NXN54TGT+M87Pq3fdZ8qgD4rSmZjGUSDgCeIJckPZOtvWnF8yNbtcnajm1rTeXYbSK"
-    }
+    "nonce": "eyJpYXQiOjE3NTQ1NTIzNjQsInZhbHVlIjoiR3dvL3Z4WUZCYU5ZMWZlUGJUNytYdVZ2QXZ1ck9qU1JBTEx0bWg2OTZVcGFDR21qM1RrT1NRK3pqYkVBSWlkbUNvSmlySVF0RFAyZkJKdHFlNVFnT0E9PSIsInNpZ25hdHVyZSI6Im9VOFYwVnZYenhEbFJQRG56UzdnTGF4bkQvVEticGVwcytUNEpmenBPQkZ2ekR0b0NmOEEwRTF3RVB0dVVGajJmYjVSQkVsZkoxajc3WXQya1lQWFU5ZjIzWExOeXhFejRDZnZmQnZKQ2NFVjZCT0hYcVNTd3RKN25PUjZZN1JjekhoWnJ5UnhYd093N3dzcU9ZYVdRSGl0aW52ZGtRYzNjSDhUS1JzUjFaaS9FeFhHNHNYMXl6LzZ4eW9tbFRFOC9rYVZTY1dZSkI5K3A3ZnBMZTQ0S29MQXN5N3ZxcWhob1JYZXhaZXRzOUlLaE5FMmNXNityWHYxTFBOYzdXT3RWT2ZOQm1ZNUhrTW5hOHRIbUVHM0Z1SUNaVDdadjI3V3IxNmh1V2s5SEh6T1BDZjlhVHk5SnkvcnV0UUVRenZTOEhhbitweGZjZThQV0greFpKUFFVSFpZZkI3SmFZZVkwb1ltUWIzbDFHZ3RVWmc2TjZmVHFTRWdRMzBhL1BEMjVaNkNzb3Njdi9zb1B2b0NSZzNUQ2xwKzM0cFVpSXM2c2Z2OG56ZzZFQ2ZtOXBKazhKS2p3ZlNtcHA2N2VUWDVUN1cyNjFGdGlRcDNMQnVKbzF6Y1pZWmxXVlpFRCtqUDdYdk1OZnB1Ulg3emlJMFFUbVhVelBmSldoY3pzbUFTIn0="
 }
  ```
+
+Note: nonce can be base64 decoded as:
+
+```json
+{
+	"iat": 1754552364,
+	"value": "Gwo/vxYFBaNY1fePbT7+XuVvAvurOjSRALLtmh696UpaCGmj3TkOSQ+zjbEAIidmCoJirIQtDP2fBJtqe5QgOA==",
+	"signature": "oU8V0VvXzxDlRPDnzS7gLaxnD/TKbpeps+T4JfzpOBFvzDtoCf8A0E1wEPtuUFj2fb5RBElfJ1j77Yt2kYPXU9f23XLNyxEz4CfvfBvJCcEV6BOHXqSSwtJ7nOR6Y7RczHhZryRxXwOw7wsqOYaWQHitinvdkQc3cH8TKRsR1Zi/ExXG4sX1yz/6xyomlTE8/kaVScWYJB9+p7fpLe44KoLAsy7vqqhhoRXexZets9IKhNE2cW6+rXv1LPNc7WOtVOfNBmY5HkMna8tHmEG3FuICZT7Zv27Wr16huWk9HHzOPCf9aTy9Jy/rutQEQzvS8Han+pxfce8PWH+xZJPQUHZYfB7JaYeY0oYmQb3l1GgtUZg6N6fTqSEgQ30a/PD25Z6Csoscv/soPvoCRg3TClp+34pUiIs6sfv8nzg6ECfm9pJk8JKjwfSmpp67eTX5T7W261FtiQp3LBuJo1zcZYZlWVZED+jP7XvMNfpuRX7ziI0QTmXUzPfJWhczsmAS"
+}
+```
+
+
 
 #### 3.3.2 Remote Attestation
 
@@ -638,14 +649,10 @@ Note: To delete revoked certificates, type must specify crl.
 | Field         | Sub-field     | Second-level Sub-field | Type            | Required | parameter constraint    | Description                                                  |
 | ------------- | ------------- | ---------------------- | --------------- | -------- | ----------------------- | ------------------------------------------------------------ |
 | agent_version |               |                        | string          | No       | Length 1-50 characters  | Client version number                                        |
-| nonce_type    |               |                        | string          | No       |                         | ignore/user/verifier (default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
-| user_nonce    |               |                        | string          | No       |                         | Filled when nonce_type is user, 1~1024BYTE, base64 encoded   |
 | measurements  |               |                        | list of objects | Yes      |                         | Measurement data                                             |
 |               | node_id       |                        | string          | No       | Length 1-255 characters | Node ID, corresponds to uied, recommended 32~128 characters, based on actual device |
-|               | nonce         |                        | object          | No       |                         | Nonce object                                                 |
-|               |               | iat                    | long            | No       |                         | Issue time                                                   |
-|               |               | value                  | string          | Yes      |                         | Nonce value                                                  |
-|               |               | signature              | string          | No       |                         | Signature value                                              |
+|               | nonce_type    |                        | string          | No       |                         | ignore/user/verifier (default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
+|               | nonce         |                        | string          | No       |                         | Nonce, base64 encoded, 1~1024bytes                           |
 |               | attester_data |                        | object          | No       |                         | User-defined data to be passed through, must be placed in token as-is |
 |               | evidences     |                        | list of objects | Yes      |                         | Challenge report                                             |
 |               |               | attester_type          | string          | Yes      |                         | Challenge type, see attester_type specification              |
@@ -680,7 +687,7 @@ Note: To delete revoked certificates, type must specify crl.
 | body           | ueid             |                           |                        | string         | No       | Device unique identifier (taken from certificate)            | Challenge response module |
 | body           | verifier_id      |                           |                        | string         | No       | Verifier ID (consider container ID?)                         | Challenge response module |
 | body           | status           |                           |                        | string         | Yes      | Overall verification status, pass/fail                       | Challenge response module |
-| body           | eat_nonce        |                           |                        | string         | No       | Nonce value, not filled for user_nonce and ignore_nonce      | Challenge response module |
+| body           | eat_nonce        |                           |                        | string         | No       | Nonce value, not filled for ignore_nonce                     | Challenge response module |
 | body           | attester_data    |                           |                        | object         | No       | User-defined information                                     | Challenge response module |
 | body           | ${attester_type} |                           |                        | object         | Yes      | Verification result corresponding to attester_type           | Challenge response module |
 |                |                  | attestation_status        |                        | string         | Yes      | Verification status corresponding to attester_type, pass/fail | Challenge response module |

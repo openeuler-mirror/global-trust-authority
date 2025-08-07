@@ -397,17 +397,17 @@ sudo attestation_cli evidence get \
 
 sudo attestation_cli evidence get \
 	--nonce-type "verifier" \
-	--content "{\"iat\": 1745850626, \"value\": \"8g5t/g5xfMJq5duxDaOB3WcCS4UVUlzXb4w4A9TBmmaFBCwokG6Ypsv82IQb0jRjD6ouinoUiwFYYxq/04qI5Q==\", \"signature\": \"mTHGMz62jf2v4MLf151S9Y3sMW80ebwJDn+Fgq7UKJKcABTw5tVx2ewX8tY6eIxBXjaV5BiGcT6Ujnu7W6OWsfydl3YqspJyN4t0VD4rZb498zztKyDuV7RkktlhILxYI8zbAMxfbrSXBsnqnoKcikyBG41O6A3hf7PYW41VV7R2/vHQo/ETUjFa0Ie5oaHYPbTeTrJIUCv+cTL4otM2cyfFtWhHcynVlALmSvkW1fibUaO057ovwJUApRBCu1XPpj9LMP2LZEvl+BselxH5aiayZ9BM7UHqDPeSgT8HdIYjDnq01IhJdiy7SW5QgO3QS9rUyhQhotC9jnqzaLETOzYqlwabAyB4d8PhhUaRYcAo2E95E+yXoviHujik93EGgW6qoP0spdrr3mi/nWhhP329bihI+dIjxy8vL2kTIpbvjZWzfc6wVuBLeQJU6WtrZ8h06UKdloUi57ntFS96GwsJHb85vsXF16kuTYPsL0uUZhXNzlYbmo1PMK1SL+t3\" }" \
+	--nonce "eyJpYXQiOiAxNzQ1ODUwNjI2LCAidmFsdWUiOiAiOGc1dC9nNXhmTUpxNWR1eERhT0IzV2NDUzRVVlVselhiNHc0QTlUQm1tYUZCQ3dva0c2WXBzdjgySVFiMGpSakQ2b3Vpbm9VaXdGWVl4cS8wNHFJNVE9PSIsICJzaWduYXR1cmUiOiAibVRIR016NjJqZjJ2NE1MZjE1MVM5WTNzTVc4MGVid0pEbitGZ3E3VUtKS2NBQlR3NXRWeDJld1g4dFk2ZUl4QlhqYVY1QmlHY1Q2VWpudTdXNk9Xc2Z5ZGwzWXFzcEp5TjR0MFZENHJaYjQ5OHp6dEt5RHVWN1Jra3RsaElMeFlJOHpiQU14ZmJyU1hCc25xbm9LY2lreUJHNDFPNkEzaGY3UFlXNDFWVjdSMi92SFFvL0VUVWpGYTBJZTVvYUhZUGJUZVRySklVQ3YrY1RMNG90TTJjeWZGdFdoSGN5blZsQUxtU3ZrVzFmaWJVYU8wNTdvdndKVUFwUkJDdTFYUHBqOUxNUDJMWkV2bCtCc2VseEg1YWlheVo5Qk03VUhxRFBlU2dUOEhkSVlqRG5xMDFJaEpkaXk3U1c1UWdPM1FTOXJVeWhRaG90QzlqbnF6YUxFVE96WXFsd2FiQXlCNGQ4UGhoVWFSWWNBbzJFOTVFK3lYb3ZpSHVqaWs5M0VHZ1c2cW9QMHNwZHJyM21pL25XaGhQMzI5YmloSStkSWp4eTh2TDJrVElwYnZqWld6ZmM2d1Z1QkxlUUpVNld0clo4aDA2VUtkbG9VaTU3bnRGUzk2R3dzSkhiODV2c1hGMTZrdVRZUHNMMHVVWmhYTnpsWWJtbzFQTUsxU0wrdDMiIH0=" \
 	--out "/tmp/evidence.txt"
 	
 sudo attestation_cli evidence get \
 	--nonce-type "verifier" \
-	--content @/tmp/nonce.txt \
+	--nonce @/tmp/nonce.txt \
 	--out "/tmp/evidence.txt"
 	
 sudo attestation_cli evidence get \
 	--nonce-type "user" \
-	--user-nonce "user_nonce" \
+	--nonce "YXdkb2huam9hd2lkb2F3aWQ=" \
 	--out "/tmp/evidence.txt"
 ```
 

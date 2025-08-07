@@ -131,13 +131,13 @@ impl ServerConfig {
     /// 
     /// # Panics
     /// 
-    /// Panics if `nonce_bytes` is not within the range of 64-1024
+    /// Panics if `nonce_bytes` is not within the range of 32-128
     /// Panics if any URL contains characters that could lead to log injection
     pub fn validate(&self) {
-        // Validate nonce_bytes is within the range of 64-1024
+        // Validate nonce_bytes is within the range of 32-128
         let nonce_bytes = self.attestation_service.nonce.nonce_bytes;
-        if !(64..=1024).contains(&nonce_bytes) {
-            panic!("Invalid configuration: nonce_bytes must be between 64 and 1024, got {}", nonce_bytes);
+        if !(32..=128).contains(&nonce_bytes) {
+            panic!("Invalid configuration: nonce_bytes must be between 32 and 128, got {}", nonce_bytes);
         }
 
         // Convert the config to a serde_json::Value to iterate over all string fields

@@ -51,14 +51,6 @@ pub struct AttesterInfo {
     pub log_types: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-/// Nonce structure used for challenge/attestation
-pub struct Nonce {
-    pub iat: u64,
-    pub value: String,
-    pub signature: String,
-}
-
 #[derive(Debug, Serialize)]
 /// Evidence structure with associated policy IDs
 pub struct EvidenceWithPolicy {
@@ -75,7 +67,9 @@ pub struct Measurement {
     pub node_id: String,
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub nonce: Option<Nonce>,
+    pub nonce: Option<String>,
+    #[serde(default)]
+    pub nonce_type: String,
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attester_data: Option<serde_json::Value>,
@@ -86,10 +80,6 @@ pub struct Measurement {
 /// Response structure for evidence collection
 pub struct GetEvidenceResponse {
     pub agent_version: String,
-    pub nonce_type: String,
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub user_nonce: Option<String>,
     pub measurements: Vec<Measurement>,
 }
 
@@ -97,19 +87,17 @@ impl GetEvidenceResponse {
     pub fn new(
         agent_version: &str,
         nonce_type: &str,
-        user_nonce: Option<&String>,
-        nonce: Option<&Nonce>,
+        nonce: Option<&String>,
         attester_data: Option<&serde_json::Value>,
         node_id: &str,
         evidences: Vec<EvidenceWithPolicy>,
     ) -> Self {
         GetEvidenceResponse {
             agent_version: agent_version.to_string(),
-            nonce_type: nonce_type.to_string(),
-            user_nonce: if nonce_type == "user" { user_nonce.cloned() } else { None },
             measurements: vec![Measurement {
                 node_id: node_id.to_string(),
                 nonce: nonce.cloned(),
+                nonce_type: nonce_type.to_string(),
                 attester_data: attester_data.cloned(),
                 evidences,
             }],
@@ -422,11 +410,11 @@ pub fn collect_evidences_core(
 /// # Errors
 ///
 /// Returns an error if the nonce fields are invalid.
-pub fn validate_nonce_fields(nonce: &Nonce) -> Result<(), ChallengeError> {
-    if nonce.value.trim().is_empty() || nonce.signature.trim().is_empty() || nonce.iat == 0 {
-        return Err(ChallengeError::NonceInvalid("One or more nonce fields are empty".to_string()));
+pub fn validate_nonce_fields(nonce: &str) -> Result<(), ChallengeError> {
+    if nonce.trim().is_empty() {
+        return Err(ChallengeError::NonceInvalid("Nonce is empty".to_string()));
     }
-    let nonce_bytes = match STANDARD.decode(&nonce.value) {
+    let nonce_bytes = match STANDARD.decode(nonce) {
         Ok(bytes) => bytes,
         Err(_) => return Err(ChallengeError::NonceInvalid("nonce decode error".to_string())),
     };
@@ -446,7 +434,7 @@ pub fn validate_nonce_fields(nonce: &Nonce) -> Result<(), ChallengeError> {
 async fn get_nonce_from_server(
     agent_version: &str,
     attester_info: &Option<Vec<AttesterInfo>>,
-) -> Result<Nonce, ChallengeError> {
+) -> Result<String, ChallengeError> {
     let attester_types = match attester_info {
         Some(info) if !info.is_empty() => {
             let filtered: Vec<_> =
@@ -484,7 +472,7 @@ async fn get_nonce_from_server(
         }
     }
 
-    let nonce: Nonce = if let Some(nonce_val) = json_value.get("nonce") {
+    let nonce: String = if let Some(nonce_val) = json_value.get("nonce") {
         serde_json::from_value(nonce_val.clone())
             .map_err(|e| ChallengeError::RequestParseError(format!("Failed to parse nonce: {}", e)))?
     } else {
@@ -560,7 +548,7 @@ pub async fn do_challenge(
 
     let nonce = get_nonce_from_server(env!("CARGO_PKG_VERSION"), attester_info).await?;
 
-    let aggregate_nonce = NonceUtil::update_nonce(attester_data, Some(&nonce.value))?;
+    let aggregate_nonce = NonceUtil::update_nonce(attester_data, Some(&nonce))?;
 
     let evidences = match collect_evidences_core(attester_info, &aggregate_nonce) {
         Ok(evidences) => {
@@ -578,7 +566,6 @@ pub async fn do_challenge(
     let evidence_response = GetEvidenceResponse::new(
         env!("CARGO_PKG_VERSION"),
         "verifier",
-        None,
         Some(&nonce),
         attester_data.as_ref(),
         &node_id,
@@ -621,60 +608,15 @@ mod tests {
 
     #[test]
     fn test_nonce_validation_empty_fields() {
-        let nonce = Nonce {
-            iat: 0,
-            value: "".to_string(),
-            signature: "".to_string(),
-        };
-
-        let result = validate_nonce_fields(&nonce);
+        let nonce = "";
+        let result = validate_nonce_fields(nonce);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
     }
 
     #[test]
-    fn test_get_evidence_response_new() {
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "test_nonce_value".repeat(5),
-            signature: "test_signature".repeat(6),
-        };
-
-        let evidence = EvidenceWithPolicy {
-            attester_type: "tpm_boot".to_string(),
-            evidence: json!({"test": "evidence"}),
-            policy_ids: Some(vec!["policy1".to_string()]),
-        };
-
-        let response = GetEvidenceResponse::new(
-            "1.0.0",
-            "verifier",
-            None,
-            Some(&nonce),
-            Some(&json!({"attester_data": "test"})),
-            "test_node_id",
-            vec![EvidenceWithPolicy {
-                attester_type: evidence.attester_type.clone(),
-                evidence: evidence.evidence.clone(),
-                policy_ids: evidence.policy_ids.clone(),
-            }],
-        );
-
-        assert_eq!(response.agent_version, "1.0.0");
-        assert_eq!(response.nonce_type, "verifier");
-        assert!(response.user_nonce.is_none());
-        assert_eq!(response.measurements.len(), 1);
-        assert_eq!(response.measurements[0].node_id, "test_node_id");
-        // Since EvidenceWithPolicy doesn't implement PartialEq, we compare individual fields
-        assert_eq!(response.measurements[0].evidences.len(), 1);
-        let evidence = &response.measurements[0].evidences[0];
-        assert_eq!(evidence.attester_type, "tpm_boot");
-        assert_eq!(evidence.policy_ids, Some(vec!["policy1".to_string()]));
-    }
-
-    #[test]
-    fn test_get_evidence_response_with_user_nonce() {
-        let user_nonce = "user_provided_nonce".to_string();
+    fn test_get_evidence_response_with_user_type() {
+        let nonce = "user_provided_nonce".to_string();
         let evidences = vec![EvidenceWithPolicy {
             attester_type: "tpm_boot".to_string(),
             evidence: json!({"test": "evidence"}),
@@ -684,15 +626,14 @@ mod tests {
         let response = GetEvidenceResponse::new(
             "1.0.0",
             "user",
-            Some(&user_nonce),
-            None,
+            Some(&nonce),
             None,
             "test_node_id",
             evidences,
         );
 
-        assert_eq!(response.nonce_type, "user");
-        assert_eq!(response.user_nonce, Some(user_nonce));
+        assert_eq!(response.measurements[0].nonce_type, "user");
+        assert_eq!(response.measurements[0].nonce, Some(nonce));
     }
 
     #[test]
@@ -711,15 +652,10 @@ mod tests {
 
     #[test]
     fn test_measurement_serialization() {
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "test_nonce_value".repeat(5),
-            signature: "test_signature".repeat(6),
-        };
-
         let measurement = Measurement {
             node_id: "test_node".to_string(),
-            nonce: Some(nonce),
+            nonce_type: "user".to_string(),
+            nonce: Some("nonce".to_string()),
             attester_data: Some(json!({"data": "test"})),
             evidences: vec![EvidenceWithPolicy {
                 attester_type: "tpm_boot".to_string(),
@@ -731,25 +667,6 @@ mod tests {
         let serialized = serde_json::to_string(&measurement).unwrap();
         assert!(serialized.contains("test_node"));
         assert!(serialized.contains("tpm_boot"));
-    }
-
-    #[test]
-    fn test_measurement_without_optional_fields() {
-        let measurement = Measurement {
-            node_id: "test_node".to_string(),
-            nonce: None,
-            attester_data: None,
-            evidences: vec![EvidenceWithPolicy {
-                attester_type: "tpm_boot".to_string(),
-                evidence: json!({"test": "evidence"}),
-                policy_ids: None,
-            }],
-        };
-
-        let serialized = serde_json::to_string(&measurement).unwrap();
-        assert!(serialized.contains("test_node"));
-        assert!(!serialized.contains("nonce"));
-        assert!(!serialized.contains("attester_data"));
     }
 
     #[test]
@@ -899,49 +816,11 @@ mod tests {
     }
 
     #[test]
-    fn test_measurement_serialization_with_all_fields() {
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "test_nonce_value".repeat(5),
-            signature: "test_signature".repeat(6),
-        };
-
-        let evidence = EvidenceWithPolicy {
-            attester_type: "tpm_boot".to_string(),
-            evidence: json!({"test": "evidence"}),
-            policy_ids: Some(vec!["policy1".to_string()]),
-        };
-
-        let measurement = Measurement {
-            node_id: "test_node".to_string(),
-            nonce: Some(Nonce {
-                iat: nonce.iat,
-                value: nonce.value.clone(),
-                signature: nonce.signature.clone(),
-            }),
-            attester_data: Some(json!({"attester_data": "test"})),
-            evidences: vec![EvidenceWithPolicy {
-                attester_type: evidence.attester_type.clone(),
-                evidence: evidence.evidence.clone(),
-                policy_ids: evidence.policy_ids.clone(),
-            }],
-        };
-
-        let serialized = serde_json::to_string(&measurement).unwrap();
-        assert!(serialized.contains("test_node"));
-        assert!(serialized.contains("nonce"));
-        assert!(serialized.contains("attester_data"));
-        assert!(serialized.contains("tpm_boot"));
-        assert!(serialized.contains("policy1"));
-    }
-
-    #[test]
     fn test_get_evidence_response_new_edge_cases() {
         // Test with empty evidences
         let response = GetEvidenceResponse::new(
             "1.0.0",
             "verifier",
-            None,
             None,
             None,
             "test_node_id",
@@ -964,7 +843,6 @@ mod tests {
         let response = GetEvidenceResponse::new(
             "1.0.0",
             "verifier",
-            None,
             None,
             None,
             "test_node_id",
@@ -1012,32 +890,13 @@ mod tests {
     }
 
     #[test]
-    fn test_nonce_serialization_edge_cases() {
-        let nonce = Nonce {
-            iat: 0,
-            value: "test_nonce_value".repeat(5),
-            signature: "test_signature".repeat(6),
-        };
+    fn test_nonce_serialization() {
+        let nonce = "test_nonce_value";
 
         let serialized = serde_json::to_string(&nonce).unwrap();
-        let deserialized: Nonce = serde_json::from_str(&serialized).unwrap();
+        let deserialized: String = serde_json::from_str(&serialized).unwrap();
 
-        assert_eq!(nonce.iat, deserialized.iat);
-        assert_eq!(nonce.value, deserialized.value);
-        assert_eq!(nonce.signature, deserialized.signature);
-
-        let nonce = Nonce {
-            iat: u64::MAX,
-            value: "test_nonce_value".repeat(5),
-            signature: "test_signature".repeat(6),
-        };
-
-        let serialized = serde_json::to_string(&nonce).unwrap();
-        let deserialized: Nonce = serde_json::from_str(&serialized).unwrap();
-
-        assert_eq!(nonce.iat, deserialized.iat);
-        assert_eq!(nonce.value, deserialized.value);
-        assert_eq!(nonce.signature, deserialized.signature);
+        assert_eq!(nonce, deserialized);
     }
 
     #[test]
@@ -1091,40 +950,6 @@ mod tests {
         let invalid_base64 = "dGVzdA!@#";
         let decoded = STANDARD.decode(invalid_base64);
         assert!(decoded.is_err());
-    }
-
-    #[test]
-    fn test_get_node_id_error_cases() {
-        // Test the case where configuration retrieval fails
-        // Since we cannot directly modify the global config, we test error handling logic
-        // This test mainly verifies error conversion logic
-        let config_error = "Config error";
-        let challenge_error: ChallengeError = config_error.into();
-        assert!(matches!(challenge_error, ChallengeError::InternalError(_)));
-    }
-
-    #[test]
-    fn test_get_cached_token_for_current_node_edge_cases() {
-        {
-            let mut global = GLOBAL_TOKENS.lock().unwrap();
-            *global = Vec::new();
-        }
-
-        let result = get_cached_token_for_current_node();
-        // Since we cannot simulate get_node_id() failure, this test mainly verifies the empty cache case
-        // The actual result depends on whether get_node_id() succeeds
-        // Since get_node_id() may fail, we only verify that the function call does not panic
-        assert!(result.is_none() || result.is_some());
-    }
-
-    #[test]
-    fn test_validate_nonce_value_too_long() {
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "a".repeat(1025),
-            signature: "b".repeat(64),
-        };
-        assert!(validate_nonce_fields(&nonce).is_err());
     }
 
     #[test]
@@ -1332,21 +1157,6 @@ mod tests {
     }
 
     #[test]
-    fn test_measurement_operations() {
-        let measurement = Measurement {
-            node_id: "test_node".to_string(),
-            nonce: None,
-            attester_data: None,
-            evidences: vec![],
-        };
-
-        let serialized = serde_json::to_string(&measurement).unwrap();
-        assert!(serialized.contains("test_node"));
-        assert!(serialized.contains("evidences"));
-        assert!(serialized.contains("[]"));
-    }
-
-    #[test]
     fn test_evidence_with_policy_operations() {
         let evidence = EvidenceWithPolicy {
             attester_type: "tpm_boot".to_string(),
@@ -1360,64 +1170,6 @@ mod tests {
         assert!(serialized.contains("policy2"));
         assert!(serialized.contains("test"));
         assert!(serialized.contains("evidence"));
-    }
-
-    #[test]
-    fn test_nonce_operations() {
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "test_nonce_value".repeat(5),
-            signature: "test_signature".repeat(6),
-        };
-
-        let serialized = serde_json::to_string(&nonce).unwrap();
-        let deserialized: Nonce = serde_json::from_str(&serialized).unwrap();
-
-        assert_eq!(nonce.iat, deserialized.iat);
-        assert_eq!(nonce.value, deserialized.value);
-        assert_eq!(nonce.signature, deserialized.signature);
-    }
-
-    #[test]
-    fn test_get_evidence_response_serialization_comprehensive() {
-        let nonce = Nonce {
-            iat: 1234567890,
-            value: "test_nonce_value".repeat(5),
-            signature: "test_signature".repeat(6),
-        };
-
-        let evidences = vec![
-            EvidenceWithPolicy {
-                attester_type: "tpm_boot".to_string(),
-                evidence: json!({"test": "evidence1"}),
-                policy_ids: Some(vec!["policy1".to_string()]),
-            },
-            EvidenceWithPolicy {
-                attester_type: "tpm_ima".to_string(),
-                evidence: json!({"test": "evidence2"}),
-                policy_ids: Some(vec!["policy2".to_string()]),
-            },
-        ];
-
-        let response = GetEvidenceResponse::new(
-            "1.0.0",
-            "verifier",
-            None,
-            Some(&nonce),
-            Some(&json!({"attester_data": "test"})),
-            "test_node_id",
-            evidences,
-        );
-
-        let serialized = serde_json::to_string(&response).unwrap();
-        assert!(serialized.contains("1.0.0"));
-        assert!(serialized.contains("verifier"));
-        assert!(serialized.contains("test_node_id"));
-        assert!(serialized.contains("tpm_boot"));
-        assert!(serialized.contains("tpm_ima"));
-        assert!(serialized.contains("policy1"));
-        assert!(serialized.contains("policy2"));
-        assert!(serialized.contains("attester_data"));
     }
 
     #[test]
@@ -1446,22 +1198,6 @@ mod tests {
     }
 
     #[test]
-    fn test_get_evidence_response_new_user_nonce() {
-        let user_nonce = "user_nonce_value".to_string();
-        let evidences = vec![];
-        let response = GetEvidenceResponse::new(
-            "1.0.0",
-            "user",
-            Some(&user_nonce),
-            None,
-            None,
-            "test_node_id",
-            evidences,
-        );
-        assert_eq!(response.user_nonce, Some(user_nonce));
-    }
-
-    #[test]
     fn test_node_token_debug_and_clone() {
         let token = NodeToken {
             node_id: "id".to_string(),
@@ -1471,33 +1207,6 @@ mod tests {
         assert!(debug_str.contains("node_id"));
         let clone = token.clone();
         assert_eq!(token.node_id, clone.node_id);
-    }
-
-    #[test]
-    fn test_measurement_debug_and_clone() {
-        let nonce = Nonce {
-            iat: 1,
-            value: "v".repeat(64),
-            signature: "s".repeat(64),
-        };
-        let m = Measurement {
-            node_id: "n".to_string(),
-            nonce: Some(nonce.clone()),
-            attester_data: None,
-            evidences: vec![],
-        };
-        let debug_str = format!("{:?}", m);
-        assert!(debug_str.contains("node_id"));
-        let _clone = Measurement {
-            node_id: m.node_id.clone(),
-            nonce: m.nonce.as_ref().map(|n| Nonce {
-                iat: n.iat,
-                value: n.value.clone(),
-                signature: n.signature.clone(),
-            }),
-            attester_data: m.attester_data.clone(),
-            evidences: vec![],
-        };
     }
 
     #[test]

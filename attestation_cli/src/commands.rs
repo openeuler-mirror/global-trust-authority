@@ -297,11 +297,7 @@ pub enum EvidenceCommands {
 
         /// Fill in when nonce-type is user
         #[clap(short, long)]
-        user_nonce: Option<String>,
-
-        /// Nonce info, starting with @ indicates the file path
-        #[clap(short, long)]
-        content: Option<String>,
+        nonce: Option<String>,
 
         /// Output file address
         #[clap(short, long, required = true)]
