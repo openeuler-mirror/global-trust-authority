@@ -10,7 +10,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
 use crate::constants::VALID_TYPES;
@@ -22,12 +21,6 @@ pub struct AttestRequest {
     #[validate(length(min = 1, max = 50))]
     pub agent_version: Option<String>,
 
-    #[validate(custom(function = "validate_nonce_type"))]
-    pub nonce_type: Option<String>,
-
-    #[validate(custom(function = "validate_user_nonce"))]
-    pub user_nonce: Option<String>,
-
     #[validate(length(min = 1), custom(function = "validate_measurements"))]
     pub measurements: Vec<Measurement>,
 }
@@ -37,7 +30,10 @@ pub struct Measurement {
     #[validate(length(min = 1, max = 255))]
     pub node_id: String,
 
-    pub nonce: Option<Nonce>,
+    pub nonce: Option<String>,
+
+    #[validate(custom(function = "validate_nonce_type"))]
+    pub nonce_type: Option<String>,
 
     pub attester_data: Option<serde_json::Value>,
 
@@ -66,22 +62,7 @@ pub struct Evidence {
 fn validate_nonce_type(nonce_type: &str) -> Result<(), ValidationError> {
     if !VALID_TYPES.contains(&nonce_type) {
         let mut err = ValidationError::new("invalid_nonce_type");
-        err.message = Some(std::borrow::Cow::Owned("nonce_type must be one of: ignore, user, default".to_string()));
-        return Err(err);
-    }
-    Ok(())
-}
-
-fn validate_user_nonce(user_nonce: &str) -> Result<(), ValidationError> {
-    if user_nonce.len() < 1 || user_nonce.len() > 1024 {
-        let mut err = ValidationError::new("length");
-        err.message = Some(std::borrow::Cow::Owned("user_nonce length must be between 1 and 1024 bytes".to_string()));
-        return Err(err);
-    }
-
-    if BASE64.decode(user_nonce).is_err() {
-        let mut err = ValidationError::new("invalid_base64");
-        err.message = Some(std::borrow::Cow::Owned("user_nonce must be base64 encoded".to_string()));
+        err.message = Some(std::borrow::Cow::Owned("nonce_type must be one of: ignore, user, verifier".to_string()));
         return Err(err);
     }
     Ok(())

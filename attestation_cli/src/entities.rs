@@ -103,7 +103,7 @@ pub enum NonceType {
 }
 
 impl fmt::Display for NonceType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             NonceType::Ignore => write!(f, "ignore"),
             NonceType::User => write!(f, "user"),

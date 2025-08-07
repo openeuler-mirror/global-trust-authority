@@ -12,6 +12,7 @@
 
 use actix_web::{web, HttpResponse};
 use serde_json::json;
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 use validator::Validate;
 use common_log::{error, info};
 use nonce::Nonce;
@@ -44,14 +45,10 @@ impl ChallengeService {
             return Err(AttestationError::InvalidParameter(err.to_string()));
         }
         let challenge_request = challenge_request.into_inner();
-        info!("Start checking plugins and generating nonce");
-
         if !Self::use_attester_types_get_plugins(&challenge_request) {
             error!("Required plugins not found");
             return Err(AttestationError::PluginNotFoundError("Required plugins not found".to_string()));
         }
-
-        info!("Plugins verified, start generating nonce");
         let nonce = match Nonce::generate().await {
             Ok(nonce) => nonce,
             Err(error) => {
@@ -59,10 +56,19 @@ impl ChallengeService {
                 return Err(AttestationError::InternalError(error.to_string()));
             }
         };
-        info!("Nonce generated successfully");
+        
+        // Serialize the nonce to JSON and then base64 encode it
+        let nonce_json = serde_json::to_string(&nonce).map_err(|e| {
+            error!("Failed to serialize nonce: {}", e);
+            AttestationError::InternalError(format!("Failed to serialize nonce: {}", e))
+        })?;
+        
+        let nonce_encoded = STANDARD.encode(nonce_json);
+        
+        info!("Nonce generated and encoded successfully");
         Ok(HttpResponse::Ok().json(json!({
             "service_version": SERVICE_VERSION,
-            "nonce": nonce
+            "nonce": nonce_encoded
         })))
     }
 

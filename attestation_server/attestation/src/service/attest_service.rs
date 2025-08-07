@@ -45,19 +45,17 @@ impl AttestationService {
             return Err(AttestationError::InvalidParameter(e.to_string()));
         }
         info!("Start processing default attestation request, user_id: {}", user_id);
-        let nonce_type = request.nonce_type.as_deref().unwrap_or("verifier");
-        info!("Using nonce type: {}", nonce_type);
         let mut token_list = Vec::new();
         for measurement in &request.measurements {
             info!("Start processing measurement, node_id: {}", measurement.node_id);
             // Validate nonce request
-            DefaultHandler::validate_nonce_request(measurement, nonce_type, &request).await?;
+            DefaultHandler::validate_nonce_request(measurement).await?;
             let mut evidence_token_responses = HashMap::new();
             // Process each evidence
             for evidence in &measurement.evidences {
                 let attester_type = &evidence.attester_type;
                 let nonce_bytes =
-                    DefaultHandler::get_nonce_bytes(nonce_type, &measurement.nonce, request.user_nonce.as_ref())?;
+                    DefaultHandler::get_nonce_bytes(&measurement.nonce_type.clone().unwrap_or("verifier".to_string()), measurement.nonce.as_ref())?;
                 
                 let aggregate_nonce_bytes = DefaultHandler::get_aggregate_nonce_bytes(&nonce_bytes, &measurement.attester_data);
 
@@ -86,8 +84,8 @@ impl AttestationService {
             // Create attestation response
             let attestation_response = DefaultHandler::create_attestation_response(
                 &evidence_token_responses,
-                nonce_type,
-                &request.user_nonce,
+                &measurement.nonce_type.clone().unwrap_or("verifier".to_string()),
+                &measurement.nonce,
                 &measurement,
             );
             // Generate token

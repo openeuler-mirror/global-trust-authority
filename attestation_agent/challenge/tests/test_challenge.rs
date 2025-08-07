@@ -12,7 +12,7 @@
 
 use challenge::{
     challenge_error::{ChallengeError, TokenError},
-    challenge::{AttesterInfo, Nonce, validate_nonce_fields, GetEvidenceResponse, EvidenceWithPolicy, Measurement},
+    challenge::{AttesterInfo, GetEvidenceResponse, EvidenceWithPolicy, Measurement},
     evidence::{Attester, GetEvidenceRequest, EvidenceManager},
     token::TokenRequest,
 };
@@ -27,12 +27,7 @@ fn test_full_evidence_collection_flow() {
             log_types: Some(vec!["TcgEventLog".to_string()]),
         }],
         nonce_type: Some("verifier".to_string()),
-        user_nonce: None,
-        nonce: Some(Nonce {
-            iat: 1234567890,
-            value: "test_nonce_value".repeat(5),
-            signature: "test_signature".repeat(6),
-        }),
+        nonce: Some("test_nonce_value".repeat(5)),
         attester_data: Some(json!({"test": "data"})),
     };
 
@@ -67,29 +62,18 @@ fn test_token_request_flow() {
 
 #[test]
 fn test_error_handling_integration() {
-    let invalid_nonce = Nonce {
-        iat: 0,
-        value: "".to_string(),
-        signature: "".to_string(),
-    };
-
-    let result = validate_nonce_fields(&invalid_nonce);
-    assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
-
     let request = GetEvidenceRequest {
         attesters: vec![Attester {
             attester_type: "tpm_boot".to_string(),
             log_types: Some(vec!["TcgEventLog".to_string()]),
         }],
         nonce_type: Some("user".to_string()),
-        user_nonce: None,
         nonce: None,
         attester_data: None,
     };
     let result = EvidenceManager::get_evidence(&request);
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), ChallengeError::UserNonceNotProvided));
+    assert!(matches!(result.unwrap_err(), ChallengeError::NonceNotProvided));
 
     let request = GetEvidenceRequest {
         attesters: vec![Attester {
@@ -97,7 +81,6 @@ fn test_error_handling_integration() {
             log_types: Some(vec!["TcgEventLog".to_string()]),
         }],
         nonce_type: Some("invalid_type".to_string()),
-        user_nonce: None,
         nonce: None,
         attester_data: None,
     };
@@ -131,7 +114,6 @@ fn test_serialization_integration() {
         "verifier",
         None,
         None,
-        None,
         "test_node",
         vec![evidence],
     );
@@ -148,7 +130,6 @@ fn test_request_sanitization_integration() {
     let empty_request = GetEvidenceRequest {
         attesters: vec![],
         nonce_type: Some("   ".to_string()),
-        user_nonce: Some("".to_string()),
         nonce: None,
         attester_data: Some(json!(null)),
     };
@@ -156,7 +137,6 @@ fn test_request_sanitization_integration() {
     let sanitized = empty_request.sanitize();
     assert!(sanitized.attesters.is_empty());
     assert!(sanitized.nonce_type.is_none());
-    assert!(sanitized.user_nonce.is_none());
     assert!(sanitized.attester_data.is_none());
 
     let empty_token_request = TokenRequest {
@@ -173,12 +153,6 @@ fn test_request_sanitization_integration() {
 
 #[test]
 fn test_measurement_construction() {
-    let nonce = Nonce {
-        iat: 1234567890,
-        value: "test_nonce_value".repeat(5),
-        signature: "test_signature".repeat(6),
-    };
-
     let evidence1 = EvidenceWithPolicy {
         attester_type: "tpm_boot".to_string(),
         evidence: json!({"boot_evidence": "data"}),
@@ -205,20 +179,15 @@ fn test_measurement_construction() {
 
     let measurement = Measurement {
         node_id: "test-node".to_string(),
-        nonce: Some(Nonce {
-            iat: nonce.iat,
-            value: nonce.value.clone(),
-            signature: nonce.signature.clone(),
-        }),
+        nonce_type: "ignore".to_string(),
+        nonce: Some("test_nonce_value".repeat(5)),
         attester_data: Some(json!({"attester_data": "test"})),
         evidences, // move evidences
     };
 
     assert_eq!(measurement.node_id, "test-node");
     if let Some(measurement_nonce) = &measurement.nonce {
-        assert_eq!(measurement_nonce.iat, nonce.iat);
-        assert_eq!(measurement_nonce.value, nonce.value);
-        assert_eq!(measurement_nonce.signature, nonce.signature);
+        assert_eq!(measurement_nonce, &"test_nonce_value".repeat(5));
     } else {
         panic!("Expected nonce to be Some");
     }
@@ -234,12 +203,6 @@ fn test_measurement_construction() {
 
 #[test]
 fn test_evidence_response_construction() {
-    let nonce = Nonce {
-        iat: 1234567890,
-        value: "test_nonce_value".repeat(5),
-        signature: "test_signature".repeat(6),
-    };
-
     let evidence1 = EvidenceWithPolicy {
         attester_type: "tpm_boot".to_string(),
         evidence: json!({"boot_evidence": "data"}),
@@ -265,67 +228,19 @@ fn test_evidence_response_construction() {
 
     let response = GetEvidenceResponse::new(
         "2.0.0",
-        "user",
-        Some(&"user_nonce".to_string()),
-        Some(&nonce),
-        Some(&json!({"attester_data": "test"})),
+        "ignore",
+        None,
+        None,
         "test_node_id",
         evidences, // move evidences
     );
 
     assert_eq!(response.agent_version, "2.0.0");
-    assert_eq!(response.nonce_type, "user");
-    assert_eq!(response.user_nonce, Some("user_nonce".to_string()));
     assert_eq!(response.measurements.len(), 1);
     assert_eq!(response.measurements[0].node_id, "test_node_id");
     assert_eq!(response.measurements[0].evidences.len(), 2);
     assert_eq!(response.measurements[0].evidences[0].attester_type, "tpm_boot");
     assert_eq!(response.measurements[0].evidences[1].attester_type, "tpm_ima");
-}
-
-#[test]
-fn test_nonce_validation_comprehensive() {
-    let invalid_iat_nonce = Nonce {
-        iat: 0,
-        value: "test_nonce_value".repeat(5),
-        signature: "test_signature".repeat(6),
-    };
-    assert!(validate_nonce_fields(&invalid_iat_nonce).is_err());
-
-    let empty_value_nonce = Nonce {
-        iat: 1234567890,
-        value: "".to_string(),
-        signature: "test_signature".repeat(6),
-    };
-    assert!(validate_nonce_fields(&empty_value_nonce).is_err());
-
-    let empty_signature_nonce = Nonce {
-        iat: 1234567890,
-        value: "test_nonce_value".repeat(5),
-        signature: "".to_string(),
-    };
-    assert!(validate_nonce_fields(&empty_signature_nonce).is_err());
-
-    let short_value_nonce = Nonce {
-        iat: 1234567890,
-        value: "short".to_string(),
-        signature: "test_signature".repeat(6),
-    };
-    assert!(validate_nonce_fields(&short_value_nonce).is_err());
-
-    let long_value_nonce = Nonce {
-        iat: 1234567890,
-        value: "a".repeat(1025),
-        signature: "test_signature".repeat(6),
-    };
-    assert!(validate_nonce_fields(&long_value_nonce).is_err());
-
-    let short_signature_nonce = Nonce {
-        iat: 1234567890,
-        value: "test_nonce_value".repeat(5),
-        signature: "short".to_string(),
-    };
-    assert!(validate_nonce_fields(&short_signature_nonce).is_err());
 }
 
 #[test]
@@ -340,7 +255,6 @@ fn test_error_handling_comprehensive() {
         ChallengeError::NonceTypeError("invalid type".to_string()),
         ChallengeError::NonceValueEmpty,
         ChallengeError::NonceNotProvided,
-        ChallengeError::UserNonceNotProvided,
         ChallengeError::NonceInvalid("invalid nonce".to_string()),
         ChallengeError::TokenNotReceived,
         ChallengeError::RequestParseError("parse error".to_string()),
@@ -380,6 +294,7 @@ fn test_measurement_edge_cases() {
 
     let measurement = Measurement {
         node_id: "test-node".to_string(),
+        nonce_type: "ignore".to_string(),
         nonce: None,
         attester_data: None,
         evidences, // move evidences
@@ -416,17 +331,17 @@ fn test_get_evidence_response_edge_cases() {
 
     let response = GetEvidenceResponse {
         agent_version: "2.0.0".to_string(),
-        nonce_type: "verifier".to_string(),
-        user_nonce: None,
         measurements: vec![
             Measurement {
                 node_id: "node1".to_string(),
+                nonce_type: "ignore".to_string(),
                 nonce: None,
                 attester_data: None,
                 evidences: evidences1,
             },
             Measurement {
                 node_id: "node2".to_string(),
+                nonce_type: "ignore".to_string(),
                 nonce: None,
                 attester_data: None,
                 evidences: evidences2,

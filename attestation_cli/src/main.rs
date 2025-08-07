@@ -21,7 +21,6 @@ use crate::entities::{CertType, ContentType, NonceResponse, TokenResponse};
 use agent_utils::load_plugins::load_plugins;
 use agent_utils::AgentError;
 use base64::{engine::general_purpose, Engine as _};
-use challenge::challenge::Nonce;
 use challenge::evidence::{Attester, EvidenceManager, GetEvidenceRequest};
 use clap::{Parser, Subcommand};
 use config::config::ConfigManager;
@@ -545,7 +544,7 @@ async fn deal_nonce_commands(
 
 async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
     match command {
-        EvidenceCommands::Get { nonce_type, user_nonce, content, attester_data, out } => {
+        EvidenceCommands::Get { nonce_type, nonce, attester_data, out } => {
             // Load plugins
             println!("Starting to load plugins");
             load_plugins(&config)
@@ -566,23 +565,16 @@ async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
                     },
                 });
             }
-            let nonce: Option<Nonce> = match content {
+            let nonce: Option<&String> = match nonce {
                 None => None,
-                Some(content) => {
-                    let nonce = get_content(&Some(content.to_string()));
-                    if nonce.is_none() {
-                        eprintln!("Unable to obtain nonce");
-                        return;
-                    }
-                    let nonce: Nonce = serde_json::from_str(&nonce.unwrap()).unwrap();
+                Some(nonce) => {
                     Some(nonce)
                 },
             };
             let evidence_request = GetEvidenceRequest {
                 attesters: attesters,
                 nonce_type: Option::from(nonce_type.to_string()),
-                user_nonce: user_nonce.clone(),
-                nonce,
+                nonce: nonce.cloned(),
                 attester_data: attester_data.clone(),
             };
             match EvidenceManager::get_evidence(&evidence_request) {

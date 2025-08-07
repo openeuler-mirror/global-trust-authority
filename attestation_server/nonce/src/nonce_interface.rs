@@ -18,14 +18,14 @@ use rand_chacha::rand_core::{RngCore, SeedableRng};
 use std::time::{SystemTime, UNIX_EPOCH};
 use key_management::api::impls::default_crypto_impl::DefaultCryptoImpl;
 use key_management::api::CryptoOperations;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use config_manager::types::CONFIG;
 use crate::error::NonceError;
 
 const SEED_SIZE: usize = 32; // seed size
 
 // Nonce
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Nonce {
     pub iat: u64,
     pub value: String,

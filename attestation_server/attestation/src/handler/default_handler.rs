@@ -27,7 +27,7 @@ use openssl::sha::Sha256;
 
 use crate::{
     entities::{
-        attest_request::{AttestRequest, Evidence, Measurement, Nonce as AttestNonce},
+        attest_request::{Evidence, Measurement},
         token_response::{AttestationResponse, AttesterResult, PolicyInfo},
     },
     error::attestation_error::AttestationError,
@@ -38,15 +38,14 @@ pub struct DefaultHandler;
 impl DefaultHandler {
     pub async fn validate_nonce_request(
         measurement: &Measurement,
-        nonce_type: &str,
-        request: &AttestRequest,
     ) -> Result<(), AttestationError> {
+        let nonce_type = measurement.nonce_type.as_ref().map_or("verifier", |s| s);
         info!("Starting nonce validation with type: {}", nonce_type);
         match nonce_type {
             "user" => {
-                if request.user_nonce.is_none() {
-                    error!("User nonce parameter required but not provided");
-                    return Err(AttestationError::NonceVerificationError("user_nonce parameter required".into()));
+                if measurement.nonce.is_none() {
+                    error!("Nonce parameter required but not provided");
+                    return Err(AttestationError::NonceVerificationError("nonce parameter required".into()));
                 }
                 return Ok(());
             },
@@ -58,6 +57,24 @@ impl DefaultHandler {
             error!("Missing nonce in measurements");
             AttestationError::NonceVerificationError("missing nonce in measurements".into())
         })?;
+        
+        // Decode the base64 nonce string first
+        let decoded_nonce = BASE64.decode(nonce).map_err(|e| {
+            error!("Failed to decode base64 nonce: {}", e);
+            AttestationError::NonceVerificationError(format!("failed to decode base64 nonce: {}", e))
+        })?;
+        
+        // Convert the decoded bytes to a string
+        let nonce_str = String::from_utf8(decoded_nonce).map_err(|e| {
+            error!("Failed to convert nonce to string: {}", e);
+            AttestationError::NonceVerificationError(format!("invalid nonce format: {}", e))
+        })?;
+        
+        // Parse the JSON string into a Nonce struct
+        let parsed_nonce: Nonce = serde_json::from_str(&nonce_str).map_err(|e| {
+            error!("Failed to deserialize nonce: {}", e);
+            AttestationError::NonceVerificationError(format!("invalid nonce format: {}", e))
+        })?;
 
         // Replace the first occurrence
         info!(
@@ -67,7 +84,7 @@ impl DefaultHandler {
         let validation_result = validate_nonce(ValidateNonceParams {
             // Replace the second occurrence
             valid_period: CONFIG.get_instance()?.attestation_service.nonce.nonce_valid_period,
-            nonce: Nonce { iat: nonce.iat, value: nonce.value.clone(), signature: nonce.signature.clone() },
+            nonce: parsed_nonce,
         })
         .await;
 
@@ -126,36 +143,21 @@ impl DefaultHandler {
 
     pub fn get_nonce_bytes(
         nonce_type: &str,
-        nonce: &Option<AttestNonce>,
-        user_nonce: Option<&String>,
+        nonce: Option<&String>,
     ) -> Result<Option<Vec<u8>>, AttestationError> {
         match nonce_type {
-            "verifier" => {
+            "user" | "verifier" => {
                 if let Some(n) = nonce {
-                    match BASE64.decode(&n.value) {
+                    match BASE64.decode(n) {
                         Ok(bytes) => Ok(Some(bytes)),
                         Err(e) => {
-                            error!("Failed to decode base64 nonce: {}", e);
-                            Err(AttestationError::NonceVerificationError(format!("failed to decode base64 nonce: {}", e)))
-                        }
-                    }
-                } else {
-                    error!("Missing nonce for verifier type");
-                    Err(AttestationError::NonceVerificationError("missing nonce for verifier type".into()))
-                }
-            },
-            "user" => {
-                if let Some(un) = user_nonce {
-                    match BASE64.decode(un) {
-                        Ok(bytes) => Ok(Some(bytes)),
-                        Err(e) => {
-                            error!("Failed to decode user_nonce: {}", e);
-                            Err(AttestationError::NonceVerificationError(format!("failed to decode user_nonce: {}", e)))
+                            error!("Failed to decode nonce: {}", e);
+                            Err(AttestationError::NonceVerificationError(format!("failed to decode nonce: {}", e)))
                         },
                     }
                 } else {
-                    error!("Missing user_nonce");
-                    Err(AttestationError::NonceVerificationError("missing user_nonce".into()))
+                    error!("Missing nonce");
+                    Err(AttestationError::NonceVerificationError("missing nonce".into()))
                 }
             },
             "ignore" => Ok(None),
@@ -314,19 +316,12 @@ impl DefaultHandler {
     pub fn create_attestation_response(
         evidence_token_responses: &HashMap<String, AttesterResult>,
         nonce_type: &str,
-        user_nonce: &Option<String>,
+        nonce: &Option<String>,
         measurement: &Measurement,
     ) -> AttestationResponse {
         AttestationResponse {
             eat_nonce: match nonce_type {
-                "verifier" => match serde_json::to_value(&measurement.nonce.clone().unwrap_or_default().value) {
-                    Ok(value) => Some(value),
-                    Err(e) => {
-                        error!("Failed to serialize verifier nonce: {}", e);
-                        None
-                    },
-                },
-                "user" => match serde_json::to_value(&user_nonce) {
+                "verifier" | "user" => match serde_json::to_value(&nonce) {
                     Ok(value) => Some(value),
                     Err(e) => {
                         error!("Failed to serialize user nonce: {}", e);
