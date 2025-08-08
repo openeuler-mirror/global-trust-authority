@@ -108,7 +108,7 @@ impl TpmPluginBase for TpmImaPlugin {
             line_count += 1;
 
             // Check line count after reading
-            if line_count >= MAX_IMA_LOG_LINES {
+            if line_count > MAX_IMA_LOG_LINES {
                 return Err(PluginError::InternalError(
                     format!("IMA log file exceeds maximum allowed lines: {} > {}", line_count, MAX_IMA_LOG_LINES)
                 ));
