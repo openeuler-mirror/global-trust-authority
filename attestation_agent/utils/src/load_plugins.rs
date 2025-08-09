@@ -68,23 +68,6 @@ pub fn query_configuration(plugin_name: String) -> Option<String> {
 /// * Plugin file is not found
 /// * No enabled plugins are found in the configuration
 /// * Plugin manager initialization fails
-///
-/// # Examples
-///
-/// ```rust
-/// let config = Config {
-///     plugins: vec![
-///         PluginConfig {
-///             name: "tpm_boot".to_string(),
-///             path: "/path/to/tpm_boot.so".to_string(),
-///             enabled: true,
-///             ..Default::default()
-///         }
-///     ],
-///     ..Default::default()
-/// };
-/// load_plugins(&config)?;
-/// ```
 pub fn load_plugins(config: &Config) -> Result<(), AgentError> {
     // Get AgentPlugin manager instance
     let plugin_manager = PluginManager::<dyn AgentPlugin, AgentHostFunctions>::get_instance();

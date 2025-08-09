@@ -21,3 +21,4 @@ openssl.workspace = true
 
 [dev-dependencies]
 futures.workspace = true
+serial_test.workspace = true

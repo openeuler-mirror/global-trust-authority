@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use crate::response_error::create_error_response;
+use crate::response_error::{create_error_response, create_challenge_error_response};
 use actix_web::{http::StatusCode, HttpResponse};
 use challenge::evidence::{EvidenceManager, GetEvidenceRequest};
 use log::info;
@@ -38,7 +38,7 @@ pub fn get_evidence(body: Option<Value>) -> HttpResponse {
     match handle.join() {
         Ok(result) => match result {
             Ok(response) => HttpResponse::Ok().json(response),
-            Err(error) => create_error_response(error, StatusCode::INTERNAL_SERVER_ERROR),
+            Err(error) => create_challenge_error_response(error),
         },
         Err(_) => create_error_response("Thread execution failed", StatusCode::INTERNAL_SERVER_ERROR),
     }

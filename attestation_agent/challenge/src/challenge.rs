@@ -161,7 +161,7 @@ fn get_enabled_attester_types() -> Result<Vec<String>, ChallengeError> {
     let enabled_plugins = plugin_manager.get_plugin_types();
     if enabled_plugins.is_empty() {
         log::error!("No enabled plugins found");
-        return Err(ChallengeError::NoEnabledPlugins);
+        return Err(ChallengeError::PluginNotFound("No enabled plugins found".to_string()));
     }
 
     let config = AGENT_CONFIG.get_instance().map_err(|e| {
@@ -186,7 +186,7 @@ fn get_enabled_attester_types() -> Result<Vec<String>, ChallengeError> {
 
     if enabled_attester_types.is_empty() {
         log::error!("No enabled attester types found in config");
-        return Err(ChallengeError::NoEnabledPlugins);
+        return Err(ChallengeError::PluginNotFound("No enabled attester types found in config".to_string()));
     }
 
     Ok(enabled_attester_types)
@@ -590,6 +590,20 @@ pub async fn do_challenge(
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::time::{Duration, Instant};
+    use serial_test::serial;
+
+    fn clear_global_tokens() {
+        if let Ok(mut tokens) = GLOBAL_TOKENS.lock() {
+            tokens.clear();
+            return;
+        }
+
+        if let Err(poisoned) = GLOBAL_TOKENS.lock() {
+            let mut guard = poisoned.into_inner();
+            guard.clear();
+        }
+    }
 
     #[test]
     fn test_attester_info_serialization() {
@@ -670,14 +684,10 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_global_tokens_operations() {
         // Clear any existing tokens
-        if let Ok(mut global) = GLOBAL_TOKENS.lock() {
-            *global = Vec::new();
-        } else {
-            // Skip test if lock is poisoned
-            return;
-        }
+        clear_global_tokens();
 
         let tokens = vec![
             NodeToken {
@@ -703,8 +713,13 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_set_cached_tokens_edge_cases() {
         // Test setting empty cache
+        let timeout = Duration::from_secs(5);
+        let start = Instant::now();
+        clear_global_tokens();
+
         set_cached_tokens(&[]);
         if let Ok(global) = GLOBAL_TOKENS.lock() {
             assert_eq!(global.len(), 0);
@@ -724,17 +739,18 @@ mod tests {
         } else {
             return;
         }
+
+        if start.elapsed() > timeout {
+            panic!("Test timed out after {:?}", timeout);
+        }
     }
 
     #[test]
+    #[serial]
     fn test_global_tokens_comprehensive() {
         // Test various operations on the global token cache
         // Clear the cache
-        if let Ok(mut global) = GLOBAL_TOKENS.lock() {
-            *global = Vec::new();
-        } else {
-            return;
-        }
+        clear_global_tokens();
 
         // Set multiple tokens
         let tokens = vec![

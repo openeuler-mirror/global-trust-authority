@@ -68,7 +68,7 @@ plugins:
 schedulers:
   - name: "challenge"      # Remote attestation task
     retry_enabled: true
-    intervals: 86400        # 24 * 60 * 60 = 86400 = 1 day
+    cron_expression: "0 0 0 * * *"   # Execute once every day at 00:00
     initial_delay:                   # Random delay configuration at startup
       min_seconds: 1                 # Minimum delay 1 second
       max_seconds: 60               # Maximum delay 60 seconds
@@ -77,6 +77,5 @@ schedulers:
 
   - name: "config_sync"     # Configuration synchronization task
     retry_enabled: false    # Temporarily disabled
-    intervals: 300          # Execute every 5 minutes
+    cron_expression: "0 */5 * * * *" # Execute every 5 minutes
     enabled: false           # No initial_delay configuration means no initial random delay is needed
-    
