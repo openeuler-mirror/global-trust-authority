@@ -21,8 +21,6 @@ pub enum ChallengeError {
     ConfigError(String),
     /// Specified plugin not found in the system, includes plugin name
     PluginNotFound(String),
-    /// No enabled plugins found in the system
-    NoEnabledPlugins,
 
     /// Errors during evidence collection, includes failure reason
     EvidenceCollectionFailed(String),
@@ -92,7 +90,6 @@ impl fmt::Display for ChallengeError {
             // Configuration related errors
             Self::ConfigError(msg) => write!(f, "Configuration error: {}", msg),
             Self::PluginNotFound(name) => write!(f, "Plugin not found: {}", name),
-            Self::NoEnabledPlugins => write!(f, "No enabled plugins found in configuration"),
 
             // Evidence collection errors
             Self::EvidenceCollectionFailed(msg) => write!(f, "Failed to collect evidence: {}", msg),
@@ -176,9 +173,6 @@ mod tests {
         let plugin_error = ChallengeError::PluginNotFound("test_plugin".to_string());
         assert_eq!(plugin_error.to_string(), "Plugin not found: test_plugin");
 
-        let no_plugins = ChallengeError::NoEnabledPlugins;
-        assert_eq!(no_plugins.to_string(), "No enabled plugins found in configuration");
-
         let evidence_error = ChallengeError::EvidenceCollectionFailed("evidence failed".to_string());
         assert_eq!(evidence_error.to_string(), "Failed to collect evidence: evidence failed");
 
@@ -246,9 +240,6 @@ mod tests {
 
         let plugin_error = ChallengeError::PluginNotFound("plugin_name".to_string());
         assert_eq!(plugin_error.to_string(), "Plugin not found: plugin_name");
-
-        let no_plugins = ChallengeError::NoEnabledPlugins;
-        assert_eq!(no_plugins.to_string(), "No enabled plugins found in configuration");
 
         let evidence_error = ChallengeError::EvidenceCollectionFailed("evidence failed".to_string());
         assert_eq!(evidence_error.to_string(), "Failed to collect evidence: evidence failed");
@@ -422,7 +413,6 @@ mod tests {
         let errors = vec![
             ChallengeError::ConfigError("config".to_string()),
             ChallengeError::PluginNotFound("plugin".to_string()),
-            ChallengeError::NoEnabledPlugins,
             ChallengeError::EvidenceCollectionFailed("evidence".to_string()),
             ChallengeError::NoValidEvidence("no evidence".to_string()),
             ChallengeError::NonceTypeError("type".to_string()),
@@ -441,7 +431,6 @@ mod tests {
             match error {
                 ChallengeError::ConfigError(_) => {},
                 ChallengeError::PluginNotFound(_) => {},
-                ChallengeError::NoEnabledPlugins => {},
                 ChallengeError::EvidenceCollectionFailed(_) => {},
                 ChallengeError::NoValidEvidence(_) => {},
                 ChallengeError::NonceTypeError(_) => {},

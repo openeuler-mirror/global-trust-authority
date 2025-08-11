@@ -249,7 +249,6 @@ fn test_error_handling_comprehensive() {
     let errors = vec![
         ChallengeError::ConfigError("config error".to_string()),
         ChallengeError::PluginNotFound("plugin not found".to_string()),
-        ChallengeError::NoEnabledPlugins,
         ChallengeError::EvidenceCollectionFailed("evidence failed".to_string()),
         ChallengeError::NoValidEvidence("no evidence".to_string()),
         ChallengeError::NonceTypeError("invalid type".to_string()),

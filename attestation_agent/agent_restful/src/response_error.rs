@@ -13,6 +13,7 @@
 use actix_web::{http::StatusCode, HttpResponse};
 use log::error;
 use serde_json::json;
+use challenge::challenge_error::ChallengeError;
 
 /// Creates a standardized error response for HTTP endpoints
 ///
@@ -34,5 +35,89 @@ pub fn create_error_response(error: impl std::fmt::Display, status: StatusCode) 
     } else {
         error!("Operation failed: {}", message);
     }
+    HttpResponse::build(status).json(json!({ "message": message }))
+}
+
+/// Creates a standardized error response for ChallengeError
+/// Maps different ChallengeError variants to appropriate HTTP status codes
+///
+/// # Arguments
+/// * `error` - ChallengeError instance to be converted to an HTTP response
+///
+/// # Returns
+/// * `HttpResponse` - JSON formatted error response with appropriate status code and message
+///
+/// # Status Code Mapping
+///
+/// ## 400 Bad Request - Client-side errors
+/// - `RequestParseError`: Request parsing failed
+/// - `NonceTypeError`: Invalid nonce type
+/// - `NonceValueEmpty`: Nonce value is empty
+/// - `NonceNotProvided`: Nonce not provided when required
+/// - `NonceInvalid`: Invalid nonce value
+/// - `PluginNotFound`: Requested plugin not found
+///
+/// ## 500 Internal Server Error - Server-side errors
+/// - `ConfigError`: Configuration error
+/// - `InternalError`: General internal server error
+/// - `EvidenceCollectionFailed`: Failed to collect evidence
+/// - `NoValidEvidence`: No valid evidence was collected
+/// - `TokenError`: Token-related errors
+///
+/// ## 503 Service Unavailable - Service errors
+/// - `NetworkError`: Network-related errors
+/// - `ServerError`: Server-related errors
+/// - `TokenNotReceived`: No token received in server response
+pub fn create_challenge_error_response(error: ChallengeError) -> HttpResponse {
+    let (status, message) = match error {
+        // 400 Bad Request
+        ChallengeError::PluginNotFound(name) => {
+            (StatusCode::BAD_REQUEST, format!("Plugin not found: {}", name))
+        },
+        ChallengeError::NonceTypeError(msg) => {
+            (StatusCode::BAD_REQUEST, format!("Invalid nonce type: {}", msg))
+        },
+        ChallengeError::NonceValueEmpty => {
+            (StatusCode::BAD_REQUEST, "Nonce value cannot be empty".to_string())
+        },
+        ChallengeError::NonceNotProvided => {
+            (StatusCode::BAD_REQUEST, "Nonce must be provided when nonce_type is 'default' or null".to_string())
+        },
+        ChallengeError::NonceInvalid(msg) => {
+            (StatusCode::BAD_REQUEST, format!("Invalid nonce: {}", msg))
+        },
+         ChallengeError::RequestParseError(msg) => {
+            (StatusCode::BAD_REQUEST, format!("Request parsing failed: {}", msg))
+        },
+
+        // 500 Internal Server Error
+        ChallengeError::ConfigError(msg) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Configuration error: {}", msg))
+        },
+        ChallengeError::EvidenceCollectionFailed(msg) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Evidence collection failed: {}", msg))
+        },
+        ChallengeError::NoValidEvidence(msg) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("No valid evidence collected: {}", msg))
+        },
+        ChallengeError::InternalError(msg) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal server error: {}", msg))
+        },
+        ChallengeError::TokenError(token_error) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Token error: {}", token_error))
+        },
+
+        // 503 Service Unavailable
+        ChallengeError::TokenNotReceived => {
+            (StatusCode::SERVICE_UNAVAILABLE, "No token received in server response".to_string())
+        },
+        ChallengeError::NetworkError(msg) => {
+            (StatusCode::SERVICE_UNAVAILABLE, format!("Network error: {}", msg))
+        },
+        ChallengeError::ServerError(msg) => {
+            (StatusCode::SERVICE_UNAVAILABLE, format!("Server error: {}", msg))
+        },
+    };
+
     HttpResponse::build(status).json(json!({ "message": message }))
 }

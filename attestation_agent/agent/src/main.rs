@@ -142,7 +142,7 @@ async fn main() -> Result<(), AgentError> {
     // start scheduler
     let scheduler_config = SchedulerConfig::new()
         .name(challenge_config.name.clone())
-        .intervals(challenge_config.intervals)
+        .cron_expression(challenge_config.cron_expression.clone())
         .initial_delay(Duration::from_secs(initial_delay.min_seconds))
         .initial_max_delay(Duration::from_secs(initial_delay.max_seconds))
         .unwrap()

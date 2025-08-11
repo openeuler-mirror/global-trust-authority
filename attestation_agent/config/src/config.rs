@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::str::FromStr;
+use cron::Schedule;
 
 // refer to registry-of-reserved-tpm-2.0-handles-and-localites
 const TPM_KEY_HANDLE_MIN: u32 = 0x81000000;
@@ -107,7 +109,7 @@ pub struct InitialDelayConfig {
 pub struct SchedulerConfig {
     pub name: String,                              // challenge...
     pub retry_enabled: bool,                       // Whether to retry the task
-    pub intervals: u64,                            // Time interval for next scheduling, units: seconds
+    pub cron_expression: String,                   // Cron expression for scheduling
     pub initial_delay: Option<InitialDelayConfig>, // Optional startup delay configuration
     pub max_retries: Option<usize>,                // Optional maximum retries
     pub enabled: bool,                             // Whether to enable scheduler
@@ -184,6 +186,14 @@ impl Config {
             // Validate name
             if scheduler.name.is_empty() {
                 return Err(format!("Scheduler #{} must have a name", idx));
+            }
+
+            // Validate cron expression
+            if cron::Schedule::from_str(&scheduler.cron_expression).is_err() {
+                return Err(format!(
+                    "Scheduler #{} '{}' has invalid cron expression: {}",
+                    idx, scheduler.name, scheduler.cron_expression
+                ));
             }
 
             // Validate initial delay (if present)

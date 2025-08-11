@@ -67,7 +67,7 @@ plugins:
 schedulers:
   - name: "challenge"
     retry_enabled: true
-    intervals: 10
+    cron_expression: "*/10 * * * * *"
     initial_delay:
       min_seconds: 1
       max_seconds: 60
@@ -76,7 +76,7 @@ schedulers:
 
   - name: "config_sync"
     retry_enabled: false
-    intervals: 5
+    cron_expression: "*/5 * * * * *"
     enabled: false
 logging:
   level: "info"

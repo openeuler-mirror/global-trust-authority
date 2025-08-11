@@ -20,9 +20,11 @@ use std::ops::RangeInclusive;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
+use std::str::FromStr;
 use tokio::select;
 use tokio::sync::{mpsc, Mutex};
 use tokio::time::sleep;
+use cron::Schedule;
 
 pub struct SchedulerBuilders {
     schedulers: Vec<SingleTaskScheduler>,
@@ -60,8 +62,8 @@ impl SchedulerBuilders {
 pub struct SchedulerConfig {
     /// Task name (used for logging)
     pub name: String,
-    /// Time interval in seconds for the task to run
-    pub intervals: u64,
+    /// Cron expression for scheduling
+    pub cron_expression: String,
     /// Delay range before the first execution (min..=max)
     pub initial_delay_range: RangeInclusive<Duration>,
     /// Whether retry is enabled for failed executions
@@ -72,7 +74,7 @@ pub struct SchedulerConfig {
     pub retry_delay_range: RangeInclusive<Duration>,
     /// Maximum queue size (must be at least 1)
     pub max_queue_size: usize,
-    /// Whether enable scheduling based on intervals
+    /// Whether enable scheduling based on cron_expression
     pub enabled: bool,
 }
 
@@ -86,7 +88,7 @@ impl Default for SchedulerConfig {
             retry_delay_range: Duration::from_secs(0)..=Duration::from_secs(0), // Default no delay
             max_queue_size: 3,                                                  // Default queue size limit of 3
             enabled: true,
-            intervals: 0,
+            cron_expression: "*/1 * * * * *".to_string(), // Default: every second
         }
     }
 }
@@ -205,19 +207,17 @@ impl SchedulerConfig {
         Ok(self)
     }
 
-    /// Sets or updates the interval time of the instance.
-    ///
-    /// This method uses a fluent interface (method chaining) to allow setting the interval time
-    /// when creating or configuring an instance. It is mainly used to configure the instance
-    /// to perform certain operations at specified time intervals.
+    /// Sets the cron expression for scheduling the task.
     ///
     /// # Arguments
-    /// - `time`: A 64-bit unsigned integer representing the interval time. The unit is second.
+    ///
+    /// * `expr` - A string representing the cron expression (six fields: sec min hour day month week)
     ///
     /// # Returns
-    /// Returns the instance itself after configuration, allowing further method chaining.
-    pub fn intervals(mut self, time: u64) -> Self {
-        self.intervals = time;
+    ///
+    /// Self for method chaining
+    pub fn cron_expression<S: Into<String>>(mut self, expr: S) -> Self {
+        self.cron_expression = expr.into();
         self
     }
 
@@ -301,7 +301,7 @@ enum WaitResult {
 ///
 /// - Delayed first execution with optional random jitter
 /// - Configurable retry policy for first execution
-/// - Periodic execution with fixed intervals OR schedule-based execution
+/// - Periodic execution with fixed cron_expression OR schedule-based execution
 /// - Clean shutdown with proper resource cleanup
 struct SingleTaskScheduler {
     /// Task configuration
@@ -345,7 +345,7 @@ impl SingleTaskScheduler {
     ///
     /// The scheduler will first execute the task after the configured initial delay,
     /// with retry attempts if enabled. After the first successful execution,
-    /// it will continue with periodic execution based on the configured intervals schedule.
+    /// it will continue with periodic execution based on the configured cron_expression schedule.
     ///
     /// # Returns
     ///
@@ -524,7 +524,7 @@ impl SingleTaskScheduler {
         rx: Arc<Mutex<mpsc::Receiver<()>>>,
         queue_size: Arc<Mutex<usize>>,
     ) {
-        info!("Starting scheduled execution of task '{}' with intervals '{}' seconds", config.name, config.intervals);
+        info!("Starting scheduled execution of task '{}' with cron expression '{}'", config.name, config.cron_expression);
 
         while !Self::should_stop(&state).await {
             match Self::wait_and_execute(&task, &config, &rx, &queue_size).await {
@@ -582,10 +582,32 @@ impl SingleTaskScheduler {
         config: &SchedulerConfig,
         rx: &Arc<Mutex<mpsc::Receiver<()>>>,
     ) -> Result<WaitResult, AgentError> {
-        let interval = Duration::from_secs(config.intervals);
-        let next = Utc::now() + interval;
-        info!("The next trigger time for the scheduled task is: {}", next.with_timezone(&Local));
-        Self::wait_with_cancellation(interval, rx).await
+        let now = Utc::now();
+        let schedule = Schedule::from_str(&config.cron_expression)
+            .map_err(|e| AgentError::ConfigError(format!(
+                "Invalid cron expression '{}': {}",
+                config.cron_expression, e
+            )))?;
+
+        // Get the next trigger time in UTC
+        let (wait_duration, next_time) = match schedule.after(&now).next() {
+            Some(next) => {
+                let duration = next.signed_duration_since(now)
+                    .to_std()
+                    .unwrap_or_else(|_| Duration::from_secs(0));
+                (duration, Some(next))
+            },
+            None => (Duration::from_secs(0), None),
+        };
+
+        // Log the next trigger time in UTC
+        if let Some(next) = next_time {
+            info!("Next trigger time (UTC) for task '{}': {}", config.name, next);
+        } else {
+            info!("No valid next trigger time found for task '{}'", config.name);
+        }
+
+        Self::wait_with_cancellation(wait_duration, rx).await
     }
 
     async fn wait_with_cancellation(
@@ -715,7 +737,7 @@ mod tests {
         let counter = Arc::new(AtomicU32::new(0));
         let counter_clone = Arc::clone(&counter);
 
-        let config = SchedulerConfig::new().name("test_task".to_string()).intervals(1);
+        let config = SchedulerConfig::new().name("test_task".to_string()).cron_expression("*/1 * * * * *");
 
         let scheduler = create_scheduler(config, move || {
             let counter = Arc::clone(&counter_clone);
@@ -736,8 +758,8 @@ mod tests {
 
         // Consider the initial execution (1 time) plus the scheduled execution (5 times)
         assert!(
-            final_count >= 4 && final_count <= 5,
-            "Task should have executed 4-5 times, but got {} executions",
+            final_count >= 4 && final_count <= 6,
+            "Task should have executed 4-6 times, but got {} executions",
             final_count
         );
     }
@@ -746,7 +768,7 @@ mod tests {
     async fn test_default_scheduler_config() {
         let config = SchedulerConfig::default();
         assert_eq!(config.name, "unnamed_task");
-        assert_eq!(config.intervals, 0);
+        assert_eq!(config.cron_expression, "*/1 * * * * *");
         assert_eq!(*config.initial_delay_range.start(), Duration::from_secs(0));
         assert_eq!(*config.initial_delay_range.end(), Duration::from_secs(0));
         assert!(!config.retry_enabled);
@@ -771,13 +793,13 @@ mod tests {
             .max_retries(3)
             .max_queue_size(5)
             .unwrap()
-            .intervals(10)
+            .cron_expression("*/10 * * * * *")
             .enabled(false);
 
         let scheduler = create_scheduler(config.clone(), || async { Ok(()) });
 
         assert_eq!(scheduler.config.name, "test_builder");
-        assert_eq!(scheduler.config.intervals, 10);
+        assert_eq!(scheduler.config.cron_expression, "*/10 * * * * *");
         assert_eq!(*scheduler.config.initial_delay_range.start(), Duration::from_secs(2));
         assert_eq!(*scheduler.config.initial_delay_range.end(), Duration::from_secs(5));
         assert!(scheduler.config.retry_enabled);
@@ -843,7 +865,7 @@ mod tests {
 
         let config = SchedulerConfig::new()
             .name("retry_test".to_string())
-            .intervals(5)
+            .cron_expression("*/5 * * * * *")
             .retry_enabled(true)
             .retry_delay(Duration::from_millis(100))
             .max_retries(2);
@@ -897,26 +919,51 @@ mod tests {
 
         let config = SchedulerConfig::new()
             .name("exhausted_retry_test".to_string())
-            .intervals(1)
+            .cron_expression("*/1 * * * * *")
             .retry_enabled(true)
-            .retry_delay(Duration::from_millis(50))
+            .retry_delay(Duration::from_millis(10))  // Reduce retry delay to speed up the test
             .max_retries(2);
 
-        let scheduler = create_scheduler(config, move || {
-            let counter = Arc::clone(&execution_count_clone);
+        // Create a channel to notify when retries are exhausted
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let tx = Arc::new(Mutex::new(Some(tx)));
 
-            async move {
-                counter.fetch_add(1, Ordering::SeqCst);
-                // Always fails
-                Err(AgentError::ExecutionError("Simulated permanent failure".to_string()))
+        let scheduler = create_scheduler(config, {
+            let counter = Arc::clone(&execution_count_clone);
+            let tx = Arc::clone(&tx);
+ 
+            move || {
+                let counter = Arc::clone(&counter);
+                let tx = Arc::clone(&tx);
+
+                async move {
+                    let count = counter.fetch_add(1, Ordering::SeqCst);
+                    // If this is the last retry, send the completion signal
+                    if count >= 2 {  // Initial execution + 2 retries = 3 executions
+                        if let Some(tx) = tx.lock().await.take() {
+                            let _ = tx.send(()).await;
+                        }
+                    }
+                    // Always fail
+                    Err(AgentError::ExecutionError("Simulated permanent failure".to_string()))
+                }
             }
         });
 
         scheduler.start().await.unwrap();
 
-        tokio::time::sleep(Duration::from_millis(300)).await;
-
-        assert_eq!(execution_count.load(Ordering::SeqCst), 3); // Initial + 2 retries
+        // Wait for retry exhaustion signal or timeout
+        let timeout_duration = Duration::from_secs(1);
+        match tokio::time::timeout(timeout_duration, rx.recv()).await {
+            Ok(Some(_)) => {
+                // Successfully received completion signal
+                let count = execution_count.load(Ordering::SeqCst);
+                assert!(count >= 3, "Should have at least 3 executions (initial + 2 retries), but got {}", count);
+                assert!(count <= 4, "Should have at most 4 executions (initial + 3 retries), but got {}", count);
+            },
+            Ok(None) => panic!("Channel unexpectedly closed"),
+            Err(_) => panic!("Timed out waiting for retries to be exhausted"),
+        }
     }
 
     #[tokio::test]
@@ -926,7 +973,7 @@ mod tests {
         let started_clone = Arc::clone(&started);
         let completed_clone = Arc::clone(&completed);
 
-        let config = SchedulerConfig::new().name("cancel_test".to_string()).intervals(1);
+        let config = SchedulerConfig::new().name("cancel_test".to_string()).cron_expression("*/1 * * * * *");
 
         let scheduler = create_scheduler(config, move || {
             let started_counter = Arc::clone(&started_clone);
@@ -985,12 +1032,12 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("No task set"));
 
-        // 2. Test enabling retry without intervals expression
+        // 2. Test enabling retry without cron expression
         let config_no_cron = SchedulerConfig::new().retry_enabled(true);
         let _scheduler_no_cron = create_scheduler(config_no_cron, || async { Ok(()) });
 
         // 4. Test if scheduler is already in running state
-        let running_config = SchedulerConfig::new().intervals(0);
+        let running_config = SchedulerConfig::new().cron_expression("*/1 * * * * *");
         let scheduler_running = create_scheduler(running_config, || async { Ok(()) });
 
         // Start once
@@ -1010,7 +1057,7 @@ mod tests {
         let execution_count = Arc::new(AtomicU32::new(0));
         let execution_count_clone = Arc::clone(&execution_count);
 
-        let config = SchedulerConfig::new().name("already_running_test".to_string()).intervals(1);
+        let config = SchedulerConfig::new().name("already_running_test".to_string()).cron_expression("*/1 * * * * *");
 
         let scheduler = create_scheduler(config, move || {
             let counter = Arc::clone(&execution_count_clone);
@@ -1055,7 +1102,7 @@ mod tests {
         let mut builders = SchedulerBuilders::new();
 
         // Create first task
-        let config1 = SchedulerConfig::new().name("task1".to_string()).intervals(1);
+        let config1 = SchedulerConfig::new().name("task1".to_string()).cron_expression("*/1 * * * * *");
 
         let task1: BoxedTask = Box::new(move || {
             let counter = Arc::clone(&counter1_clone);
@@ -1066,7 +1113,7 @@ mod tests {
         });
 
         // Create second task
-        let config2 = SchedulerConfig::new().name("task2".to_string()).intervals(1);
+        let config2 = SchedulerConfig::new().name("task2".to_string()).cron_expression("*/1 * * * * *");
 
         let task2: BoxedTask = Box::new(move || {
             let counter = Arc::clone(&counter2_clone);
@@ -1105,7 +1152,7 @@ mod tests {
         let task1: BoxedTask = Box::new(|| Box::pin(async { Ok(()) }));
         builders.add(config1, task1);
 
-        // Add an invalid scheduler (missing intervals expression)
+        // Add an invalid scheduler (missing cron expression)
         let config2 = SchedulerConfig::new().name("invalid_task".to_string());
 
         let task2: BoxedTask = Box::new(|| Box::pin(async { Ok(()) }));

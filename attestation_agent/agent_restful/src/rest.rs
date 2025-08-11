@@ -1242,10 +1242,24 @@ mod tests {
         let server_result = instance.start_server().await;
         assert!(server_result.is_ok());
 
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        // Wait for the server port to be ready (polling)
+        let addr = format!("127.0.0.1:{}", http_port);
+        let start = std::time::Instant::now();
+        let timeout_ms = 3000;
+        let mut ready = false;
+        while start.elapsed().as_millis() < timeout_ms {
+            if std::net::TcpStream::connect(&addr).is_ok() {
+                ready = true;
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        assert!(ready, "Server did not become ready in time");
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         let url = format!("http://127.0.0.1:{}/test_operation", http_port);
-        let client = reqwest::Client::builder().timeout(Duration::from_secs(2)).build().unwrap();
+        let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(2)).build().unwrap();
 
         let response = client.get(&url).send().await.expect("Request should succeed");
         assert_eq!(response.status(), reqwest::StatusCode::OK);
@@ -1258,11 +1272,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_timeout_behavior() {
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        drop(listener);
+        // Get an available port
+        let port = {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            let port = listener.local_addr().unwrap().port();
+            drop(listener);
+            port
+        };
 
-        let config = ServiceConfig::new().with_port(port).with_bind_address("127.0.0.1");
+        let config = ServiceConfig::new()
+            .with_port(port)
+            .with_bind_address("127.0.0.1");
 
         let service = create_test_instance();
         service.is_running.store(false, Ordering::SeqCst);
@@ -1272,18 +1292,44 @@ mod tests {
             *config_guard = config;
         }
 
-        let server_result = service.start_server().await;
-        assert!(server_result.is_ok());
+        // Start server in the background
+        let server_handle = tokio::spawn({
+            let service = service.clone();
+            async move {
+                service.start_server().await
+            }
+        });
 
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        // Create a client with reasonable timeouts
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(5))  // Increased from 2s to 5s
+            .build()
+            .expect("Failed to create HTTP client");
 
-        let client = reqwest::Client::new();
-        let response =
-            client.get(&format!("http://127.0.0.1:{}/health", port)).timeout(Duration::from_secs(2)).send().await;
+        // Try multiple times with a small delay
+        let mut response = None;
+        for _ in 0..5 {  // Try up to 5 times
+            match client
+                .get(&format!("http://127.0.0.1:{}/health", port))
+                .send()
+                .await
+            {
+                Ok(resp) => {
+                    response = Some(resp);
+                    break;
+                }
+                Err(_) => {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+            }
+        }
 
-        assert!(response.is_ok());
+        let response = response.expect("Failed to get successful response after multiple attempts");
+        assert!(response.status().is_success(), "Expected successful status code");
 
-        service.stop_server().await.unwrap();
+        // Clean up
+        service.stop_server().await.expect("Failed to stop server");
+        server_handle.await.expect("Server task panicked").expect("Server returned error");
     }
 
     #[tokio::test]
@@ -1319,10 +1365,21 @@ mod tests {
         let server_result = service.start_server().await;
         assert!(server_result.is_ok());
 
-        // Increase wait time to ensure server is fully started
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        // Wait for the server port to be ready (polling)
+        let addr = format!("127.0.0.1:{}", port);
+        let start = std::time::Instant::now();
+        let timeout_ms = 3000;
+        let mut ready = false;
+        while start.elapsed().as_millis() < timeout_ms {
+            if std::net::TcpStream::connect(&addr).is_ok() {
+                ready = true;
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        assert!(ready, "Server did not become ready in time");
 
-        let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build().unwrap();
+        let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(5)).build().unwrap();
         let test_url = format!("http://127.0.0.1:{}/json-test", port);
 
         // Add retry logic to handle intermittent connection issues
@@ -1337,7 +1394,7 @@ mod tests {
                 Err(e) => {
                     // If connection error, wait and retry
                     eprintln!("Connection failed, retrying: {} (attempt {})", e, retry + 1);
-                    tokio::time::sleep(Duration::from_millis(300)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
                 },
             }
         }
