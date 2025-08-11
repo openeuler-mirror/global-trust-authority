@@ -40,7 +40,7 @@ use std::env;
 use std::future::Future;
 use utils::env_setting_center::{default_not_found_page, get_address, get_https_address};
 
-const MAX_JSON_SIZE_DEFAULT: usize = 10 * 1024 * 1024; // 10MB
+const MAX_JSON_SIZE_DEFAULT: usize = 100 * 1024 * 1024; // 100MB
 const HTTPS_SWITCH_ON: u32 = 1;
 const HTTPS_SWITCH_OFF: u32 = 0;
 const USER_ID: &str = "User-Id";

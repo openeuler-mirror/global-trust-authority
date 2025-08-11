@@ -57,8 +57,8 @@ fn validate_attester_type(attester_type: &str) -> Result<(), ValidationError> {
 }
 
 fn validate_content_max_size(content: &str) -> Result<(), ValidationError> {
-    if content.len() > 10 * 1024 * 1024 {
-        return Err(ValidationError::new("content_max_size is too large"))
+    if content.len() > 100 * 1024 * 1024 {
+        return Err(ValidationError::new("content size is too large"))
     }
     Ok(())
 }

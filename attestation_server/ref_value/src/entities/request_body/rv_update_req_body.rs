@@ -32,6 +32,7 @@ pub struct RvUpdateReqBody {
     pub attester_type: Option<String>,
 
     /// content
+    #[validate(custom(function = "validate_content_max_size"))]
     pub content: Option<String>,
 
     /// is default reference value
@@ -50,3 +51,11 @@ fn validate_rv_update_body(body: &RvUpdateReqBody) -> Result<(), ValidationError
     Validator::validate_attester_type_could_none(&body.attester_type)?;
     Ok(())
 }
+
+fn validate_content_max_size(content: &str) -> Result<(), ValidationError> {
+    if content.len() > 100 * 1024 * 1024 {
+        return Err(ValidationError::new("update content size is too large"))
+    }
+    Ok(())
+}
+
