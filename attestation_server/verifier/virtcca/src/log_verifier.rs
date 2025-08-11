@@ -184,6 +184,10 @@ impl UefiVerify {
         cvm_token_rem: [Vec<u8>; CVM_REM_ARR_SIZE],
         mut log_result: LogResult,
     ) -> Result<LogResult, PluginError> {
+        if uefi_log.as_bytes().len() > 5 * 1024 * 1024 {
+            return Err(PluginError::InputError("UEFI log size exceeds 5MB limit".to_string()));
+        }
+
         let decode_uefi_log = general_purpose::STANDARD
             .decode(uefi_log)
             .map_err(|e| PluginError::InputError(format!("Failed to decode base64 log: {}", e)))?;
