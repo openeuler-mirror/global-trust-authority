@@ -520,7 +520,6 @@ async fn deal_nonce_commands(
             if out.is_some() && status == StatusCode::OK {
                 let response: NonceResponse = serde_json::from_str(text).unwrap();
                 if let Some(nonce) = response.nonce {
-                    let nonce_json = serde_json::to_string_pretty(&nonce).expect("Failed to serialize nonce to JSON");
                     let out_path = match out {
                         Some(path) => path,
                         None => {
@@ -532,7 +531,7 @@ async fn deal_nonce_commands(
                         eprintln!("Warning: Failed to create directories for {}: {}", out_path, e);
                         return;
                     }
-                    match fs::write(&out_path, &nonce_json) {
+                    match fs::write(&out_path, &nonce) {
                         Ok(_) => println!("Nonce successfully saved to {}", out_path),
                         Err(e) => eprintln!("Error writing to {}: {}", out_path, e),
                     }
@@ -567,16 +566,21 @@ async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
                     },
                 });
             }
-            let nonce: Option<&String> = match nonce {
+            let nonce: Option<String> = match nonce {
                 None => None,
-                Some(nonce) => {
-                    Some(nonce)
+                Some(content) => {
+                    let nonce = get_content(&Some(content.to_string()));
+                    if nonce.is_none() {
+                        eprintln!("Unable to obtain nonce");
+                        return;
+                    }
+                    nonce
                 },
             };
             let evidence_request = GetEvidenceRequest {
-                attesters: attesters,
+                attesters,
                 nonce_type: Option::from(nonce_type.to_string()),
-                nonce: nonce.cloned(),
+                nonce,
                 attester_data: attester_data.clone(),
             };
             match EvidenceManager::get_evidence(&evidence_request) {
