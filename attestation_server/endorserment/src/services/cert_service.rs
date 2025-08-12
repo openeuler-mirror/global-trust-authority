@@ -154,7 +154,7 @@ fn validate_cert_type(cert_type: &Vec<String>) -> Result<(), ValidationError> {
             return Err(ValidationError::new("invalid_cert_type_length"));
         }
         match item.as_ref() {
-            "refvalue" | "policy" | "tpm_boot" | "tpm_ima" | "crl" | "virt_cca" => {},
+            "refvalue" | "policy" | "tpm_boot" | "tpm_ima" | "crl" => {},
             _ => return Err(ValidationError::new("invalid_cert_type")),
         }
     }
@@ -171,7 +171,7 @@ fn validate_cert_type_by_update(cert_type: &Vec<String>) -> Result<(), Validatio
             return Err(ValidationError::new("invalid_cert_type_length"));
         }
         match item.as_ref() {
-            "refvalue" | "policy" | "tpm_boot" | "tpm_ima" | "virt_cca" => {},
+            "refvalue" | "policy" | "tpm_boot" | "tpm_ima" => {},
             _ => return Err(ValidationError::new("invalid_cert_type")),
         }
     }
@@ -271,7 +271,6 @@ impl CertificateType {
     pub(crate) const TPM_BOOT: &'static str = "tpm_boot";
     pub(crate) const TPM_IMA: &'static str = "tpm_ima";
     pub(crate) const CRL: &'static str = "crl";
-    pub(crate) const VIRT_CCA: &'static str = "virt_cca";
 }
 
 pub struct CertService;
@@ -328,7 +327,7 @@ impl CertService {
     /// # Arguments
     /// * `db` - Database connection pool.
     /// * `ids` - Optional vector of certificate IDs to query.
-    /// * `cert_type` - Optional certificate type to filter by ("refvalue", "policy", "tpm_boot", "tpm_ima", "crl", "virt_cca").
+    /// * `cert_type` - Optional certificate type to filter by ("refvalue", "policy", "tpm_boot", "tpm_ima", "crl").
     /// * `user_id` - The ID of the user whose certificates are being queried.
     ///
     /// # Returns
@@ -352,7 +351,7 @@ impl CertService {
         }
         // Verify the type field
         let valid_types =
-            [CertificateType::REFVALUE, CertificateType::POLICY, CertificateType::TPM_BOOT, CertificateType::TPM_IMA, CertificateType::VIRT_CCA];
+            [CertificateType::REFVALUE, CertificateType::POLICY, CertificateType::TPM_BOOT, CertificateType::TPM_IMA];
         if let Some(cert_type) = &cert_type {
             if cert_type == CertificateType::CRL {
                 return Self::query_crl_info(db, ids, user_id).await;

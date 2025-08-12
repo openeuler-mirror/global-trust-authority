@@ -75,6 +75,10 @@ impl PcrValues {
     /// 
     /// * `PluginError::InputError` - If the JSON is invalid or missing required fields.
     pub fn from_json(json: &serde_json::Value) -> Result<Self, PluginError> {
+        if json.to_string().as_bytes().len() > 5 * 1024 * 1024 {
+            return Err(PluginError::InputError("Log size exceeds 5MB limit".to_string()));
+        }
+
         let bank: PcrValues = serde_json::from_value(json.clone())
             .map_err(|e| PluginError::InputError(
                 format!("Failed to parse PCR values: {}", e)

@@ -22,6 +22,8 @@ use tpm_common_verifier::CryptoVerifier;
 use tpm_common_verifier::PcrValueEntry;
 use tpm_common_verifier::PcrValues;
 
+const MAX_IMA_LOG_LINES: usize = 100000;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImaLogEntry {
     pub pcr_index: u32,
@@ -108,6 +110,10 @@ impl ImaLog {
                     "0".repeat(digest_size * 2)
                 },
             };
+
+            if logs.len() > MAX_IMA_LOG_LINES {
+                return Err(PluginError::InputError("Measurement logs exceed 100,000 entries".to_string()));
+            }
 
             logs.push(ImaLogEntry {
                 pcr_index,
