@@ -560,6 +560,8 @@ async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
                         Some(vec!["ImaLog".to_string()])
                     } else if attester_type == "tpm_boot" {
                         Some(vec!["TcgEventLog".to_string()])
+                    } else if attester_type == "virt_cca" {
+                        Some(vec!["CCEL".to_string(), "ImaLog".to_string()])
                     } else {
                         None
                     },
