@@ -292,7 +292,7 @@ pub enum EvidenceCommands {
     /// Get evidence
     Get {
         /// Nonce type
-        #[clap(short, long, required = true, value_enum)]
+        #[clap(short = 't', long, required = true, value_enum)]
         nonce_type: NonceType,
 
         /// Fill in when nonce-type is user
