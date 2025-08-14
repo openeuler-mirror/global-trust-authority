@@ -1,4 +1,5 @@
 # Server Preparation
+
 ## Strategy-related data preparation
 
 Added tpm_boot policy and tpm_ima policy
@@ -303,13 +304,13 @@ awk 'BEGIN {
     for (i=6; i<=NF; i++) {
         filename = filename " " $i
     }
-    
+  
     if (!first) {
         print "    },"
     } else {
         first=0
     }
-    
+  
     printf "    {\n"
     printf "      \"fileName\": \"%s\",\n", filename
     printf "      \"sha256\": \"%s\"\n", sha256
@@ -338,14 +339,11 @@ Then provide the imported baseline certificate to generate jwt
 
 Finally, import the baseline
 
-
-
-
 # Agent preparation
+
 ## environmental preparation
 
 1. The agent needs to be deployed in an openEuler environment when deploying RPM, and users can use the source code in other environments.
-
 2. The agent can communicate with the server over the network..
 
 ## agent_config.yaml file configuration
@@ -369,6 +367,7 @@ agent:
  listen_port: 8088
  uuid: "a4e7c719-6b05-4ac6-b95a-7e71a9d6f9d5" 
  user_id: "test_01" 
+ token_fmt: "eat"
 
 server:
  server_url: "http://127.0.0.1:8080" 
@@ -409,6 +408,7 @@ curl -X POST http://localhost:8088/global-trust-authority/agent/v1/tokens -d '{
       }
     ],
     "challenge": true,
+    "token_fmt": "ear",
     "attester_data": {"test_key": "test_value"}
 }'
 
@@ -432,11 +432,8 @@ curl -X POST http://localhost:8088/global-trust-authority/agent/v1/evidences \
   -d '{
     "attester_types": ["tpm_boot", "tpm_ima"],
     "nonce_type": "verifier",
-    "nonce": {
-      "iat": 1749721474,
-      "value": "ImQiIm+6vwdKhAH6FC58XFxfuQ8TWvGxO6qlYwQK6P11Fi/ole/VMN9+4PJodOGt8E6+sbkfJOmuU96/Wc0JSw==",
-      "signature": "eEZHR66P+wPOuTTJanS0OhjqPLquLlJci2KxdptPz8+yLJpOVsOSUDsdeadv0a3aFStY130NdthZ/aBWQNWusblABhq0uepaS/29UFVUXT9tbSQG2PGhsG1+NQxkNr1/u/zktQLqThk9oxiEF8nwFozZTyaSJAvzV5b/3lIvJxa588OUug6PhurMKxIOx0KqpPxv/sHq74IUjW50r4ZtLUlRUxERLPORuobHaCjmJ9UMby6NZ6xlvjKVb5gAWGcupZS4M1PSAYb3+90MpflFrfu6gGLbe29o5CIWDgrwMYfgFGsJ9GaWdTZ20rbdn60USYPvManw0dkNr4Q4tKhs4VYX+IkByVddfexg9t5en/wC8axVk2zH6C7edoepgZfW2AJo8TKYdb8XEGIBteadlvGohX3w957/uZc3lAcJmNEImYTEzwJu4aj4pcOH54YhOWoIYY3fGaIw5JQ87VslG256VUo0h8QIlYUEtEisFpZzwuInOlNwB9o4TMbPuosd"
-    },
+    "nonce": "eyJpYXQiOjE3NTY5ODAwNjMsInZhbHVlIjoiZjMrYVc0cm1vWHUxSjNjaGlJZWNkMkJUWWYrdS84WXU0Q2VTZWYwUmt4MXYzeHJhNHZNYkNrc1locC9UaTRVWW9wN1ZvMm5XNXlsMGs4VXNQNnZrTkE9PSIsInNpZ25hdHVyZSI6Im9Mc09WbTh2OHY3ZllUTW9SZHdySjBrbWl4blFmRXIwTVliNExDa2NyZUpveUFDZmFBdlpGdmJiYURHTFJjOW9ndWkycVhMbnUwWFgvZDhEc1hhK2xwQzg2dXhSeWZtYklSdVpza2xscHd5WVV4TXlEbmFZQS9SSlFGaEtEakJjYUp0Ri9sQnpZYWMzVVNzQmFkNE5tMVE1cnBEb3RscFpHbHd5akhhdGtxUENPVzZORG9wbU9pZWtzM3RNVXpJV0NyNVZPVGhhRnpZdUdIZUZJMHdhdVdMWHY4TnlwRnlIbnllay8zdWhjdEhIc2gyRExZZUVBZW1keWQ2VnVDWmNqNjBzSjNyenF5ME9LTUFIQVRuOWhhZjk0M0k3SllDUlkvTU0xQ08rWmk1MHNTUXV1UHllVUpuTERpMGxwQmdDZmwyeWgyQ2phcU9QdE15ckhTREJwRlNNaC8xVW5xdDBlaXFzcFRESDNtNm81TXd3dUFQWGJmRFZvaDArR2dPaUowaENLUnhLY3NXSXVHNythemNoS0U3U1kyakIxWWg0NjlpSTN2MUpQRWhobnVtdC9YWENhRXBYd29aVENLRUN6NjJMYnByOWp3SzZXVVZyS2t5L3hmbkdKTlR3NWxHNGFBS1hlOFdzSldtYnpXK0Yvd0JFa0E2amdHK1hWT1J6In0=",
+    "token_fmt": "ear",
     "attester_data": {"test_key": "test_value"}
   }'
 ```

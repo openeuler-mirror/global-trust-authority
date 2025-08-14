@@ -155,6 +155,7 @@ async fn main() -> Result<(), AgentError> {
         .retry_enabled(challenge_config.retry_enabled)
         .enabled(challenge_config.enabled);
 
+    // Create a task that doesn't move config, but uses a different approach
     let task = Box::new(move || {
         let thread_handle = std::thread::Builder::new()
             .name("challenge_scheduler".to_string())
@@ -162,9 +163,15 @@ async fn main() -> Result<(), AgentError> {
                 info!("Scheduler task executed (threaded)");
                 let attester_info: Option<Vec<AttesterInfo>> = None;
                 let attester_data: Option<serde_json::Value> = None;
+                // Get token_fmt from config inside the thread, avoiding closure capture issues
+                let token_fmt = {
+                    let config = AGENT_CONFIG.get_instance().ok();
+                    config.map(|c| c.agent.get_token_fmt_or_default())
+                };
+
                 let result = {
                     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                    rt.block_on(async { do_challenge(&attester_info, &attester_data).await })
+                    rt.block_on(async { do_challenge(&attester_info, &attester_data, token_fmt.as_deref()).await })
                 };
                 if let Err(e) = &result {
                     log::error!("do_challenge failed in scheduler thread: {}", e);

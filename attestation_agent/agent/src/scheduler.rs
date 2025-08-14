@@ -11,7 +11,6 @@
  */
 
 use agent_utils::AgentError;
-use chrono::Local;
 use chrono::Utc;
 use log::{debug, error, info, warn};
 use rand::Rng;

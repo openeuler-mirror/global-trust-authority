@@ -13,7 +13,7 @@
 use actix_web::{http::StatusCode, HttpResponse};
 use log::error;
 use serde_json::json;
-use challenge::challenge_error::ChallengeError;
+use challenge::challenge_error::{ChallengeError, TokenError};
 
 /// Creates a standardized error response for HTTP endpoints
 ///
@@ -56,13 +56,15 @@ pub fn create_error_response(error: impl std::fmt::Display, status: StatusCode) 
 /// - `NonceNotProvided`: Nonce not provided when required
 /// - `NonceInvalid`: Invalid nonce value
 /// - `PluginNotFound`: Requested plugin not found
+/// - `TokenError::InvalidTokenFormat`: Invalid token format
 ///
 /// ## 500 Internal Server Error - Server-side errors
 /// - `ConfigError`: Configuration error
 /// - `InternalError`: General internal server error
 /// - `EvidenceCollectionFailed`: Failed to collect evidence
 /// - `NoValidEvidence`: No valid evidence was collected
-/// - `TokenError`: Token-related errors
+/// - `TokenError::ChallengeError`: Challenge error
+/// - `TokenError::TokenNotFound`: Token not found
 ///
 /// ## 503 Service Unavailable - Service errors
 /// - `NetworkError`: Network-related errors
@@ -89,6 +91,9 @@ pub fn create_challenge_error_response(error: ChallengeError) -> HttpResponse {
          ChallengeError::RequestParseError(msg) => {
             (StatusCode::BAD_REQUEST, format!("Request parsing failed: {}", msg))
         },
+        ChallengeError::TokenError(TokenError::InvalidTokenFormat(msg)) => {
+            (StatusCode::BAD_REQUEST, format!("Invalid token format: {}", msg))
+        },
 
         // 500 Internal Server Error
         ChallengeError::ConfigError(msg) => {
@@ -103,8 +108,11 @@ pub fn create_challenge_error_response(error: ChallengeError) -> HttpResponse {
         ChallengeError::InternalError(msg) => {
             (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal server error: {}", msg))
         },
-        ChallengeError::TokenError(token_error) => {
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("Token error: {}", token_error))
+        ChallengeError::TokenError(TokenError::ChallengeError(msg)) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Challenge error: {}", msg))
+        },
+        ChallengeError::TokenError(TokenError::TokenNotFound(msg)) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Token not found: {}", msg))
         },
 
         // 503 Service Unavailable
