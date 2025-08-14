@@ -9,6 +9,10 @@ readonly SOURCE_DIR_NAME=$(basename ${PROJECT_DIR})
 readonly RPM_SOURCE_DIR="${HOME}/rpmbuild/SOURCES"
 readonly SPEC_FILE="${PROJECT_DIR}/key_manager/script/key_manager.spec"
 
+if [ ! -d $RPM_SOURCE_DIR ]; then
+    mkdir -p $RPM_SOURCE_DIR
+fi
+
 # 清理旧构建
 clean_old_build() {
     echo "[Clean] Remove the historical build files..."
