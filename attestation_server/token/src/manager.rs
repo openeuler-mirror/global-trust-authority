@@ -13,7 +13,7 @@
 use crate::entity::VerifyTokenResponse;
 use crate::error::{GenerateTokenError, VerifyTokenError};
 use config_manager::types::CONFIG;
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation, errors::ErrorKind};
 use key_management::api::{CryptoOperations, DefaultCryptoImpl};
 use key_management::key_manager::error::KeyManagerError;
 use key_management::key_manager::key_initialization::is_initialized;
@@ -90,7 +90,8 @@ impl TokenManager {
         let token_eat_profile = token_management.eat_profile;
 
         // fill body value
-        let now_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+        let now_time = SystemTime::now().duration_since(UNIX_EPOCH).map_err(
+            |e| GenerateTokenError::GenerateTokenError("System internal error.".to_string()))?.as_secs();
         if let Value::Object(ref mut map) = json_body {
             map.insert("iat".to_string(), json!(now_time));
             map.insert("exp".to_string(), json!(now_time + token_exist_time));
@@ -149,11 +150,11 @@ impl TokenManager {
         // get_public_key
         let key_info_resp = DefaultCryptoImpl.get_public_key("TSK", None).await.map_err(|e: KeyManagerError| {
             error!("get_public_key error: {}", e.to_string());
-            VerifyTokenError::VerifyTokenError(e.to_string())
+            VerifyTokenError::VerifyTokenError
         })?;
         let pkey = PKey::public_key_from_pem(&key_info_resp.key)
-            .map_err(|e| VerifyTokenError::VerifyTokenError(e.to_string()))?;
-        let rsa = pkey.rsa().map_err(|e| VerifyTokenError::VerifyTokenError(e.to_string()))?;
+            .map_err(|e| VerifyTokenError::VerifyTokenError)?;
+        let rsa = pkey.rsa().map_err(|e| VerifyTokenError::VerifyTokenError)?;
         let der = rsa.public_key_to_der_pkcs1().unwrap();
         let public_key = DecodingKey::from_rsa_der(&der);
 
@@ -161,18 +162,28 @@ impl TokenManager {
         let algorithm = key_info_resp.algorithm;
         if !algorithm.contains("rsa") {
             error!("Wrong key algorithm {}", algorithm);
-            return Err(VerifyTokenError::VerifyTokenError("The key algorithm is illegal".to_string()));
+            return Err(VerifyTokenError::VerifyTokenError);
         }
 
         // verify token
         match decode::<Value>(&token, &public_key, &Validation::new(Algorithm::RS256)) {
             Ok(token_data) => {
                 info!("Token verified successfully");
-                Ok(VerifyTokenResponse::new(true, Some(token_data.claims), Some(token_data.header)))
+                Ok(VerifyTokenResponse::new(true, None, Some(token_data.claims), Some(token_data.header)))
             },
             Err(e) => {
+                let message = match e.kind() {
+                    ErrorKind::InvalidSignature | ErrorKind::InvalidToken => Some(String::from(
+                        "Token verification failed because either it was not issued by GTA or its signing key is expired/revoked.")),
+                    ErrorKind::ImmatureSignature  => Some(String::from("Token is immature.")),
+                    ErrorKind::ExpiredSignature => Some(String::from("Token is expired.")),
+                    _ => None,
+                };
                 error!("Token verification failed: {}", e);
-                Ok(VerifyTokenResponse::new(false, None, None))
+                match message {
+                    Some(msg) => Ok(VerifyTokenResponse::new(false, Some(msg), None, None)),
+                    None => Err(VerifyTokenError::VerifyTokenError),
+                }
             },
         }
     }
