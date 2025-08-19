@@ -117,6 +117,8 @@ pub struct TokenManagement {
     pub mq_enabled: bool,
     /// Send token information to MQ's topic
     pub token_topic: String,
+    /// Token signing algorithm
+    pub token_signing_algorithm: String,
 }
 
 /// Cert configuration
