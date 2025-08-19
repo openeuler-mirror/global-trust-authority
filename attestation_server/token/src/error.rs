@@ -24,6 +24,6 @@ pub enum GenerateTokenError {
 #[derive(Debug, Error)]
 pub enum VerifyTokenError {
     // verify token failed
-    #[error("Verify token failed: {0}")]
-    VerifyTokenError(String),
+    #[error("Token verification failed due to internal service error.")]
+    VerifyTokenError,
 }

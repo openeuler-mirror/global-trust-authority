@@ -46,6 +46,6 @@ async fn test_verify_token_No_key_found() {
     assert!(result.is_err());
     assert_eq!(
         result.unwrap_err().to_string(),
-        "Verify token failed: No key found, version: ".to_string()
+        "Token verification failed due to internal service error.".to_string()
     );
 }

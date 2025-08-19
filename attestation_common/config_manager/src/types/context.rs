@@ -108,7 +108,7 @@ pub struct TokenManagement {
     /// Key ID
     pub kid: String,
     /// Token existence time in milliseconds
-    pub exist_time: u128,
+    pub exist_time: u64,
     /// Token issuer
     pub iss: String,
     /// EAT profile identifier
