@@ -14,16 +14,17 @@ use thiserror::Error;
 
 // Generate token exception enumeration
 #[derive(Debug, Error)]
-pub enum GenerateTokenError {
-    // Token generation failed
-    #[error("Generate token failed: {0}")]
-    GenerateTokenError(String),
+pub enum TokenGenerationError {
+    #[error("Internal server error.")]
+    InternalServerError,
+    #[error("Token size exceeds limit.")]
+    TokenSizeError,
 }
 
 /// Verify token exception enumeration
 #[derive(Debug, Error)]
-pub enum VerifyTokenError {
+pub enum TokenVerificationError {
     // verify token failed
-    #[error("Token verification failed due to internal service error.")]
-    VerifyTokenError,
+    #[error("Internal server error.")]
+    InternalServerError,
 }
