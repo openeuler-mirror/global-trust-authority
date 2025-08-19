@@ -10,7 +10,7 @@ SOURCE_DIR_NAME=$(basename ${ROOT_DIR})
 VERSION=$(grep "^version:" "${ROOT_DIR}/config/common.yaml" | awk '{print $2}')
 RELEASE=$(grep "^release:" "${ROOT_DIR}/config/common.yaml" | awk '{print $2}')
 
-SUPPORTED_OS=("openEuler, ctyunos")
+SUPPORTED_OS=("openEuler" "ctyunos")
 
 ENABLE_AGENT_RPM=false
 ENABLE_SERVER_RPM=false
