@@ -98,70 +98,58 @@ impl VritCCAEvidence {
         Ok(VritCCAEvidence { vcca_token, dev_cert, logs })
     }
 
-    fn verify_cert_chain(&self) -> Result<(), PluginError> {
+    fn parse_cert(&self, cert_bytes: &[u8], cert_type: &str, is_platform: bool) -> Result<X509, PluginError> {
+        if is_platform {
+            X509::from_pem(cert_bytes)
+                .map_err(|e| PluginError::InputError(format!("Failed to parse {} certificate: {}", cert_type, e)))
+        } else {
+            X509::from_der(cert_bytes)
+                .map_err(|e| PluginError::InputError(format!("Failed to parse {} certificate: {}", cert_type, e)))
+        }
+    }
+
+    fn check_validity(&self, cert: &X509, cert_type: &str) -> Result<(), PluginError> {
+        let now = Asn1Time::days_from_now(0)
+            .map_err(|e| PluginError::InputError(format!("Failed to get current time: {}", e)))?;
+
+        if now.compare(cert.not_before()).map_err(|e| PluginError::InputError(e.to_string()))? != Greater ||
+           now.compare(cert.not_after()).map_err(|e| PluginError::InputError(e.to_string()))? != Less {
+            return Err(PluginError::InputError(format!("{} certificate is expired or not yet valid", cert_type)));
+        }
+        Ok(())
+    }
+
+    fn verify_cert(&self, cert: &X509, issuer_cert: &X509, cert_type: &str) -> Result<(), PluginError> {
+        let issuer_pk = issuer_cert.public_key()
+            .map_err(|e| PluginError::InputError(e.to_string()))?;
+
+        if !cert.verify(issuer_pk.as_ref())
+            .map_err(|e| PluginError::InputError(format!("Failed to verify {} cert: {}", cert_type, e)))? {
+            return Err(PluginError::InputError(format!("Verify {} cert failed", cert_type)));
+        }
+        Ok(())
+    }
+
+    fn verify_cert_chain(&self, is_platform: bool) -> Result<(), PluginError> {
         let dev_cert_bytes = general_purpose::STANDARD.decode(&self.dev_cert)
-            .map_err(|e| PluginError::InternalError(format!("Failed to decode base64 device certificate: {}", e)))?;
-        let dev_cert_x509 = X509::from_der(&dev_cert_bytes)
-            .map_err(|e| PluginError::InternalError(format!("Failed to parse device certificate: {}", e)))?;
-        let dev_pk = dev_cert_x509
-            .public_key()
-            .map_err(|e| PluginError::InternalError(format!("Failed to get device public key: {}", e)))?;
-        let is_rsa = dev_pk.rsa().is_ok();
-        let root_ca_pem = if is_rsa { VCCA_EQUIPMENT_ROOT_CA_RSA } else { VCCA_EQUIPMENT_ROOT_CA_ECCP521 };
-        let product_ca_pem = if is_rsa { VCCA_IT_PRODUCT_CA_RSA } else { VCCA_IT_PRODUCT_CA_ECCP521 };
+            .map_err(|e| PluginError::InputError(format!("Failed to decode base64 device certificate: {}", e)))?;
+        let dev_cert = self.parse_cert(&dev_cert_bytes, "device", is_platform)?;
 
-        let device_cert = dev_cert_x509;
+        let root_ca_pem = if !is_platform { VCCA_EQUIPMENT_ROOT_CA_RSA } else { VCCA_EQUIPMENT_ROOT_CA_ECCP521 };
+        let product_ca_pem = if !is_platform { VCCA_IT_PRODUCT_CA_RSA } else { VCCA_IT_PRODUCT_CA_ECCP521 };
+
         let product_cert = X509::from_pem(product_ca_pem.as_bytes())
-            .map_err(|e| PluginError::InternalError(format!("Failed to parse product CA: {}", e)))?;
+            .map_err(|e| PluginError::InputError(format!("Failed to parse product CA: {}", e)))?;
         let root_cert = X509::from_pem(root_ca_pem.as_bytes())
-            .map_err(|e| PluginError::InternalError(format!("Failed to parse root CA: {}", e)))?;
+            .map_err(|e| PluginError::InputError(format!("Failed to parse root CA: {}", e)))?;
 
-        let now = Asn1Time::days_from_now(0).map_err(|e| PluginError::InternalError(format!("Failed to get current time: {}", e)))?;
+        self.check_validity(&dev_cert, "Device")?;
+        self.check_validity(&product_cert, "Product")?;
+        self.check_validity(&root_cert, "Root")?;
 
-        // Check device cert validity
-        if now.compare(&device_cert.not_before()).map_err(|e| PluginError::InputError(e.to_string()))? != Greater ||
-           now.compare(&device_cert.not_after()).map_err(|e| PluginError::InputError(e.to_string()))? != Less {
-            return Err(PluginError::InputError("Device certificate is expired or not yet valid".to_string()));
-        }
-
-        // Check product cert validity
-        if now.compare(&product_cert.not_before()).map_err(|e| PluginError::InputError(e.to_string()))? != Greater ||
-           now.compare(&product_cert.not_after()).map_err(|e| PluginError::InputError(e.to_string()))? != Less {
-            return Err(PluginError::InputError("Product certificate is expired or not yet valid".to_string()));
-        }
-
-        // Check root cert validity
-        if now.compare(&root_cert.not_before()).map_err(|e| PluginError::InputError(e.to_string()))? != Greater ||
-           now.compare(&root_cert.not_after()).map_err(|e| PluginError::InputError(e.to_string()))? != Less {
-            return Err(PluginError::InputError("Root certificate is expired or not yet valid".to_string()));
-        }
-
-        // verify dev_cert by product_cert
-        let product_pk = product_cert.public_key().map_err(|e| PluginError::InternalError(e.to_string()))?;
-        let ret = device_cert
-            .verify(product_pk.as_ref())
-            .map_err(|e| PluginError::InternalError(format!("Failed to verify device cert by product cert: {}", e)))?;
-        if !ret {
-            return Err(PluginError::InternalError("Verify device cert by product cert failed".to_string()));
-        }
-
-        // verify product_cert by root_cert
-        let root_pk_product = root_cert.public_key().map_err(|e| PluginError::InternalError(e.to_string()))?;
-        let ret = product_cert
-            .verify(root_pk_product.as_ref())
-            .map_err(|e| PluginError::InternalError(format!("Failed to verify product cert by root cert: {}", e)))?;
-        if !ret {
-            return Err(PluginError::InternalError("Verify product cert by root cert failed".to_string()));
-        }
-
-        // verify self signed root_cert
-        let root_pk_self = root_cert.public_key().map_err(|e| PluginError::InternalError(e.to_string()))?;
-        let ret = root_cert
-            .verify(root_pk_self.as_ref())
-            .map_err(|e| PluginError::InternalError(format!("Failed to verify self signed root cert: {}", e)))?;
-        if !ret {
-            return Err(PluginError::InternalError("Verify self signed root cert failed".to_string()));
-        }
+        self.verify_cert(&dev_cert, &product_cert, "device")?;
+        self.verify_cert(&product_cert, &root_cert, "product")?;
+        self.verify_cert(&root_cert, &root_cert, "root self-signed")?;
 
         Ok(())
     }
@@ -183,15 +171,16 @@ impl VritCCAEvidence {
         nonce: Option<&[u8]>,
         plugin: &VirtCCAPlugin,
     ) -> Result<Value, PluginError> {
-        // Certificate chain for verifying equipment certificates
-        self.verify_cert_chain()?;
-        
-        // verify cvm_token
         let decoded_evidence = general_purpose::STANDARD
             .decode(&self.vcca_token)
             .map_err(|e| PluginError::InputError(format!("Failed to decode base64 token: {}", e)))?;
         let mut vcca_token = VccaToken::new(&decoded_evidence)?;
-        vcca_token.verify_cvm_token(nonce)?;
+
+        // Certificate chain for verifying equipment certificates
+        self.verify_cert_chain(vcca_token.tokens.is_platform)?;
+
+        // verify vcca_token
+        vcca_token.verify_vcca_token(nonce, &self.dev_cert)?;
         let token_info = vcca_token.to_json_value();
         
         // verify log

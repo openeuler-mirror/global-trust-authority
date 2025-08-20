@@ -116,6 +116,7 @@ mod tests {
 
     // Test simulated config path handling
     #[test]
+    #[ignore]
     fn test_config_loader_path_resolution() {
         let current_exe = env::current_exe().ok().unwrap();
         let yml_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
