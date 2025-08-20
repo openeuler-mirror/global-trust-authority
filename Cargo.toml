@@ -124,6 +124,5 @@ bytes = "1.10.1"
 actix-multipart = "0.7.2"
 zeroize = { version = "1.6", features = ["derive"] }
 subtle = "2.5"
-# TODO:Use the official secGear code repository and specify the commit ID.
-sec_gear = { git = "https://gitee.com/lyyyze/secGear.git", package = "verifier", branch = "master", features = ["virtcca-verifier"], default-features = false }
-eventlog-rs = { git = "https://gitee.com/lyyyze/secGear.git", package = "eventlog-rs", branch = "master" }
+sec_gear = { git = "https://gitee.com/SPYFAMILY/secGear.git", package = "verifier", branch = "master", features = ["virtcca-verifier"], default-features = false }
+eventlog-rs = { git = "https://gitee.com/SPYFAMILY/secGear.git", package = "eventlog-rs", branch = "master" }
