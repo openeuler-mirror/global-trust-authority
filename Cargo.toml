@@ -124,5 +124,5 @@ bytes = "1.10.1"
 actix-multipart = "0.7.2"
 zeroize = { version = "1.6", features = ["derive"] }
 subtle = "2.5"
-sec_gear = { git = "https://gitee.com/SPYFAMILY/secGear.git", package = "verifier", branch = "master", features = ["virtcca-verifier"], default-features = false }
-eventlog-rs = { git = "https://gitee.com/SPYFAMILY/secGear.git", package = "eventlog-rs", branch = "master" }
+sec_gear = { git = "https://gitee.com/openeuler/secGear.git", package = "verifier", rev = "e80860868ba3f18d92a276405c47c1cdaf62a0d0", features = ["virtcca-verifier"], default-features = false }
+eventlog-rs = { git = "https://gitee.com/openeuler/secGear.git", package = "eventlog-rs", rev = "e80860868ba3f18d92a276405c47c1cdaf62a0d0" }
