@@ -32,7 +32,7 @@ async fn test_generate_token_uninitialized() {
     assert!(result.is_err());
     assert_eq!(
         result.unwrap_err().to_string(),
-        "Generate token failed: Key is not initialized".to_string()
+        "Internal server error.".to_string()
     );
 }
 
@@ -46,6 +46,6 @@ async fn test_verify_token_No_key_found() {
     assert!(result.is_err());
     assert_eq!(
         result.unwrap_err().to_string(),
-        "Token verification failed due to internal service error.".to_string()
+        "Internal server error.".to_string()
     );
 }

@@ -54,6 +54,8 @@ COPY attestation_server/server_config/Cargo.toml ./attestation_server/server_con
 COPY attestation_server/verifier/tpm/common/Cargo.toml ./attestation_server/verifier/tpm/common/Cargo.toml
 COPY attestation_server/verifier/tpm/boot/Cargo.toml ./attestation_server/verifier/tpm/boot/Cargo.toml
 COPY attestation_server/verifier/tpm/ima/Cargo.toml ./attestation_server/verifier/tpm/ima/Cargo.toml
+COPY attestation_server/verifier/common/Cargo.toml ./attestation_server/verifier/common/Cargo.toml
+COPY attestation_server/verifier/virtcca/Cargo.toml ./attestation_server/verifier/virtcca/Cargo.toml
 COPY attestation_server/registry/Cargo.toml ./attestation_server/registry/Cargo.toml
 COPY plugin_manager/Cargo.toml ./plugin_manager/Cargo.toml
 COPY attestation_common/cache/Cargo.toml ./attestation_common/cache/Cargo.toml
@@ -95,6 +97,7 @@ RUN sed -i '/members = \[/,/\]/ {/key_manager/d}' Cargo.toml
 RUN cargo build --release --package attestation_service --features docker_build
 RUN cargo build --release --package tpm_boot_verifier
 RUN cargo build --release --package tpm_ima_verifier
+RUN cargo build --release --package virtcca_verifier
 
 # Copy rust standard library files to build directory
 RUN cp $(find $(rustc --print sysroot) -name "libstd-*.so") /var/test_docker/app/target/release/

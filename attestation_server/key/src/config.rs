@@ -116,7 +116,6 @@ mod tests {
 
     // Test simulated config path handling
     #[test]
-    #[ignore]
     fn test_config_loader_path_resolution() {
         let current_exe = env::current_exe().ok().unwrap();
         let yml_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
@@ -140,6 +139,7 @@ attestation_service:
     eat_profile: "test"
     mq_enabled: false
     token_topic: "test"
+    token_signing_algorithm: "PS256"
   policy:
     export_policy_file:
       - name: "tpm_boot"
