@@ -33,6 +33,9 @@ use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+const CLIENT_CONNECTION_TIMEOUT: u64 = 60; // Client connection timeout in seconds
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -41,9 +44,13 @@ struct Cli {
     #[clap(short, long, default_value = "")]
     server_url: String,
 
-    /// Client CA Cert
+    /// Client Certificate Path
     #[clap(long, default_value = "")]
     cert_path: String,
+
+    /// Client Private Key Path
+    #[clap(long, default_value = "")]
+    key_path: String,
 
     /// Service CA Cert
     #[clap(long, default_value = "")]
@@ -729,7 +736,8 @@ async fn main() {
         cli.server_url + SERVICE_URL_PREFIX
     };
     let tls = config.clone().server.tls.unwrap();
-    let cert_path = if cli.cert_path.is_empty() { tls.cert_path } else { cli.cert_path };
+    let cert_path = if cli.cert_path.is_empty() { tls.cert_path } else { Some(cli.cert_path) };
+    let key_path = if cli.key_path.is_empty() { tls.key_path } else { Some(cli.key_path) };
     let ca_path = if cli.ca_path.is_empty() { tls.ca_path } else { cli.ca_path };
 
     let mut user_id = cli.user.clone();
@@ -738,25 +746,65 @@ async fn main() {
     apikey = if apikey.is_empty() { config.agent.apikey.clone().unwrap_or("".to_string()) } else { apikey };
 
     // Create client
-    let client: Client = if server_url.starts_with("https://") {
-        // 1. Load server CA certificate (to verify server identity)
-        let server_ca_cert = fs::read(Path::new(&ca_path)).unwrap();
-        let server_ca_cert = Certificate::from_pem(&server_ca_cert).unwrap();
+    let mut builder = Client::builder().timeout(Duration::from_secs(CLIENT_CONNECTION_TIMEOUT));
 
-        // 2. Load client certificate and private key (for server to verify client)
-        let client_cert_and_key = fs::read(Path::new(&cert_path)).unwrap(); // Contains certificate and private key
-        let client_identity = Identity::from_pem(&client_cert_and_key).unwrap();
+    if server_url.starts_with("https://") {
+        // Check if CA certificate path is provided (required for HTTPS)
+        if ca_path.is_empty() {
+            eprintln!("Error: CA certificate path is required for HTTPS connections");
+            std::process::exit(1);
+        }
 
-        // 3. Create client with mutual authentication support
-        Client::builder()
-            .add_root_certificate(server_ca_cert) // Verify server certificate
-            .identity(client_identity) // Provide client certificate
-            .danger_accept_invalid_certs(false) // Strict certificate verification
-            .build()
-            .unwrap()
-    } else {
-        Client::builder().build().unwrap()
-    };
+        // Load server CA certificate (required for HTTPS)
+        let ca_data = fs::read(Path::new(&ca_path))
+            .unwrap_or_else(|e| {
+                eprintln!("Failed to read CA certificate: {}", e);
+                std::process::exit(1);
+            });
+        let ca_cert = Certificate::from_pem(&ca_data)
+            .unwrap_or_else(|e| {
+                eprintln!("Failed to create CA certificate: {}", e);
+                std::process::exit(1);
+            });
+
+        // Check if it's mutual authentication (both client certificate and private key provided)
+        if let (Some(cert_path), Some(key_path)) = (&cert_path, &key_path) {
+            let cert_data = fs::read(Path::new(cert_path))
+                .unwrap_or_else(|e| {
+                    eprintln!("Failed to read client certificate: {}", e);
+                    std::process::exit(1);
+                });
+            let key_data = fs::read(Path::new(key_path))
+                .unwrap_or_else(|e| {
+                    eprintln!("Failed to read client private key: {}", e);
+                    std::process::exit(1);
+                });
+
+            let client_identity = Identity::from_pkcs8_pem(&cert_data, &key_data)
+                .unwrap_or_else(|e| {
+                    eprintln!("Failed to create client identity: {}", e);
+                    std::process::exit(1);
+                });
+
+            builder = builder
+                .identity(client_identity)
+                .add_root_certificate(ca_cert)
+                .danger_accept_invalid_certs(false)
+                .danger_accept_invalid_hostnames(false);
+        } else {
+            // One-way authentication: only use CA certificate to verify server
+            builder = builder
+                .add_root_certificate(ca_cert)
+                .danger_accept_invalid_certs(false)
+                .danger_accept_invalid_hostnames(false);
+        }
+    }
+
+    // Build client with unified error handling
+    let client = builder.build().unwrap_or_else(|e| {
+        eprintln!("Failed to build HTTP client: {}", e);
+        std::process::exit(1);
+    });
     match &cli.group {
         CommandGroup::Policy { command } => {
             deal_policy_commands(command, server_url, client, &user_id, &apikey).await;
