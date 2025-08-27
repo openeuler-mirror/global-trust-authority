@@ -117,8 +117,8 @@ pub struct SchedulerConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TlsConfig {
-    pub cert_path: String,
-    pub key_path: String,
+    pub cert_path: Option<String>, // Client certificate path, optional for one-way authentication
+    pub key_path: Option<String>, // Client certificate path, optional for one-way authentication
     pub ca_path: String,
 }
 
