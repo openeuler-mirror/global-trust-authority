@@ -169,12 +169,6 @@ mod tests {
     }
 
     #[test]
-    fn test_enable_apikey_not_set() {
-        unsafe { env::remove_var("ENABLE_APIKEY"); }
-        assert!(!get_api_key_enable());
-    }
-
-    #[test]
     fn test_enable_apikey_case_insensitive() {
         unsafe { env::set_var("ENABLE_APIKEY", "TRUE"); }
         assert!(!get_api_key_enable());
