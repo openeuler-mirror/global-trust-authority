@@ -24,13 +24,6 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone --depth 1 --branch v2.3.0 https://gitee.com/mirrors/librdkafka.git && \
-    cd librdkafka && \
-    ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu && \
-    make && \
-    make install && \
-    ldconfig
-
 # Set environment variables (independent ENV instruction)
 ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
 

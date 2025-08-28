@@ -8,5 +8,6 @@ path = "src/lib.rs"
 
 [dependencies]
 log.workspace = true
-rdkafka.workspace = true
+kafka.workspace = true
+tokio.workspace = true
 env_config_parse.workspace = true

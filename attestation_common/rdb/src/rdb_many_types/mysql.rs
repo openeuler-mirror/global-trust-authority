@@ -21,7 +21,6 @@ use crate::DbError;
 
 /// Create MySQL database connection
 pub(crate) async fn create_mysql_connection(config: &DbConfig) -> Result<DatabaseConnection, DbError> {
-    info!("Configuring MySQL connection parameters: url={}, timeout={}s", config.url, config.timeout);
     let mut opt = ConnectOptions::new(config.url.clone());
     opt.max_connections(config.max_connections)
        .connect_timeout(Duration::from_secs(config.timeout)).sqlx_logging(false);

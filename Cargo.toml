@@ -92,7 +92,7 @@ serial_test = "3.2.0"
 walkdir = "2.5.0"
 governor = "0.6.0"
 hex = "0.4.3"
-rdkafka = { version = "0.37.0", features = ["dynamic-linking"] }
+kafka = "0.10.0"
 reqwest = { version = "0.11"}
 tss-esapi = { version = "7.6.0", features = ["generate-bindings"] }
 validator = { version = "0.20.0", features = ["derive"]}
