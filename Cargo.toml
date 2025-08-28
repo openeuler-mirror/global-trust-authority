@@ -82,7 +82,6 @@ base64 = "0.22.1"
 regex = "1.9.1"
 regorus = "0.2.8"
 mockall = "0.10.1"
-fmt = "0.8"
 token_management = { path = "attestation_server/token" }
 jsonwebtoken = "9"
 uuid = { version = "1.13.1", features = ["v4", "v5"] }
@@ -92,7 +91,7 @@ serial_test = "3.2.0"
 walkdir = "2.5.0"
 governor = "0.6.0"
 hex = "0.4.3"
-rdkafka = { version = "0.37.0", features = ["dynamic-linking"] }
+kafka = "0.10.0"
 reqwest = { version = "0.11"}
 tss-esapi = { version = "7.6.0", features = ["generate-bindings"] }
 validator = { version = "0.20.0", features = ["derive"]}
@@ -111,17 +110,7 @@ server_config = {path = "attestation_server/server_config" }
 scopeguard = "1.2.0"
 clap = { version = "4.5.32", features = ["derive"] }
 ring = "0.17.14"
-hyperlocal = "0.9.0"
-hyper = "1.6.0"
-percent-encoding = "2.3.1"
-strum = "0.27.1"
-strum_macros = "0.27.1"
 futures-util = "0.3.31"
-tar = "0.4.44"
-flate2 = "1.1.2"
-zip = "4.2.0"
-bytes = "1.10.1"
-actix-multipart = "0.7.2"
 zeroize = { version = "1.6", features = ["derive"] }
 subtle = "2.5"
 sec_gear = { git = "https://gitee.com/openeuler/secGear.git", package = "verifier", rev = "e80860868ba3f18d92a276405c47c1cdaf62a0d0", features = ["virtcca-verifier"], default-features = false }

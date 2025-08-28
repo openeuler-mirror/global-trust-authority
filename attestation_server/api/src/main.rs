@@ -15,7 +15,7 @@ mod middlewares;
 mod routes;
 mod utils;
 
-use crate::middlewares::mq::create_mq_topics;
+use crate::middlewares::mq::check_mq_topics;
 use crate::routes::routes::configure_user_routes;
 use crate::utils::env_setting_center::{
     get_cert_path, get_env_by_key, get_env_value_or_default, get_key_path, load_env,
@@ -61,8 +61,8 @@ async fn main() -> std::io::Result<()> {
 
     chain.execute(&mut InitContext::new()).await.unwrap();
 
-    // create topic
-    create_mq_topics().await;
+    // check topic
+    check_mq_topics().await;
 
     let pool = get_connection().await.clone().unwrap();
     let management_governor = create_management_governor();
