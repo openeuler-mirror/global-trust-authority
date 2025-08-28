@@ -11,13 +11,10 @@
  */
 
 use std::fs;
-use actix_web::http::header::{HeaderMap, HeaderName, HeaderValue};
 use policy::entities::policy_db_model::{ActiveModel, Model};
 use policy::repositories::policy_repository::PolicyRepository;
 use sea_orm::{ActiveValue, DatabaseBackend, MockDatabase, MockExecResult, TransactionTrait};
-use serde_json::json;
 use key_management::key_manager::error::KeyManagerError;
-use policy::handler::query_policy_handler::QueryPolicyHandler;
 use policy::error::policy_error::PolicyError;
 
 fn create_test_policy() -> ActiveModel {
@@ -267,7 +264,8 @@ async fn test_get_default_policies_success() {
         .into_connection();
 
     let attester_type = "test_type".to_string();
-    let result = PolicyRepository::get_default_policies_by_type(&db, attester_type).await;
+    let user_id = "test_user".to_string();
+    let result = PolicyRepository::get_default_policies_by_type(&db, attester_type, &user_id).await;
 
     assert!(result.is_ok());
     let policies = result.unwrap();
@@ -285,7 +283,9 @@ async fn test_get_default_policies_db_error() {
         .into_connection();
 
     let attester_type = "test_type".to_string();
-    let result = PolicyRepository::get_default_policies_by_type(&db, attester_type).await;
+    let user_id = "test_user".to_string();
+
+    let result = PolicyRepository::get_default_policies_by_type(&db, attester_type, &user_id).await;
 
     assert!(matches!(result, Err(PolicyError::DatabaseOperationError(_))));
 }

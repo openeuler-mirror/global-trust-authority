@@ -179,7 +179,7 @@ docker stop CONTAINER ID
 
 ### attestation_server
 
-#### Uploading TLS certificates with key_manager and install librdkafka
+#### Uploading TLS certificates with key_manager and create kafka topic
 
 Create the certs folder in the /etc/attestation_server/certs directory and place the ra_client_key.pem, ra_client_cert.pem and km_cert.pem certificates into the specified directory.
 
@@ -189,25 +189,14 @@ Create the certs folder in the /etc/attestation_server/certs directory and place
 
 One thing to note here is that the service relies on the key_manager key management service, and there is a key_manager service configuration in the docker-compose.yaml file in the root directory of the code, so we won't go into the details of how to configure and start the key_manager service here.
 
-Installing librdkafka in a server deployment environment
+If you wish to upload tokens generated after challenges to a Kafka topic, first set `mq_enabled` to `true` in `server_config.yaml`. Next, execute the script `scripts/create_kafka_topic.sh` located in the root directory on the machine where Kafka is deployed to create the topic.
 
+```bash
+sh create_kafka_topic.sh -h
 ```
-sudo dnf install -y git gcc gcc-c++ make cmake openssl-devel zlib-devel python3 && \
-git clone --branch v2.3.0 https://gitee.com/mirrors/librdkafka.git && \
-cd librdkafka && \
-./configure --prefix=/usr/local && \
-make -j$(nproc) && \
-sudo make install && \
-sudo ldconfig
+Pass the `-h` parameter to view detailed usage instructions. 
 
-export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
-export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-```
-
-Last viewed version number 2.3.0
-```
-pkg-config --modversion rdkafka
-```
+Note that the directory where the script is executed must match the `kafka-topics.sh` script located in the bin directory under the Kafka installation directory.
 
 #### Build the rpm package
 
@@ -256,8 +245,16 @@ Install and run these components before deployment:
 Execute the command to start the service
 
 ```
-attestation_service
+systemctl start attestation_server
 ```
+
+Execute the command to enable the service to start automatically at system boot.
+
+```
+systemctl enable attestation_server
+```
+
+Use `systemctl status attestation_server` to check the service status. If the service is active, it indicates the service has started successfully.
 
 The following display appears, proving that the service was started successfully
 

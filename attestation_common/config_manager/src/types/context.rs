@@ -108,7 +108,7 @@ pub struct TokenManagement {
     /// Key ID
     pub kid: String,
     /// Token existence time in milliseconds
-    pub exist_time: u128,
+    pub exist_time: u64,
     /// Token issuer
     pub iss: String,
     /// EAT profile identifier
@@ -117,6 +117,8 @@ pub struct TokenManagement {
     pub mq_enabled: bool,
     /// Send token information to MQ's topic
     pub token_topic: String,
+    /// Token signing algorithm
+    pub token_signing_algorithm: String,
 }
 
 /// Cert configuration

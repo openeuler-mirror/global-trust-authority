@@ -87,8 +87,9 @@ impl QueryPolicyHandler {
     pub async fn get_default_policies_by_type(
         db: &DatabaseConnection,
         attester_type: String,
+        user_id: &str,
     ) -> Result<Vec<Policy>, PolicyError> {
-        let signature_policies = match PolicyRepository::get_default_policies_by_type(db, attester_type).await {
+        let signature_policies = match PolicyRepository::get_default_policies_by_type(db, attester_type, user_id).await {
             Ok(policies) => policies,
             Err(e) => return Err(PolicyError::DatabaseOperationError(e.to_string())),
         };

@@ -9,7 +9,8 @@
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+use base64::{engine::general_purpose, Engine as _};
+use openssl::{pkey::PKey, x509::X509};
 use plugin_manager::PluginError;
 use sec_gear::virtcca::Evidence;
 use serde_json::{json, Value};
@@ -28,11 +29,19 @@ impl VccaToken {
     /// # Returns
     /// A `Result` containing the `VccaToken` or a `PluginError`.
     pub fn new(vcca_token: &[u8]) -> Result<Self, PluginError> {
-        let evidence = Evidence::decode(vcca_token.to_vec())
-            .map_err(|e| PluginError::InternalError(e.to_string()))?;
-        Ok(Self {
-            tokens: evidence,
-        })
+        let evidence = Evidence::decode(vcca_token.to_vec()).map_err(|e| PluginError::InternalError(e.to_string()))?;
+        Ok(Self { tokens: evidence })
+    }
+
+    pub fn verify_vcca_token(&mut self, nonce: Option<&[u8]>, dev_cert: &String) -> Result<(), PluginError> {
+        if self.tokens.is_platform {
+            let dev_cert_bytes = general_purpose::STANDARD
+                .decode(dev_cert)
+                .map_err(|e| PluginError::InputError(format!("Failed to decode base64 device certificate: {}", e)))?;
+            self.verify_platform_token(&dev_cert_bytes)?;
+        }
+        self.verify_cvm_token(nonce)?;
+        Ok(())
     }
 
     /// Verifies the CVM token, optionally checking against a nonce.
@@ -51,8 +60,27 @@ impl VccaToken {
                 return Err(PluginError::InputError("Cvm token challenge does not match nonce".to_string()));
             }
         }
-        
-        self.tokens.verify_cose_sign1()
+
+        if self.tokens.is_platform {
+            self.tokens
+                .verfiy_cvm_challenge(&self.tokens.platform_token.challenge, &self.tokens.cvm_token.pub_key)
+                .map_err(|e| PluginError::InputError(e.to_string()))?;
+        }
+
+        let pkey = PKey::public_key_from_der(&self.tokens.cvm_token.pub_key)
+            .or_else(|_| self.tokens.raw_ec_public_key_to_pkey())
+            .map_err(|e| PluginError::InternalError(e.to_string()))?;
+        Evidence::verify_cose_sign1(&mut self.tokens.cvm_envelop, &pkey)
+            .map_err(|e| PluginError::InputError(e.to_string()))?;
+        Ok(())
+    }
+
+    fn verify_platform_token(&mut self, dev_cert: &[u8]) -> Result<(), PluginError> {
+        let pkey = X509::from_pem(dev_cert)
+            .map_err(|e| PluginError::InputError(e.to_string()))?
+            .public_key()
+            .map_err(|e| PluginError::InputError(e.to_string()))?;
+        Evidence::verify_cose_sign1(&mut self.tokens.platform_envelop, &pkey)
             .map_err(|e| PluginError::InputError(e.to_string()))?;
         Ok(())
     }
@@ -69,7 +97,16 @@ impl VccaToken {
             json_map.insert(format!("vcca_rem{}", i), json!(hex::encode(rem_val)));
         }
         json_map.insert("vcca_cvm_token_hash_alg".to_string(), json!(self.tokens.cvm_token.hash_alg));
-
+        if self.tokens.is_platform {
+            json_map.insert("vcca_platform_token_profile".to_string(), json!(self.tokens.platform_token.profile));
+            json_map.insert("vcca_platform_token_implementation".to_string(),json!(hex::encode(self.tokens.platform_token.implementation)),);
+            json_map.insert("vcca_platform_token_instance".to_string(), json!(hex::encode(self.tokens.platform_token.instance)));
+            json_map.insert("vcca_platform_token_config".to_string(), json!(hex::encode(self.tokens.platform_token.config.clone())));
+            json_map.insert("vcca_platform_token_lifecycle".to_string(), json!(self.tokens.platform_token.lifecycle));
+            json_map.insert("vcca_platform_token_sw_components".to_string(), json!(self.tokens.platform_token.sw_components));
+            json_map.insert("vcca_platform_token_verification_service".to_string(), json!(self.tokens.platform_token.verification_service));
+            json_map.insert("vcca_platform_token_hash_algo".to_string(), json!(self.tokens.platform_token.hash_algo));
+        }
         json!(json_map)
     }
 }

@@ -11,36 +11,50 @@
  */
 
 use log::{error, info};
-use rdkafka::{
-    config::ClientConfig,
-    producer::{FutureProducer, FutureRecord},
-};
+use kafka::producer::{Producer, Record, RequiredAcks};
 use std::time::Duration;
 use env_config_parse::env_parse::get_env_value;
+use tokio::task;
 
 pub async fn send_message(topic: &str, key: &str, payload: &str) {
-    // 1. create producer
-    let Ok(producer): Result<FutureProducer, _> = ClientConfig::new()
-        .set("bootstrap.servers", get_env_value("MQ_HOST").await)
-        .set("message.timeout.ms", "30000")
-        .set("queue.buffering.max.messages", "100000")
-        .set("compression.type", "snappy")
-        .create() // auto config FutureProducer type
-    else {
-        error!("Failed to create Kafka producer");
-        return;
-    };
+    // obtain broker list from env
+    let brokers = get_env_value("MQ_HOST").await;
+    let brokers_list: Vec<String> = brokers
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
 
-    let base_record = FutureRecord::to(topic).key(key);
-    let payload = payload.to_owned(); // clone payload str
-    
-    let record = base_record.payload(&payload);
-    match producer.send(record, Duration::from_secs(0)).await {
-        Ok(delivery) => {
-            info!("Message sent to partition {} offset {}",delivery.0, delivery.1);
+    if brokers_list.is_empty() {
+        error!("MQ_HOST is empty, cannot create Kafka producer");
+        return;
+    }
+
+    let topic_owned = topic.to_owned();
+    let key_bytes = key.as_bytes().to_vec();
+    let payload_bytes = payload.as_bytes().to_vec();
+
+    let res = task::spawn_blocking(move || -> Result<(), kafka::error::Error> {
+        // create synchronous Producer and configure
+        let mut producer = Producer::from_hosts(brokers_list)
+            .with_ack_timeout(Duration::from_secs(1))
+            .with_required_acks(RequiredAcks::One)
+            .create()?;
+
+        // send message with key
+        producer.send(&Record::from_key_value(&topic_owned, key_bytes.as_slice(), payload_bytes.as_slice()))
+    })
+    .await;
+
+    match res {
+        Ok(Ok(())) => {
+            info!("Message sent to topic [{}]", topic);
         }
-        Err((e, _original_record)) => {
-            error!("send message failed, _original_record: {}", e);
+        Ok(Err(e)) => {
+            error!("send message failed: {}", e);
+        }
+        Err(e) => {
+            error!("spawn_blocking join error: {}", e);
         }
     }
 }

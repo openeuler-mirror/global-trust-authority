@@ -11,44 +11,39 @@
  */
 
 use log::{error, info};
-use rdkafka::{
-    admin::{AdminClient, AdminOptions, NewTopic, TopicReplication},
-    client::DefaultClientContext,
-    config::ClientConfig,
-};
+use kafka::client::KafkaClient;
 use env_config_parse::env_parse::get_env_value;
 
-pub async fn create_topic(
+pub async fn check_topic(
     topic_name: &str,
-    partitions: i32,
-    replication: i32,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let brokers = get_env_value("MQ_HOST").await;
-    // create AdminClient
-    let admin_client: AdminClient<DefaultClientContext> = ClientConfig::new()
-        .set("bootstrap.servers", brokers)
-        .create()?;
+    let brokers_list: Vec<String> = brokers
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
 
-    // config Topic
-    let new_topic = NewTopic::new(
-        topic_name,
-        partitions,
-        TopicReplication::Fixed(replication),
-    );
+    if brokers_list.is_empty() {
+        error!("MQ_HOST is empty, cannot connect to Kafka brokers");
+        return Err("MQ_HOST is empty".into());
+    }
 
-    // async create Topic
-    let create_result = admin_client
-        .create_topics(&[new_topic], &AdminOptions::new())
-        .await?;
+    // Load metadata and check whether the topic exists
+    let mut client = KafkaClient::new(brokers_list);
+    if let Err(e) = client.load_metadata_all() {
+        error!("Failed to load Kafka metadata: {}", e);
+        return Err(Box::new(e));
+    }
 
-    // check create result
-    for result in create_result {
-        match result {
-            Ok(_) => info!("Topic [{}] created", topic_name),
-            Err(e) => {
-                error!("Error creating topic: [{}], error : {}", e.0, e.1.to_string());
-            }
-        }
+    let exists = client.topics().iter().any(|t| t.name() == topic_name);
+    if exists {
+        info!("Topic [{}] already exists", topic_name);
+    } else {
+        error!(
+            "Topic [{}] not found. Please create the topic first.",
+            topic_name
+        );
     }
 
     Ok(())

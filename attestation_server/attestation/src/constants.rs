@@ -21,3 +21,6 @@ pub const NONCE_PERIOD: &str = "attestation_service.nonce.nonce_valid_period";
 
 /// valid types
 pub const VALID_TYPES: &[&str] = &["ignore", "user", "verifier"];
+
+/// verifier developer
+pub const VERIFIER_DEVELOPER: &str = "https://gitee.com/openeuler/global-trust-authority";
