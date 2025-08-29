@@ -111,8 +111,6 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy executables from build stage with permissions
-COPY --from=builder /usr/lib/x86_64-linux-gnu/*kafka* /usr/lib/x86_64-linux-gnu/
-RUN ldconfig
 COPY --from=builder /var/test_docker/app/target/release/attestation_service /usr/local/bin/
 RUN chmod 550 /usr/local/bin/attestation_service
 
