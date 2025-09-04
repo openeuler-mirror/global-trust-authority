@@ -92,7 +92,7 @@ serial_test = "3.2.0"
 walkdir = "2.5.0"
 governor = "0.6.0"
 hex = "0.4.3"
-rdkafka = { version = "0.37.0", features = ["dynamic-linking"] }
+kafka = "0.10.0"
 reqwest = { version = "0.11"}
 tss-esapi = { version = "7.6.0", features = ["generate-bindings"] }
 validator = { version = "0.20.0", features = ["derive"]}
@@ -124,6 +124,5 @@ bytes = "1.10.1"
 actix-multipart = "0.7.2"
 zeroize = { version = "1.6", features = ["derive"] }
 subtle = "2.5"
-# TODO:Use the official secGear code repository and specify the commit ID.
-sec_gear = { git = "https://gitee.com/lyyyze/secGear.git", package = "verifier", branch = "master", features = ["virtcca-verifier"], default-features = false }
-eventlog-rs = { git = "https://gitee.com/lyyyze/secGear.git", package = "eventlog-rs", branch = "master" }
+sec_gear = { git = "https://gitee.com/openeuler/secGear.git", package = "verifier", rev = "e80860868ba3f18d92a276405c47c1cdaf62a0d0", features = ["virtcca-verifier"], default-features = false }
+eventlog-rs = { git = "https://gitee.com/openeuler/secGear.git", package = "eventlog-rs", rev = "e80860868ba3f18d92a276405c47c1cdaf62a0d0" }

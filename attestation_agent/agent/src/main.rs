@@ -130,8 +130,11 @@ async fn main() -> Result<(), AgentError> {
     // Configure TLS certificates
     if let Some(tls_config) = &config.server.tls {
         debug!("TLS configuration found, configuring certificates");
-        client_config =
-            client_config.with_certificates(&tls_config.cert_path, &tls_config.key_path, &tls_config.ca_path);
+         client_config = client_config.with_tls_config(
+            tls_config.cert_path.as_deref(),
+            tls_config.key_path.as_deref(),
+            &tls_config.ca_path
+        );
     }
 
     Client::configure(client_config)?;

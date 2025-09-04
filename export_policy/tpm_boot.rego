@@ -50,10 +50,30 @@ pcrs = pcrs_out {
     pcrs_out := null
 }
 
+# Hardware value calculation
+hardware_value = 2 {
+    log_status == "replay_success"
+    ref_value_match_status == "ignore"
+}
+
+hardware_value = 0 {
+    log_status == "no_log"
+}
+
+hardware_value = 96 {
+    not (log_status == "replay_success"); not (ref_value_match_status == "ignore")
+    not (log_status == "no_log")
+}
+
 # Output object
 result = {
-    "secure_boot": secure_boot,
-    "log_status": log_status,
-    "ref_value_match_status": ref_value_match_status,
-    "pcrs": pcrs,
+    "annotated_evidence": {
+        "secure_boot": secure_boot,
+        "log_status": log_status,
+        "ref_value_match_status": ref_value_match_status,
+        "pcrs": pcrs,
+    },
+    "ear_trustworthiness_vector": {
+        "hardware": hardware_value
+    }
 }

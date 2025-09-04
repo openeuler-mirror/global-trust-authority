@@ -21,7 +21,6 @@ use crate::DbError;
 
 /// Create PostgreSQL database connection
 pub(crate) async fn create_postgresql_connection(config: &DbConfig) -> Result<DatabaseConnection, DbError> {
-    info!("Configuring PostgreSQL connection parameters: url={}, timeout={}s", config.url, config.timeout);
     let mut opt = ConnectOptions::new(config.url.clone());
     opt.max_connections(config.max_connections)
        .connect_timeout(Duration::from_secs(config.timeout)).sqlx_logging(false);

@@ -12,6 +12,10 @@ License:  MulanPSL-2.0
 Source0: %{server_source_dir_name}.tar.gz
 Source1: vendor.tar.gz
 
+BuildRequires: systemd, openssl-devel, pkgconfig
+
+Requires: openssl >= 3.0.0
+
 %description
 Global Trust Authority Server, including main process and plugins
 
@@ -46,6 +50,7 @@ CARGO_BUILD_JOBS=$(nproc) cargo build --release -p virtcca_verifier
 %install
 rm -rf %{buildroot}
 mkdir -m 550 -p %{buildroot}%{_bindir}
+mkdir -m 550 -p %{buildroot}%{server_systemd_dir}
 mkdir -m 550 -p %{buildroot}%{_libdir}
 mkdir -m 550 -p %{buildroot}%{_sysconfdir}/attestation_server/
 mkdir -m 550 -p %{buildroot}%{_sysconfdir}/attestation_server/export_policy/
@@ -57,6 +62,7 @@ install -pm 550 %{server_output_dir}/libkey_management.so     %{buildroot}%{_lib
 install -pm 550 %{server_output_dir}/libtpm_ima_verifier.so   %{buildroot}%{_libdir}
 install -pm 550 %{server_output_dir}/libtpm_boot_verifier.so  %{buildroot}%{_libdir}
 install -pm 550 %{server_output_dir}/libvirtcca_verifier.so  %{buildroot}%{_libdir}
+install -pm 640 service/attestation_server.service             %{buildroot}%{server_systemd_dir}
 install -pm 644 server_config_rpm.yaml                            %{buildroot}%{_sysconfdir}/attestation_server/server_config_rpm.yaml
 install -pm 644 logging.yaml                                  %{buildroot}%{_sysconfdir}/attestation_server/logging.yaml
 install -pm 644 .env.rpm                                      %{buildroot}%{_sysconfdir}/attestation_server/.env.rpm
@@ -76,6 +82,7 @@ install -pm 644 export_policy/virt_cca.rego                                     
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_ima.rego
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_boot.rego
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/virt_cca.rego
+%config %attr(0640, root, root) %{server_systemd_dir}/attestation_server.service
 
 %attr(0550, root, root) %{_bindir}/attestation_service
 %attr(0550, root, root) %{_libdir}/libpolicy.so
@@ -84,6 +91,14 @@ install -pm 644 export_policy/virt_cca.rego                                     
 %attr(0550, root, root) %{_libdir}/libtpm_ima_verifier.so
 %attr(0550, root, root) %{_libdir}/libvirtcca_verifier.so
 
+%post
+%systemd_post attestation_server.service
+
+%preun
+%systemd_preun attestation_server.service
+
+%postun
+%systemd_postun_with_restart attestation_server.service
 
 %changelog
 * Thu Feb 13 2025 Build - 0.0.1
