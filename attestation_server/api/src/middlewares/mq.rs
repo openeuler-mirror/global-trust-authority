@@ -11,12 +11,11 @@
  */
 
 use config_manager::types::CONFIG;
-use mq::create_topic;
+use mq::check_topic;
 
-pub async fn create_mq_topics() {
-    create_topic("ra_topic", 1, 1).await.expect("create topic failed, please check!");
+pub async fn check_mq_topics() {
     if CONFIG.get_instance().unwrap().attestation_service.token_management.mq_enabled {
-        create_topic(&CONFIG.get_instance().unwrap().attestation_service.token_management.token_topic, 1, 1)
+        check_topic(&CONFIG.get_instance().unwrap().attestation_service.token_management.token_topic)
             .await
             .expect("create topic failed, please check!");
     }

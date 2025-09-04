@@ -104,7 +104,7 @@ pub enum PolicyCommands {
         #[clap(short, long)]
         description: Option<String>,
 
-        /// Applicable types of challenge plugins: tpm_ima/tpm_boot
+        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virtCCA
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
         attester_type: Vec<String>,
 
@@ -130,7 +130,7 @@ pub enum PolicyCommands {
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
         ids: Option<Vec<String>>,
 
-        /// Applicable types of challenge plugins: tpm_ima/tpm_boot
+        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virtCCA
         #[clap(short, long)]
         attester_type: Option<String>,
     },
@@ -148,7 +148,7 @@ pub enum PolicyCommands {
         #[clap(short, long)]
         description: Option<String>,
 
-        /// Applicable types of challenge plugins: tpm_ima/tpm_boot
+        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virtCCA
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
         attester_type: Option<Vec<String>>,
 
@@ -166,7 +166,7 @@ pub enum PolicyCommands {
     },
     /// Query policy information
     Get {
-        /// Applicable types of challenge plugins: tpm_ima/tpm_boot
+        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virtCCA
         #[clap(short, long)]
         attester_type: Option<String>,
 
@@ -213,7 +213,7 @@ pub enum BaselineCommands {
         #[clap(short, long)]
         description: Option<String>,
 
-        /// Applicable types of challenge plugins: tpm_ima
+        /// Applicable types of challenge plugins: tpm_ima/virtCCA
         #[clap(short, long, default_value = "tpm_ima")]
         attester_type: String,
 
@@ -235,7 +235,7 @@ pub enum BaselineCommands {
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
         ids: Option<Vec<String>>,
 
-        /// Applicable types of challenge plugins: tpm_ima
+        /// Applicable types of challenge plugins: tpm_ima/virtCCA
         #[clap(short, long)]
         attester_type: Option<String>,
     },
@@ -253,7 +253,7 @@ pub enum BaselineCommands {
         #[clap(short, long)]
         description: Option<String>,
 
-        /// Applicable types of challenge plugins: tpm_ima
+        /// Applicable types of challenge plugins: tpm_ima/virtCCA
         #[clap(short, long)]
         attester_type: Option<String>,
 
@@ -267,7 +267,7 @@ pub enum BaselineCommands {
     },
     /// Query baseline information
     Get {
-        /// Applicable types of challenge plugins: tpm_ima
+        /// Applicable types of challenge plugins: tpm_ima/virtCCA
         #[clap(short, long)]
         attester_type: Option<String>,
 
@@ -292,7 +292,7 @@ pub enum EvidenceCommands {
     /// Get evidence
     Get {
         /// Nonce type
-        #[clap(short, long, required = true, value_enum)]
+        #[clap(short = 't', long, required = true, value_enum)]
         nonce_type: NonceType,
 
         /// Fill in when nonce-type is user

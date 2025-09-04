@@ -37,7 +37,7 @@ cargo clean
 
 export RUST_MIN_STACK=33554432
 
-CARGO_BUILD_JOBS=4 cargo build -p attestation_cli -p tpm_boot_attester -p tpm_ima_attester -p virt_cca_attester
+CARGO_BUILD_JOBS=4 cargo build -p attestation_cli -p tpm_boot_attester -p tpm_ima_attester -p virtcca_attester
 
 %install
 rm -rf %{buildroot}
@@ -50,7 +50,7 @@ install -pm 640 config/agent_config.yaml %{buildroot}%{_sysconfdir}/attestation_
 
 install -pm 640 %{cli_output_dir}/libtpm_boot_attester.so   %{buildroot}%{_libdir}
 install -pm 640 %{cli_output_dir}/libtpm_ima_attester.so    %{buildroot}%{_libdir}
-install -pm 640 %{cli_output_dir}/libvirt_cca_attester.so  %{buildroot}%{_libdir}
+install -pm 640 %{cli_output_dir}/libvirtcca_attester.so  %{buildroot}%{_libdir}
 
 %files
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_agent/agent_config.yaml
@@ -58,7 +58,7 @@ install -pm 640 %{cli_output_dir}/libvirt_cca_attester.so  %{buildroot}%{_libdir
 %{_bindir}/attestation_cli
 %{_libdir}/libtpm_boot_attester.so
 %{_libdir}/libtpm_ima_attester.so
-%{_libdir}/libvirt_cca_attester.so
+%{_libdir}/libvirtcca_attester.so
 
 %changelog
 * Thu Mar 14 2024 Build - 0.0.1

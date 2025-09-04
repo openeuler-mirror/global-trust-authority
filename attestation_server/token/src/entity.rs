@@ -18,12 +18,16 @@ use serde_json::Value;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VerifyTokenResponse {
     verification_pass: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     token_body: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     token_header: Option<Header>
 }
 
 impl VerifyTokenResponse {
-    pub fn new(verification_pass: bool, token_body: Option<Value>, token_header: Option<Header>) -> Self {
-        Self { verification_pass, token_body, token_header }
+    pub fn new(verification_pass: bool, message: Option<String>, token_body: Option<Value>, token_header: Option<Header>) -> Self {
+        Self { verification_pass, message, token_body, token_header }
     }
 }

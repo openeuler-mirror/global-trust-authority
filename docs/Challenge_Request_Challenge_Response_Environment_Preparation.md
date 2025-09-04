@@ -101,6 +101,72 @@ result = {
 }
 ```
 
+### virtCCA
+Fill in the contents of the UEFI baseline and virtCCAToken into predefined_values.
+```
+package verification
+
+# Predefined values for verification
+predefined_values := {
+    "firmware_state": {
+        "grub_cfg": "d76740a196dc8c96b5983dd2177a84ba893e01b08430bae81d90112b7eefa5cf",
+        "kernel": "e14bd37fd6d957b48d3ddde9be14c6d977f74127a6c6e4846c6b2a9f4fe48b41",
+        "initramfs": "fc7269847648cdab5323a4213a6d7b9a47512851beae8106a81b3e507e6dfc79",
+        "grub_image_list": ["87276d2d4f3d17714e120d5b68694873880043e5abe7747fb4a47b5f6f38ca7a"]
+    },
+    "vcca_rpv": "02000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "vcca_rim": "b23d801b7a7d00e53dc636f918237a62f8a30df39f46db9af7cd213713a041d8",
+    "vcca_rem0": "5a408cfa02bc28f677a937348e2d8c34519a4c61e4934ca911e5a3e12d2a877d",
+    "vcca_rem1": "646fdfc8b716bf958471a20378f178c472679216c911ddd0349cd74924eda7e9",
+    "vcca_rem2": "d5baa6203ec24a54e92ee9d3c1e678a2f67e3a2cd4d38111606a710fa247c93e",
+    "vcca_rem3": "0000000000000000000000000000000000000000000000000000000000000000"
+}
+
+default attestation_valid = false
+
+# Main validation rule that checks all required fields
+attestation_valid {
+    # Check firmware_state if present
+    input.vcca_ccel_log_data.firmware_state
+    objects_equal(input.vcca_ccel_log_data.firmware_state, predefined_values.firmware_state)
+    
+    # Check other required fields
+    input.vcca_rpv == predefined_values.vcca_rpv
+    input.vcca_rim == predefined_values.vcca_rim
+    input.vcca_rem0 == predefined_values.vcca_rem0
+    input.vcca_rem1 == predefined_values.vcca_rem1
+    input.vcca_rem2 == predefined_values.vcca_rem2
+    input.vcca_rem3 == predefined_values.vcca_rem3
+}
+
+# Alternative rule when firmware_state is not present
+attestation_valid {
+    not input.vcca_ccel_log_data.firmware_state
+    
+    # Check other required fields
+    input.vcca_rpv == predefined_values.vcca_rpv
+    input.vcca_rim == predefined_values.vcca_rim
+    input.vcca_rem0 == predefined_values.vcca_rem0
+    input.vcca_rem1 == predefined_values.vcca_rem1
+    input.vcca_rem2 == predefined_values.vcca_rem2
+    input.vcca_rem3 == predefined_values.vcca_rem3
+}
+
+# Helper function to compare objects
+objects_equal(a, b) {
+    keys_a := {k | a[k]}
+    keys_b := {k | b[k]}
+    keys_a == keys_b
+    
+    values_match := {k | a[k] == b[k]}
+    count(keys_a) == count(values_match)
+}
+
+result = {
+    "policy_matched": attestation_valid
+}
+```
+
 ## Certificate-related preparations
 
 ### Importing the plugin's ak certificate
@@ -277,62 +343,9 @@ Convert to json format
 }
 ```
 
-```
-#!/bin/bash
-
-OUTPUT_FILE="ima_measurements.json"
-
-if [ ! -f "/sys/kernel/security/ima/ascii_runtime_measurements" ]; then
-    echo "Error: /sys/kernel/security/ima/ascii_runtime_measurements not found." >&2
-    exit 1
-fi
-
-if [ ! -r "/sys/kernel/security/ima/ascii_runtime_measurements" ]; then
-    echo "Error: No permission to read /sys/kernel/security/ima/ascii_runtime_measurements." >&2
-    exit 1
-fi
-
-{
-awk 'BEGIN {
-    print "{"
-    print "  \"referenceValues\": ["
-    first=1
-}
-/ima-ng sha256:/ {  
-    sha256 = substr($4, 8)
-    filename = $5
-    for (i=6; i<=NF; i++) {
-        filename = filename " " $i
-    }
-  
-    if (!first) {
-        print "    },"
-    } else {
-        first=0
-    }
-  
-    printf "    {\n"
-    printf "      \"fileName\": \"%s\",\n", filename
-    printf "      \"sha256\": \"%s\"\n", sha256
-}
-END {
-    if (!first) { 
-        print "    }"
-    }
-    print "  ]"
-    print "}"
-}' /sys/kernel/security/ima/ascii_runtime_measurements
-} > "$OUTPUT_FILE"
-
-if [ $? -eq 0 ]; then
-    echo "Successfully saved IMA measurements to $OUTPUT_FILE"
-else
-    echo "Error: Failed to save IMA measurements" >&2
-    exit 1
-fi
-
-chmod 644 "$OUTPUT_FILE"
-
+Run scripts/reference_value_generate_tool.sh in the code directory to generate the ima baseline.
+```bash
+sh reference_value_generate_tool.sh -m ima -a sha256 -f /path/
 ```
 
 Then provide the imported baseline certificate to generate jwt

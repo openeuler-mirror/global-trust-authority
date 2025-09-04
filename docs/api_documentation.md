@@ -87,21 +87,19 @@
 **Request Method**: `POST /global-trust-authority/agent/v1/evidences`
 
 #### Request Parameters
-
 | Field         | Sub-field     | Type            | Required | parameter constraint      | Description                                                                                                              |
-| ------------- | ------------- | --------------- | -------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+|---------------|---------------|-----------------|----------|---------------------------|--------------------------------------------------------------------------------------------------------------------------|
 | attesters     |               | list of objects | Yes      |                           | challenge information                                                                                                    |
 |               | attester_type | string          | yes      | tpm_boot/tpm_ima/virt_cca | challenge types                                                                                                          |
 |               | log_types     | list of strings | No       | ImaLog/TcgEventLog/CCEL   | types of log to collect                                                                                                  |
-| nonce_type    |               | string          | No       | ignore、user or verifier  | ignore/user/verifier(default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
+| nonce_type    |               | string          | No       | ignore、user or verifier   | ignore/user/verifier(default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
 | nonce         |               | string          | No       | Lenght 1-1024 bytes       | Nonce value, format: Base64                                                                                              |
-| token_fmt     |               | string          | No       | eat/ear                   | Token format, default value is eat                                                                                       |
+| token_fmt     |               | string          | No       | eat/ear                   | token format, default value is eat                                                                                                 |
 | attester_data |               | object          | No       |                           | User data, reserved field                                                                                                |
 
 #### Response Parameters
-
 | Field         | Sub-field     | Second-level Sub-field | Type            | Required | Description                                                           |
-| ------------- | ------------- | ---------------------- | --------------- | -------- | --------------------------------------------------------------------- |
+|---------------|---------------|------------------------|-----------------|----------|-----------------------------------------------------------------------|
 | agent_version |               |                        | string          | No       | Client version number                                                 |
 | measurements  |               |                        | list of objects | No       | Measurement data                                                      |
 |               | node_id       |                        | string          | No       | Node ID, corresponds to ueid                                          |
@@ -119,12 +117,10 @@
 
 ```
 {
-    "attesters": [
-      {
+    "attesters": [{
         "attester_type": "tpm_boot",
         "log_types": ["TcgEventLog"]
-      }
-    ],
+    }],
     "nonce_type": "verifier",
     "nonce": "eyJpYXQiOjE3NTY5ODAwNjMsInZhbHVlIjoiZjMrYVc0cm1vWHUxSjNjaGlJZWNkMkJUWWYrdS84WXU0Q2VTZWYwUmt4MXYzeHJhNHZNYkNrc1locC9UaTRVWW9wN1ZvMm5XNXlsMGs4VXNQNnZrTkE9PSIsInNpZ25hdHVyZSI6Im9Mc09WbTh2OHY3ZllUTW9SZHdySjBrbWl4blFmRXIwTVliNExDa2NyZUpveUFDZmFBdlpGdmJiYURHTFJjOW9ndWkycVhMbnUwWFgvZDhEc1hhK2xwQzg2dXhSeWZtYklSdVpza2xscHd5WVV4TXlEbmFZQS9SSlFGaEtEakJjYUp0Ri9sQnpZYWMzVVNzQmFkNE5tMVE1cnBEb3RscFpHbHd5akhhdGtxUENPVzZORG9wbU9pZWtzM3RNVXpJV0NyNVZPVGhhRnpZdUdIZUZJMHdhdVdMWHY4TnlwRnlIbnllay8zdWhjdEhIc2gyRExZZUVBZW1keWQ2VnVDWmNqNjBzSjNyenF5ME9LTUFIQVRuOWhhZjk0M0k3SllDUlkvTU0xQ08rWmk1MHNTUXV1UHllVUpuTERpMGxwQmdDZmwyeWgyQ2phcU9QdE15ckhTREJwRlNNaC8xVW5xdDBlaXFzcFRESDNtNm81TXd3dUFQWGJmRFZvaDArR2dPaUowaENLUnhLY3NXSXVHNythemNoS0U3U1kyakIxWWg0NjlpSTN2MUpQRWhobnVtdC9YWENhRXBYd29aVENLRUN6NjJMYnByOWp3SzZXVVZyS2t5L3hmbkdKTlR3NWxHNGFBS1hlOFdzSldtYnpXK0Yvd0JFa0E2amdHK1hWT1J6In0=",
     "token_fmt": "eat",
@@ -135,7 +131,9 @@
 ###### response body
 
 ```
-{"agent_version":"0.1.0","measurements":[{"node_id":"TPM AK","nonce":"eyJpYXQiOjE3NTY5ODAwNjMsInZhbHVlIjoiZjMrYVc0cm1vWHUxSjNjaGlJZWNkMkJUWWYrdS84WXU0Q2VTZWYwUmt4MXYzeHJhNHZNYkNrc1locC9UaTRVWW9wN1ZvMm5XNXlsMGs4VXNQNnZrTkE9PSIsInNpZ25hdHVyZSI6Im9Mc09WbTh2OHY3ZllUTW9SZHdySjBrbWl4blFmRXIwTVliNExDa2NyZUpveUFDZmFBdlpGdmJiYURHTFJjOW9ndWkycVhMbnUwWFgvZDhEc1hhK2xwQzg2dXhSeWZtYklSdVpza2xscHd5WVV4TXlEbmFZQS9SSlFGaEtEakJjYUp0Ri9sQnpZYWMzVVNzQmFkNE5tMVE1cnBEb3RscFpHbHd5akhhdGtxUENPVzZORG9wbU9pZWtzM3RNVXpJV0NyNVZPVGhhRnpZdUdIZUZJMHdhdVdMWHY4TnlwRnlIbnllay8zdWhjdEhIc2gyRExZZUVBZW1keWQ2VnVDWmNqNjBzSjNyenF5ME9LTUFIQVRuOWhhZjk0M0k3SllDUlkvTU0xQ08rWmk1MHNTUXV1UHllVUpuTERpMGxwQmdDZmwyeWgyQ2phcU9QdE15ckhTREJwRlNNaC8xVW5xdDBlaXFzcFRESDNtNm81TXd3dUFQWGJmRFZvaDArR2dPaUowaENLUnhLY3NXSXVHNythemNoS0U3U1kyakIxWWg0NjlpSTN2MUpQRWhobnVtdC9YWENhRXBYd29aVENLRUN6NjJMYnByOWp3SzZXVVZyS2t5L3hmbkdKTlR3NWxHNGFBS1hlOFdzSldtYnpXK0Yvd0JFa0E2amdHK1hWT1J6In0=","nonce_type":"verifier","attester_data":{"test_key":"test_value"},"token_fmt":"eat","evidences":[{"attester_type":"tpm_boot","evidence":{"ak_certs":[{"cert_type":"iak","cert_data":"-----BEGIN CERTIFICATE-----\nMIIDBjCCAe4CFBL8z+Gow59PViXBqsqFMR2GhOUdMA0GCSqGSIb3DQEBCwUAMEcxCzAJBgNVBAYTAkNOMRAwDgYDVQQKDAd0ZXN0IENBMQ0wCwYDVQQLDAR0ZXN0MRcwFQYDVQQDDA5UUE0gUm9vdCBDQSB2MjAeFw0yNTA0MjgxNDA2MjJaFw0zNTA0MjYxNDA2MjJaMDgxDzANBgNVBAMMBlRQTSBBSzEYMBYGA1UECgwPTXkgT3JnYW5pemF0aW9uMQswCQYDVQQGEwJDTjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALKuVeLxr1WUlf3/IgDEmQ4KcIZQfsuu38U6s8PeiNbQytEBhMSIiqdteGevb+DHU7jtO+n39GJaBwp1OjuOJCo5QemaKidlG1IEfRxVO82cQ99FPXuqxFNIWcM4c6nWTmx+e3WDDSv8hRAowVgRsdqFkcR9fP9H7ahl8kyrOm5aSU2wKGfopxVBdUDlD+H+EaflwU0okXV8NW/Vq6+dFloCo6dMp37e3VI+YDc73Jp8xed7KmXqzUGUOWclBjAADg1W5hBdSDdCEzwJ9+1DspcyNkMYhs0UlXsHfxRY28Fmk66MIPEmcbbL/9Fs68qa0KEENABV5Vwb+rWFLlYviEkCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAw3l3M5Mq2hlL3mt01kzgRDJH5zLooWpq1Ze2BKKGaSbpqcvLI48WV0pvtJXrKELZecyTnVWMHjOVqrsWXUpzIx7sd4Gwrg4wa5xAU4azSI70Fa8apESI/m9K0ECUyhIOWdIo1xUHr21wPlLn09v1Ey59MQnfu/HvIhRifaEqEbHTw6PyQBBuWJ+YoAJ+Ry1Xs445Pvq2/wvBq6uypRcBnki/1mfabkOacE+pTQTvmji1iAl+40t6wcU+5KI6l4Mdor5wOzxWPIJJaq4NVUErAwtY/o44ZU1YAqdw2z5tyFz1SapWCDvqaEqm3FaOHtcozkHoHeZPMzKlWEupJf/Ekw==\n-----END CERTIFICATE-----"}],"quote":{"quote_data":"/1RDR4AYACIAC6dK2j3UWnqCmI9se9Itpmwo+GB2VAKRbS/VU2Iczqe1ACCt3tsBfBuY8awf4+x3f57JuaOsDHMDnS5mMyIN/sRT5gAAAAKiT1w+AAAAHgAAAAABIBkQIwAWNjYAAAABAAsD/wAAACDmjVToNmS/+eKvnv6kvbrY+7FU8ALNmB8Ntz2L9wJotw==","signature":"ABQACwEAcV8BD4Y+6Gi4sR2MkhbqVpN/Zr7UxkcWBXAEpbnbVOX/dF5Z3mvSr/mFSoxCpK6NFL2TtsILblT0nw4nKvc6B3Sl8wzzOrGMWPKvN15Akj6qgvvmvZjq5yvH5LJ32Al/iY0HQvLee68r8IumPiInlYNzGYUPeZu8AuJv/gdngmE8s1gtEsZFe3wvlAcY3Tn/LboDBsl3f10aPLmzEdVRB1lJQMyTSfayJtJunjPz3RjXJ2F8jNYo0pNei6Ut9LalTKC598GsKV3Jhy6Oc0lh0rAlPH7AsO6gMpaf7t2XuiYuKVQYSipmM9sniHEZKkSUo3YdO77CAvpgpQcTkJ6zfw=="},"pcrs":{"hash_alg":"sha256","pcr_values":[{"pcr_index":0,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":1,"pcr_value":"a32bf8bf329907dc2b4839ff3c61b456a9856d12110f49d490df33baf189340e"},{"pcr_index":2,"pcr_value":"a9d5bdf3b0b034a434ef3adde2d5cb0a7533803f97f8889f1174ab60bd4dcb70"},{"pcr_index":3,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":4,"pcr_value":"fce7f1083082b16cfe2b085dd7858bb11a37c09b78e36c79e5a2fd529353c4e2"},{"pcr_index":5,"pcr_value":"8edde912699ceddddc7d9a3d7ee44a8b1b1910815692def6c9e637e2b939f941"},{"pcr_index":6,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":7,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"}]},"logs":[{"log_type":"TcgEventLog","log_data":"AAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACEAAABTcGVjIElEIEV2ZW50MDMAAAAAAAACAgIBAAAACwAgAAABAAAABgAAAAEAAAALAKUQl5WfT2u4kWVrAbSwFzFjH47hjONtvzakrA+LlDtEHAAAAAEAAAAUAAAAP56Gs4+udkBZNHIbDv9fS+P5kjUCAAAABQAAAAEAAAALAM6xuxF9FKN/B+I8luWAcp4/zBL3SZFbvcjtrfwg4hrPFQAAAFN0YXJ0IE9wdGlvbiBST00gU2NhbgIAAAAGAAAAAQAAAAsAQsNfc9yoYaT2lBuIXP60QTs/V44tYaVIrSbo/STF/vIgAAAABwAAABgAAAAAAAAAh/vA7LHufU2MjIjH2KL7Psj5nqUCAAAABgAAAAEAAAALAEhCcfsTwdRfjq1K1720aNnRAZTpRdNnOcSJR3WojkSDIAAAAAcAAAAYAAAAAAAAAKF3/pUe76cFAoGMcB9F4l1zCtadAgAAAAYAAAABAAAACwDoVl9LfTKvNQynp1Xau/dtFxpE0UeBPIM0P3be9myybSAAAAAHAAAAGAAAAAAAAABnDJzHm0hZlEcF7s5xDcMyGIt5tAQAAAAFAAAAAQAAAAsAehmlpW/SxKnJ29jHRTfzTQvEQqSlKMNvtEo8zYWN8SsPAAAAQ2FsbGluZyBJTlQgMTloAAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAUAAAABAAAACwCTSuIFkroG1wKWsgvJKnBsFgwLvBFfJlCJS3Y3UhxlOhwAAABCb290aW5nIEJDViBkZXZpY2UgODBoIChIREQpBAAAAA0AAAABAAAACwCfj8pNuhjuU9V1PHZiqzy9cTY3G9yjOqzfC6pJyRPlLAMAAABNQlIFAAAADgAAAAEAAAALAANFsCy5TpPzbQ926+9+lu9QuPhi1KuuUrcygr0MMilREwAAAE1CUiBQQVJUSVRJT05fVEFCTEU="}]}}]}]}
+{
+    "agent_version":"0.1.0","measurements":[{"node_id":"TPM AK","nonce":"eyJpYXQiOjE3NTY5ODAwNjMsInZhbHVlIjoiZjMrYVc0cm1vWHUxSjNjaGlJZWNkMkJUWWYrdS84WXU0Q2VTZWYwUmt4MXYzeHJhNHZNYkNrc1locC9UaTRVWW9wN1ZvMm5XNXlsMGs4VXNQNnZrTkE9PSIsInNpZ25hdHVyZSI6Im9Mc09WbTh2OHY3ZllUTW9SZHdySjBrbWl4blFmRXIwTVliNExDa2NyZUpveUFDZmFBdlpGdmJiYURHTFJjOW9ndWkycVhMbnUwWFgvZDhEc1hhK2xwQzg2dXhSeWZtYklSdVpza2xscHd5WVV4TXlEbmFZQS9SSlFGaEtEakJjYUp0Ri9sQnpZYWMzVVNzQmFkNE5tMVE1cnBEb3RscFpHbHd5akhhdGtxUENPVzZORG9wbU9pZWtzM3RNVXpJV0NyNVZPVGhhRnpZdUdIZUZJMHdhdVdMWHY4TnlwRnlIbnllay8zdWhjdEhIc2gyRExZZUVBZW1keWQ2VnVDWmNqNjBzSjNyenF5ME9LTUFIQVRuOWhhZjk0M0k3SllDUlkvTU0xQ08rWmk1MHNTUXV1UHllVUpuTERpMGxwQmdDZmwyeWgyQ2phcU9QdE15ckhTREJwRlNNaC8xVW5xdDBlaXFzcFRESDNtNm81TXd3dUFQWGJmRFZvaDArR2dPaUowaENLUnhLY3NXSXVHNythemNoS0U3U1kyakIxWWg0NjlpSTN2MUpQRWhobnVtdC9YWENhRXBYd29aVENLRUN6NjJMYnByOWp3SzZXVVZyS2t5L3hmbkdKTlR3NWxHNGFBS1hlOFdzSldtYnpXK0Yvd0JFa0E2amdHK1hWT1J6In0=","nonce_type":"verifier","attester_data":{"test_key":"test_value"},"token_fmt":"eat","evidences":[{"attester_type":"tpm_boot","evidence":{"ak_certs":[{"cert_type":"iak","cert_data":"-----BEGIN CERTIFICATE-----\nMIIDBjCCAe4CFBL8z+Gow59PViXBqsqFMR2GhOUdMA0GCSqGSIb3DQEBCwUAMEcxCzAJBgNVBAYTAkNOMRAwDgYDVQQKDAd0ZXN0IENBMQ0wCwYDVQQLDAR0ZXN0MRcwFQYDVQQDDA5UUE0gUm9vdCBDQSB2MjAeFw0yNTA0MjgxNDA2MjJaFw0zNTA0MjYxNDA2MjJaMDgxDzANBgNVBAMMBlRQTSBBSzEYMBYGA1UECgwPTXkgT3JnYW5pemF0aW9uMQswCQYDVQQGEwJDTjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALKuVeLxr1WUlf3/IgDEmQ4KcIZQfsuu38U6s8PeiNbQytEBhMSIiqdteGevb+DHU7jtO+n39GJaBwp1OjuOJCo5QemaKidlG1IEfRxVO82cQ99FPXuqxFNIWcM4c6nWTmx+e3WDDSv8hRAowVgRsdqFkcR9fP9H7ahl8kyrOm5aSU2wKGfopxVBdUDlD+H+EaflwU0okXV8NW/Vq6+dFloCo6dMp37e3VI+YDc73Jp8xed7KmXqzUGUOWclBjAADg1W5hBdSDdCEzwJ9+1DspcyNkMYhs0UlXsHfxRY28Fmk66MIPEmcbbL/9Fs68qa0KEENABV5Vwb+rWFLlYviEkCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAw3l3M5Mq2hlL3mt01kzgRDJH5zLooWpq1Ze2BKKGaSbpqcvLI48WV0pvtJXrKELZecyTnVWMHjOVqrsWXUpzIx7sd4Gwrg4wa5xAU4azSI70Fa8apESI/m9K0ECUyhIOWdIo1xUHr21wPlLn09v1Ey59MQnfu/HvIhRifaEqEbHTw6PyQBBuWJ+YoAJ+Ry1Xs445Pvq2/wvBq6uypRcBnki/1mfabkOacE+pTQTvmji1iAl+40t6wcU+5KI6l4Mdor5wOzxWPIJJaq4NVUErAwtY/o44ZU1YAqdw2z5tyFz1SapWCDvqaEqm3FaOHtcozkHoHeZPMzKlWEupJf/Ekw==\n-----END CERTIFICATE-----"}],"quote":{"quote_data":"/1RDR4AYACIAC6dK2j3UWnqCmI9se9Itpmwo+GB2VAKRbS/VU2Iczqe1ACCt3tsBfBuY8awf4+x3f57JuaOsDHMDnS5mMyIN/sRT5gAAAAKiT1w+AAAAHgAAAAABIBkQIwAWNjYAAAABAAsD/wAAACDmjVToNmS/+eKvnv6kvbrY+7FU8ALNmB8Ntz2L9wJotw==","signature":"ABQACwEAcV8BD4Y+6Gi4sR2MkhbqVpN/Zr7UxkcWBXAEpbnbVOX/dF5Z3mvSr/mFSoxCpK6NFL2TtsILblT0nw4nKvc6B3Sl8wzzOrGMWPKvN15Akj6qgvvmvZjq5yvH5LJ32Al/iY0HQvLee68r8IumPiInlYNzGYUPeZu8AuJv/gdngmE8s1gtEsZFe3wvlAcY3Tn/LboDBsl3f10aPLmzEdVRB1lJQMyTSfayJtJunjPz3RjXJ2F8jNYo0pNei6Ut9LalTKC598GsKV3Jhy6Oc0lh0rAlPH7AsO6gMpaf7t2XuiYuKVQYSipmM9sniHEZKkSUo3YdO77CAvpgpQcTkJ6zfw=="},"pcrs":{"hash_alg":"sha256","pcr_values":[{"pcr_index":0,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":1,"pcr_value":"a32bf8bf329907dc2b4839ff3c61b456a9856d12110f49d490df33baf189340e"},{"pcr_index":2,"pcr_value":"a9d5bdf3b0b034a434ef3adde2d5cb0a7533803f97f8889f1174ab60bd4dcb70"},{"pcr_index":3,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":4,"pcr_value":"fce7f1083082b16cfe2b085dd7858bb11a37c09b78e36c79e5a2fd529353c4e2"},{"pcr_index":5,"pcr_value":"8edde912699ceddddc7d9a3d7ee44a8b1b1910815692def6c9e637e2b939f941"},{"pcr_index":6,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":7,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"}]},"logs":[{"log_type":"TcgEventLog","log_data":"AAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACEAAABTcGVjIElEIEV2ZW50MDMAAAAAAAACAgIBAAAACwAgAAABAAAABgAAAAEAAAALAKUQl5WfT2u4kWVrAbSwFzFjH47hjONtvzakrA+LlDtEHAAAAAEAAAAUAAAAP56Gs4+udkBZNHIbDv9fS+P5kjUCAAAABQAAAAEAAAALAM6xuxF9FKN/B+I8luWAcp4/zBL3SZFbvcjtrfwg4hrPFQAAAFN0YXJ0IE9wdGlvbiBST00gU2NhbgIAAAAGAAAAAQAAAAsAQsNfc9yoYaT2lBuIXP60QTs/V44tYaVIrSbo/STF/vIgAAAABwAAABgAAAAAAAAAh/vA7LHufU2MjIjH2KL7Psj5nqUCAAAABgAAAAEAAAALAEhCcfsTwdRfjq1K1720aNnRAZTpRdNnOcSJR3WojkSDIAAAAAcAAAAYAAAAAAAAAKF3/pUe76cFAoGMcB9F4l1zCtadAgAAAAYAAAABAAAACwDoVl9LfTKvNQynp1Xau/dtFxpE0UeBPIM0P3be9myybSAAAAAHAAAAGAAAAAAAAABnDJzHm0hZlEcF7s5xDcMyGIt5tAQAAAAFAAAAAQAAAAsAehmlpW/SxKnJ29jHRTfzTQvEQqSlKMNvtEo8zYWN8SsPAAAAQ2FsbGluZyBJTlQgMTloAAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAUAAAABAAAACwCTSuIFkroG1wKWsgvJKnBsFgwLvBFfJlCJS3Y3UhxlOhwAAABCb290aW5nIEJDViBkZXZpY2UgODBoIChIREQpBAAAAA0AAAABAAAACwCfj8pNuhjuU9V1PHZiqzy9cTY3G9yjOqzfC6pJyRPlLAMAAABNQlIFAAAADgAAAAEAAAALAANFsCy5TpPzbQ926+9+lu9QuPhi1KuuUrcygr0MMilREwAAAE1CUiBQQVJUSVRJT05fVEFCTEU="}]}}]}]
+}
 ```
 
 ## 3. Service API
@@ -612,11 +610,10 @@ Note: To delete revoked certificates, type must specify crl.
 **Request Method**: `POST /global-trust-authority/service/v1/challenge`
 
 ##### Request Parameters
-
-| Field         | Type           | Required | parameter constraint   | Description                                        | Note                               |
-| ------------- | -------------- | -------- | ---------------------- | -------------------------------------------------- | ---------------------------------- |
-| agent_version | string         | No       | Length 1-50 characters | Client version number                              | Format is x.x.x, e.g., 1.0.0       |
-| attester_type | list of string | Yes      | "tpm_boot","tpm_ima"   | Plugin type, server returns error if not supported | Only supports "tpm_boot","tpm_ima" |
+| Field         | Type           | Required | parameter constraint            | Description                                        | Note                               |
+|---------------|----------------|----------|---------------------------------|----------------------------------------------------|------------------------------------|
+| agent_version | string         | No       | Length 1-50 characters          | Client version number                              | Format is x.x.x, e.g., 1.0.0       |
+| attester_type | list of string | Yes      | "tpm_boot","tpm_ima","virt_cca" | Plugin type, server returns error if not supported | Only supports "tpm_boot","tpm_ima" |
 
 ##### Response Parameters
 
@@ -671,14 +668,14 @@ Note: nonce can be base64 decoded as:
 **Request Method**: `POST /global-trust-authority/service/v1/attest`
 
 ##### Request Parameters
-
 | Field         | Sub-field     | Second-level Sub-field | Type            | Required | parameter constraint    | Description                                                                                                               |
-| ------------- | ------------- | ---------------------- | --------------- | -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+|---------------|---------------|------------------------|-----------------|----------|-------------------------|---------------------------------------------------------------------------------------------------------------------------|
 | agent_version |               |                        | string          | No       | Length 1-50 characters  | Client version number                                                                                                     |
 | measurements  |               |                        | list of objects | Yes      |                         | Measurement data                                                                                                          |
 |               | node_id       |                        | string          | No       | Length 1-255 characters | Node ID, corresponds to uied, recommended 32~128 characters, based on actual device                                       |
 |               | nonce_type    |                        | string          | No       |                         | ignore/user/verifier (default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
 |               | nonce         |                        | string          | No       |                         | Nonce, base64 encoded, 1~1024bytes                                                                                        |
+|               | token_fmt     |                        | string          | No       | eat/ear                 | Token format, only support ear or eat, default is eat                                                                     |
 |               | attester_data |                        | object          | No       |                         | User-defined data to be passed through, must be placed in token as-is                                                     |
 |               | evidences     |                        | list of objects | Yes      |                         | Challenge report                                                                                                          |
 |               |               | attester_type          | string          | Yes      |                         | Challenge type, see attester_type specification                                                                           |
@@ -733,10 +730,11 @@ Note: nonce can be base64 decoded as:
 ```
 {
     "agent_version": "0.1.0",
-    "nonce_type": "ignore",
     "measurements": [
         {
             "node_id": "TPM AK",
+            "nonce_type": "ignore",
+            "token_fmt": "eat",
             "evidences": [
                 {
                     "attester_type": "tpm_boot",
@@ -1067,7 +1065,87 @@ http(s)://ip:port/global-trust-authority/service/v1/policy?ids=2b0ead4b-6a15-423
 
 ```
 {
-    "verification_pass": false
+	"verification_pass": true,
+	"token_body": {
+		"nonce_type": "ignore",
+		"intuse": "Generic",
+		"attester_data": "custom_data",
+		"ueid": "a4e7c719-6b05-4ac6-b95a-7e71a9d6f9d5",
+		"virt_cca": {
+			"attestation_status": "unknown",
+			"vcca_ccel_log_status": "replay_success",
+			"vcca_ccel_ref_value_match_status": "ignore",
+			"vcca_cvm_token_hash_alg": "sha-256",
+			"vcca_firmware_state": {
+				"grub_cfg": "1aaeda68126809b20f88f6ed6fac2ec720ddf4ae4ea99b2d2ba6fafc18d79971",
+				"grub_image_list": [
+					"87276d2d4f3d17714e120d5b68694873880043e5abe7747fb4a47b5f6f38ca7a"
+				],
+				"initramfs": "fc7269847648cdab5323a4213a6d7b9a47512851beae8106a81b3e507e6dfc79",
+				"kernel": "e14bd37fd6d957b48d3ddde9be14c6d977f74127a6c6e4846c6b2a9f4fe48b41"
+			},
+			"vcca_ima_log_status": "replay_success",
+			"vcca_ima_ref_value_match_status": "matched",
+			"vcca_platform_token_config": "",
+			"vcca_platform_token_hash_algo": "sha-256",
+			"vcca_platform_token_implementation": "1213071ad6425b5bac0de45b6b1827b080476085162e32293ac947755250649e",
+			"vcca_platform_token_instance": "01e3e5e2548bcf2cf712fb005ee4c7fcbbd9394edde3597ea889b678878608248d",
+			"vcca_platform_token_lifecycle": 8192,
+			"vcca_platform_token_profile": "",
+			"vcca_platform_token_sw_components": [
+				{
+					"firware_name": "ipu",
+					"firware_version": "21.23.0",
+					"measurement": "abdfaad091595b7310aafc6d9762e793e4653eaf936988b75187a62b3dd01f3d"
+				},
+				{
+					"firware_name": "imu",
+					"firware_version": "21.23.0",
+					"measurement": "5034faa5b8bcc68c6dc5953b8c0f0cb552b23bd6d306bcd7909d65f03f303672"
+				},
+				{
+					"firware_name": "imf_ap",
+					"firware_version": "21.23.0",
+					"measurement": "f72d095e952acadd60a486a0a1d9c2ede8ee1a918d33682781e03631597b953b"
+				},
+				{
+					"firware_name": "tf_bl2",
+					"firware_version": "21.23.0",
+					"measurement": "f3f8a175e7eaca582ee886b60c98a708ab86bca361484630c73b4074fe6a884e"
+				},
+				{
+					"firware_name": "uefi",
+					"firware_version": "21.23.0",
+					"measurement": "498e3cb6773c59fdb498f268ebdb1fe0391ab7956dcc135e904b5fd202b0c3c9"
+				},
+				{
+					"firware_name": "tee",
+					"firware_version": "1.6",
+					"measurement": "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b"
+				}
+			],
+			"vcca_platform_token_verification_service": "",
+			"vcca_rem0": "f5f0f64f4b3e3dd6e29e8613825b739e89912527996635f9e555d00c1ea91ad4",
+			"vcca_rem1": "646fdfc8b716bf958471a20378f178c472679216c911ddd0349cd74924eda7e9",
+			"vcca_rem2": "ed2ff313b2cb951cbab6f1e3ed4c8209e1541c20fbce614882df7748a6b7092b",
+			"vcca_rem3": "0000000000000000000000000000000000000000000000000000000000000000",
+			"vcca_rim": "ec7f23be62e51c8dc62e495d2d6e20df14d95d5284044223fb86cbaac1edb3a1",
+			"vcca_rpv": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+		},
+		"iat": 1755672484,
+		"exp": 1756272484,
+		"iss": "iss",
+		"jti": "6d981d6b-7fae-479b-9fd5-ea6395f3b2ae",
+		"ver": "1.0",
+		"nbf": 1755672484,
+		"eat_profile": "eat_profile"
+	},
+	"token_header": {
+		"typ": "JWT",
+		"alg": "RS256",
+		"jku": "jku",
+		"kid": "kid"
+	}
 }
 ```
 

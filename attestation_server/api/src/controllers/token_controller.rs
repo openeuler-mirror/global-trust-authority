@@ -36,7 +36,7 @@ pub async fn verify_token(token_req: web::Json<TokenRequest>) -> HttpResponse {
     match TokenManager::verify_token(token).await {
         Ok(verify_token_response) => HttpResponse::Ok().json(verify_token_response),
         Err(verify_token_error) => {
-            HttpResponse::ServiceUnavailable().json(json!({"message": verify_token_error.to_string()}))
+            HttpResponse::InternalServerError().json(json!({"message": verify_token_error.to_string()}))
         },
     }
 }

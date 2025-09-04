@@ -11,3 +11,7 @@
  */
 
 pub mod attestation_factory;
+pub mod token_factory;
+
+pub use attestation_factory::{AttestationFactory, AttestationType};
+pub use token_factory::{TokenFactory, TokenType};

@@ -138,21 +138,20 @@ fn test_log_result_to_json_value() {
         log_data: Some(json!({ "key": "value" })),
     };
     let json_ima = log_result_ima.to_json_value();
+    println!("{:?}", json_ima);
     assert_eq!(json_ima["vcca_ima_log_status"], "replay_success");
     assert_eq!(json_ima["vcca_ima_ref_value_match_status"], "matched");
-    assert_eq!(json_ima["vcca_ima_log_type"], "ImaLog");
     assert_eq!(json_ima["vcca_ima_log_data"], json!({ "key": "value" }));
 
     let log_result_ccel = LogResult {
-        log_status: "replay_failed".to_string(),
+        log_status: "replay_failure".to_string(),
         ref_value_match_status: "unmatched".to_string(),
         log_type: "CCEL".to_string(),
         log_data: None,
     };
     let json_ccel = log_result_ccel.to_json_value();
-    assert_eq!(json_ccel["vcca_ccel_log_status"], "replay_failed");
+    assert_eq!(json_ccel["vcca_ccel_log_status"], "replay_failure");
     assert_eq!(json_ccel["vcca_ccel_ref_value_match_status"], "unmatched");
-    assert_eq!(json_ccel["vcca_ccel_log_type"], "CCEL");
     assert!(json_ccel.get("vcca_ccel_log_data").is_none());
 
     let log_result_other = LogResult {
@@ -164,7 +163,6 @@ fn test_log_result_to_json_value() {
     let json_other = log_result_other.to_json_value();
     assert_eq!(json_other["log_status"], "unknown");
     assert_eq!(json_other["ref_value_match_status"], "ignore");
-    assert_eq!(json_other["log_type"], "OtherLog");
 }
 
 #[test]

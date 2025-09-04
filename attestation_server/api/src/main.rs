@@ -15,7 +15,7 @@ mod middlewares;
 mod routes;
 mod utils;
 
-use crate::middlewares::mq::create_mq_topics;
+use crate::middlewares::mq::check_mq_topics;
 use crate::routes::routes::configure_user_routes;
 use crate::utils::env_setting_center::{
     get_cert_path, get_env_by_key, get_env_value_or_default, get_key_path, load_env,
@@ -40,7 +40,7 @@ use std::env;
 use std::future::Future;
 use utils::env_setting_center::{default_not_found_page, get_address, get_https_address};
 
-const MAX_JSON_SIZE_DEFAULT: usize = 10 * 1024 * 1024; // 10MB
+const MAX_JSON_SIZE_DEFAULT: usize = 100 * 1024 * 1024; // 100MB
 const HTTPS_SWITCH_ON: u32 = 1;
 const HTTPS_SWITCH_OFF: u32 = 0;
 const USER_ID: &str = "User-Id";
@@ -61,8 +61,8 @@ async fn main() -> std::io::Result<()> {
 
     chain.execute(&mut InitContext::new()).await.unwrap();
 
-    // create topic
-    create_mq_topics().await;
+    // check topic
+    check_mq_topics().await;
 
     let pool = get_connection().await.clone().unwrap();
     let management_governor = create_management_governor();

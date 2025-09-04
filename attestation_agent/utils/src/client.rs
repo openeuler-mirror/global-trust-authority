@@ -28,9 +28,9 @@ const CLIENT_CONNECTION_TIMEOUT: u64 = 60; // Client connection timeout in secon
 #[derive(Clone, Debug)]
 pub struct CertConfig {
     #[validate(custom(function = "validate_file"))]
-    cert_path: String,
+    cert_path:  Option<String>,
     #[validate(custom(function = "validate_file"))]
-    key_path: String,
+    key_path:  Option<String>,
     #[validate(custom(function = "validate_file"))]
     ca_path: String,
 }
@@ -60,10 +60,25 @@ impl ClientConfig {
         self
     }
 
-    pub fn with_certificates(mut self, cert_path: &str, key_path: &str, ca_path: &str) -> Self {
+    /// Unified TLS certificate configuration method
+    ///
+    /// # Arguments
+    /// * `cert_path` - Client certificate path (optional, pass None for one-way authentication)
+    /// * `key_path` - Client private key path (optional, pass None for one-way authentication)
+    /// * `ca_path` - CA certificate path (required)
+    ///
+    /// # Usage
+    /// ```rust
+    /// // Mutual authentication
+    /// client_config.with_tls_config(Some("client.crt"), Some("client.key"), "ca.crt");
+    ///
+    /// // One-way authentication
+    /// client_config.with_tls_config(None, None, "ca.crt");
+    /// ```
+    pub fn with_tls_config(mut self, cert_path: Option<&str>, key_path: Option<&str>, ca_path: &str) -> Self {
         self.cert_config = Some(CertConfig {
-            cert_path: cert_path.to_string(),
-            key_path: key_path.to_string(),
+            cert_path: cert_path.map(|s| s.to_string()),
+            key_path: key_path.map(|s| s.to_string()),
             ca_path: ca_path.to_string(),
         });
         self
@@ -121,6 +136,34 @@ impl ClientConfig {
         // If base_url starts with https, certificate configuration is required
         if self.base_url.starts_with("https://") {
             if let Some(cert_config) = &self.cert_config {
+                // Validate CA certificate path (required)
+                if cert_config.ca_path.is_empty() {
+                    return Err(AgentError::ConfigError("CA certificate path cannot be empty for HTTPS".to_string()));
+                }
+
+                // If client certificate is configured, private key must also be configured (mutual authentication)
+                match (&cert_config.cert_path, &cert_config.key_path) {
+                    (Some(cert), Some(key)) => {
+                        // Mutual authentication: validate client certificate and private key paths
+                        if cert.is_empty() {
+                            return Err(AgentError::ConfigError("Client certificate path cannot be empty".to_string()));
+                        }
+                        if key.is_empty() {
+                            return Err(AgentError::ConfigError("Client private key path cannot be empty".to_string()));
+                        }
+                    }
+                    (Some(_), None) | (None, Some(_)) => {
+                        // Not allowed to configure only one: either configure both (mutual authentication) or neither (one-way authentication)
+                        return Err(AgentError::ConfigError(
+                            "For mutual TLS, both cert_path and key_path must be provided. For one-way TLS, provide only ca_path".to_string()
+                        ));
+                    }
+                    (None, None) => {
+                        // One-way authentication: only CA certificate is needed, this is allowed
+                    }
+                }
+
+                // Use validator to validate file paths
                 if let Err(err) = cert_config.validate() {
                     return Err(AgentError::ConfigError(format!("Certificate validation failed: {:?}", err)));
                 }
@@ -203,26 +246,38 @@ impl Client {
 
         if config.base_url.starts_with("https://") {
             if let Some(cert_config) = &config.cert_config {
-                // Read files
-                let cert_data = std::fs::read(&cert_config.cert_path)
-                    .map_err(|e| AgentError::SslError(format!("Failed to read certificate: {}", e)))?;
-                let key_data = std::fs::read(&cert_config.key_path)
-                    .map_err(|e| AgentError::SslError(format!("Failed to read private key: {}", e)))?;
+                // Read CA certificate (required)
                 let ca_data = std::fs::read(&cert_config.ca_path)
                     .map_err(|e| AgentError::SslError(format!("Failed to read CA certificate: {}", e)))?;
 
-                // Create Identity and Certificate
-                let identity = reqwest::Identity::from_pkcs8_pem(&cert_data, &key_data)
-                    .map_err(|e| AgentError::SslError(format!("Failed to create identity: {}", e)))?;
                 let ca_cert = reqwest::Certificate::from_pem(&ca_data)
                     .map_err(|e| AgentError::SslError(format!("Failed to create CA certificate: {}", e)))?;
 
-                // Build client configuration
-                builder = builder
-                    .identity(identity)
-                    .add_root_certificate(ca_cert)
-                    .danger_accept_invalid_certs(false)
-                    .danger_accept_invalid_hostnames(false);
+                // Check if it's mutual authentication (both client certificate and private key exist)
+                if let (Some(cert_path), Some(key_path)) = (&cert_config.cert_path, &cert_config.key_path) {
+                    // Mutual authentication: read client certificate and private key
+                    debug!("Configuring mutual TLS authentication");
+                    let cert_data = std::fs::read(cert_path)
+                        .map_err(|e| AgentError::SslError(format!("Failed to read certificate: {}", e)))?;
+                    let key_data = std::fs::read(key_path)
+                        .map_err(|e| AgentError::SslError(format!("Failed to read private key: {}", e)))?;
+
+                    let identity = reqwest::Identity::from_pkcs8_pem(&cert_data, &key_data)
+                        .map_err(|e| AgentError::SslError(format!("Failed to create identity: {}", e)))?;
+
+                    builder = builder
+                        .identity(identity)
+                        .add_root_certificate(ca_cert)
+                        .danger_accept_invalid_certs(false)
+                        .danger_accept_invalid_hostnames(false);
+                } else {
+                    // One-way authentication: only use CA certificate to verify server
+                    debug!("Configuring one-way TLS authentication");
+                    builder = builder
+                        .add_root_certificate(ca_cert)
+                        .danger_accept_invalid_certs(false)
+                        .danger_accept_invalid_hostnames(false);
+                }
             }
         }
 

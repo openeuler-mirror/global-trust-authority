@@ -139,6 +139,7 @@ attestation_service:
     eat_profile: "test"
     mq_enabled: false
     token_topic: "test"
+    token_signing_algorithm: "PS256"
   policy:
     export_policy_file:
       - name: "tpm_boot"

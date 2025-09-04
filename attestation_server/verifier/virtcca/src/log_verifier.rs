@@ -100,7 +100,6 @@ impl LogResult {
         };
         map.insert(format!("{}log_status", prefix), Value::String(self.log_status.clone()));
         map.insert(format!("{}ref_value_match_status", prefix), Value::String(self.ref_value_match_status.clone()));
-        map.insert(format!("{}log_type", prefix), Value::String(self.log_type.clone()));
         if let Some(data) = &self.log_data {
             map.insert(format!("{}log_data", prefix), data.clone());
         }
@@ -184,6 +183,10 @@ impl UefiVerify {
         cvm_token_rem: [Vec<u8>; CVM_REM_ARR_SIZE],
         mut log_result: LogResult,
     ) -> Result<LogResult, PluginError> {
+        if uefi_log.as_bytes().len() > 5 * 1024 * 1024 {
+            return Err(PluginError::InputError("UEFI log size exceeds 5MB limit".to_string()));
+        }
+
         let decode_uefi_log = general_purpose::STANDARD
             .decode(uefi_log)
             .map_err(|e| PluginError::InputError(format!("Failed to decode base64 log: {}", e)))?;
@@ -196,7 +199,7 @@ impl UefiVerify {
         if UefiVerify::compare_rtmr_with_uefi_log(&replayed_rtmr, &cvm_token_rem) {
             log_result.log_status = "replay_success".to_string();
         } else {
-            log_result.log_status = "replay_failed".to_string();
+            log_result.log_status = "replay_failure".to_string();
         }
 
         let mut log_data = serde_json::to_value(serializable_event_log).ok();
@@ -228,7 +231,7 @@ impl ImaVerify {
             if ImaVerify::check_replay_value_is_matched(replay_pcr_values.clone(), cvm_token_rem_hex.clone(), parsed_ima_log.clone()) {
                 "replay_success".to_string()
             } else {
-                "replay_failed".to_string()
+                "replay_failure".to_string()
             };
         let is_ref_value_match = &parsed_ima_log
             .check_reference_values(plugin.get_host_functions(), user_id, plugin.get_plugin_type())

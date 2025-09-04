@@ -10,7 +10,7 @@ SOURCE_DIR_NAME=$(basename ${ROOT_DIR})
 VERSION=$(grep "^version:" "${ROOT_DIR}/config/common.yaml" | awk '{print $2}')
 RELEASE=$(grep "^release:" "${ROOT_DIR}/config/common.yaml" | awk '{print $2}')
 
-SUPPORTED_OS=("openEuler")
+SUPPORTED_OS=("openEuler" "ctyunos")
 
 ENABLE_AGENT_RPM=false
 ENABLE_SERVER_RPM=false
@@ -74,7 +74,7 @@ tar -zcf vendor.tar.gz vendor
 mv vendor.tar.gz $RPM_SOURCE_DIR
 
 rm -rf $RPM_SPEC_DIR/*
-cd ./rpm/spec/${OS_NAME}
+cd ./rpm/spec
 if [ "$ENABLE_AGENT_RPM" = true ]; then
     cp agent.spec $RPM_SPEC_DIR
     rpmbuild -bb --clean $RPM_SPEC_DIR/agent.spec --define "_ra_version ${VERSION}" --define "_ra_release ${RELEASE}" --define "_source_dir ${SOURCE_DIR_NAME}"
