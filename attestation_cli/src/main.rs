@@ -550,27 +550,31 @@ async fn deal_nonce_commands(
 
 async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
     match command {
-        EvidenceCommands::Get { nonce_type, nonce, attester_data, out } => {
+        EvidenceCommands::Get { nonce_type, nonce, attester_data, out, attester_types, token_format } => {           
             // Load plugins
             println!("Starting to load plugins");
             load_plugins(&config)
                 .map_err(|e| AgentError::PluginLoadError(format!("Failed to load plugins: {}", e)))
                 .unwrap();
             println!("Plugins loaded successfully");
-            let attester_type = get_attester_types(config);
+            let mut enabled_types = get_attester_types(config);
+            let attester_types = match attester_types {
+                Some(attester_types) => Some(attester_types.into_iter().map(|attester_type| attester_type.to_string()).collect::<Vec<String>>()),
+                None => None,
+            };
+            if let Some(attester_types) = attester_types {
+                if attester_types.iter().filter(|attester_type| !enabled_types.contains(attester_type)).count() > 0 {
+                    eprintln!("[Error] Some of the requested attester types [{}] are disabled", attester_types.join(", "));
+                    return;
+                }
+                enabled_types.retain(|attester_type| attester_types.contains(attester_type));
+            }
+
             let mut attesters = Vec::new();
-            for attester_type in attester_type {
+            for attester_type in enabled_types {
                 attesters.push(Attester {
                     attester_type: attester_type.clone(),
-                    log_types: if attester_type == "tpm_ima" {
-                        Some(vec!["ImaLog".to_string()])
-                    } else if attester_type == "tpm_boot" {
-                        Some(vec!["TcgEventLog".to_string()])
-                    } else if attester_type == "virt_cca" {
-                        Some(vec!["CCEL".to_string(), "ImaLog".to_string()])
-                    } else {
-                        None
-                    },
+                    log_types: None,
                 });
             }
             let nonce: Option<String> = match nonce {
@@ -578,18 +582,22 @@ async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
                 Some(content) => {
                     let nonce = get_content(&Some(content.to_string()));
                     if nonce.is_none() {
-                        eprintln!("Unable to obtain nonce");
+                        eprintln!("[Error] Unable to obtain nonce");
                         return;
                     }
                     nonce
                 },
             };
+            let token_fmt = match token_format {
+                Some(token_format) => Some(token_format.to_string()),
+                None => None,
+            };
             let evidence_request = GetEvidenceRequest {
                 attesters,
                 nonce_type: Option::from(nonce_type.to_string()),
                 nonce,
-                token_fmt: None,
                 attester_data: attester_data.clone(),
+                token_fmt,
             };
             match EvidenceManager::get_evidence(&evidence_request) {
                 Ok(evidence) => {
@@ -598,15 +606,15 @@ async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
 
                     let out_path = out.to_string();
                     if let Err(e) = fs::create_dir_all(Path::new(&out_path).parent().unwrap()) {
-                        eprintln!("Warning: Failed to create directories for {}: {}", out_path, e);
+                        eprintln!("[Error] Failed to create directories for {}: {}", out_path, e);
                         return;
                     }
                     match fs::write(&out_path, &evidence_json) {
                         Ok(_) => println!("Evidence successfully saved to {}", out_path),
-                        Err(e) => eprintln!("Error writing to {}: {}", out_path, e),
+                        Err(e) => eprintln!("[Error] Failed to write evidence to {}: {}", out_path, e),
                     }
                 },
-                Err(error) => eprintln!("Get Evidence failed: {}", error),
+                Err(error) => eprintln!("[Error] Get Evidence failed: {}", error),
             }
         },
     }

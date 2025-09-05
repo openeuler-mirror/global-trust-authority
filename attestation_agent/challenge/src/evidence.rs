@@ -154,7 +154,7 @@ impl EvidenceManager {
         let attester_info = request.attesters.iter().map(|att| 
                 AttesterInfo { 
                     attester_type: att.attester_type.clone(), 
-                    log_types: if att.log_types.is_none() { Some(Vec::new()) } else { att.log_types.clone() }, 
+                    log_types: att.log_types.clone(), 
                     policy_ids: None 
                 }).collect::<Vec<_>>();
         if attester_info.is_empty() {
