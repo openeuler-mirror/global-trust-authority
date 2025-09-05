@@ -1,5 +1,8 @@
 package verification
 
+default hardware_value = 96
+default executables_value = 96
+
 get(key) = value {
     value := object.get(input, key, "___KEY_NOT_EXIST___")
     value != "___KEY_NOT_EXIST___"
@@ -54,11 +57,6 @@ hardware_value = 0 {
     filtered_base_fields.vcca_ccel_log_status == "no_log"
 }
 
-hardware_value = 96 {
-    not (filtered_base_fields.vcca_ccel_log_status == "replay_success"); not (filtered_base_fields.vcca_ccel_ref_value_match_status == "ignore")
-    not (filtered_base_fields.vcca_ccel_log_status == "no_log")
-}
-
 # executables value calculation
 executables_value = 2 {
     filtered_base_fields.vcca_ima_log_status == "replay_success"
@@ -67,11 +65,6 @@ executables_value = 2 {
 
 executables_value = 0 {
     filtered_base_fields.vcca_ima_log_status == "no_log"
-}
-
-executables_value = 96 {
-    not (filtered_base_fields.vcca_ima_log_status == "replay_success"); not (filtered_base_fields.vcca_ima_ref_value_match_status == "matched")
-    not (filtered_base_fields.vcca_ima_log_status == "no_log")
 }
 
 result := {
