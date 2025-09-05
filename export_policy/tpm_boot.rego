@@ -1,6 +1,7 @@
 package verification
 
 default secure_boot = "NA"
+default hardware_value = 96
 
 # Extract secure_boot status
 secure_boot = "enabled" {
@@ -58,11 +59,6 @@ hardware_value = 2 {
 
 hardware_value = 0 {
     log_status == "no_log"
-}
-
-hardware_value = 96 {
-    not (log_status == "replay_success"); not (ref_value_match_status == "ignore")
-    not (log_status == "no_log")
 }
 
 # Output object

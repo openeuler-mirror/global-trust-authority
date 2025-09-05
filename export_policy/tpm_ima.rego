@@ -2,6 +2,7 @@ package verification
 
 default log_status = "no_log"
 default ref_value_match_status = "ignore"
+default executables_value = 96
 
 log_status = status {
     some i
@@ -32,11 +33,6 @@ executables_value = 2 {
 
 executables_value = 0 {
     log_status == "no_log"
-}
-
-executables_value = 96 {
-    not (log_status == "replay_success"); not (ref_value_match_status == "matched")
-    not (log_status == "no_log")
 }
 
 result = {
