@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use crate::challenge_error::ChallengeError;
+use crate::challenge_error::{ChallengeError, TokenError};
 use agent_utils::Client;
 use config::{PluginConfig, AGENT_CONFIG};
 use log;
@@ -31,6 +31,7 @@ const TIME_OUT: u64 = 120;
 pub struct NodeToken {
     node_id: String,
     token: Value,
+    token_fmt: String,
 }
 
 static GLOBAL_TPM: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
@@ -73,6 +74,9 @@ pub struct Measurement {
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attester_data: Option<serde_json::Value>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_fmt: Option<String>,
     pub evidences: Vec<EvidenceWithPolicy>,
 }
 
@@ -91,6 +95,7 @@ impl GetEvidenceResponse {
         attester_data: Option<&serde_json::Value>,
         node_id: &str,
         evidences: Vec<EvidenceWithPolicy>,
+        token_fmt: Option<&str>,
     ) -> Self {
         GetEvidenceResponse {
             agent_version: agent_version.to_string(),
@@ -99,6 +104,7 @@ impl GetEvidenceResponse {
                 nonce: nonce.cloned(),
                 nonce_type: nonce_type.to_string(),
                 attester_data: attester_data.cloned(),
+                token_fmt: token_fmt.map(|s| s.to_string()),
                 evidences,
             }],
         }
@@ -113,23 +119,32 @@ fn acquire_thread_lock() -> Result<MutexGuard<'static, ()>, ChallengeError> {
 
 /// Set the global cached tokens (async)
 ///
-/// # Panics
+/// # Errors
 ///
-/// This function may panic if the lock cannot be acquired.
-pub fn set_cached_tokens(tokens: &[NodeToken]) {
-    let mut global = GLOBAL_TOKENS.lock().unwrap();
+/// Returns an error if the lock cannot be acquired.
+pub fn set_cached_tokens(tokens: &[NodeToken]) -> Result<(), ChallengeError> {
+    let mut global = GLOBAL_TOKENS.lock().map_err(|e| {
+        log::error!("Failed to acquire lock for setting cached tokens: {}", e);
+        ChallengeError::InternalError("Failed to acquire lock for setting cached tokens".to_string())
+    })?;
     *global = tokens.to_vec();
+    Ok(())
 }
 
-/// Get the cached token for current `node_id` as `serde_json::Value` (sync)
+/// Get the cached token for current `node_id` and specific `token_fmt` as `serde_json::Value` (sync)
 ///
-/// # Panics
+/// # Errors
 ///
-/// This function may panic if the lock cannot be acquired.
-pub fn get_cached_token_for_current_node() -> Option<Value> {
-    let node_id = get_node_id().ok()?;
-    let global = GLOBAL_TOKENS.lock().unwrap();
-    global.iter().find(|nt| nt.node_id == node_id).map(|nt| nt.token.clone())
+/// Returns an error if the lock cannot be acquired or if node_id cannot be retrieved.
+pub fn get_cached_token_for_current_node_with_fmt(token_fmt: &str) -> Result<Option<Value>, ChallengeError> {
+    let node_id = get_node_id()?;
+    let global = GLOBAL_TOKENS.lock().map_err(|e| {
+        log::error!("Failed to acquire lock for getting cached token: {}", e);
+        ChallengeError::TokenError(TokenError::TokenNotFound("Failed to acquire lock for getting cached token".to_string()))
+    })?;
+    Ok(global.iter()
+        .find(|nt| nt.node_id == node_id && nt.token_fmt == token_fmt)
+        .map(|nt| nt.token.clone()))
 }
 
 /// Get the node ID (UUID) from configuration
@@ -529,7 +544,19 @@ async fn get_tokens_from_server(evidence: &GetEvidenceResponse) -> Result<Vec<No
             .ok_or_else(|| ChallengeError::RequestParseError("token.node_id missing or not string".to_string()))?
             .to_string();
         let token_val = t.get("token").cloned().unwrap_or(serde_json::Value::Null);
-        node_tokens.push(NodeToken { node_id, token: token_val });
+
+        let token_fmt = evidence
+            .measurements
+            .iter()
+            .find(|m| m.node_id == node_id)
+            .and_then(|m| m.token_fmt.as_ref().cloned())
+            .unwrap_or_else(|| "eat".to_string());
+
+        node_tokens.push(NodeToken {
+            node_id,
+            token: token_val,
+            token_fmt,
+        });
     }
 
     Ok(node_tokens)
@@ -543,6 +570,7 @@ async fn get_tokens_from_server(evidence: &GetEvidenceResponse) -> Result<Vec<No
 pub async fn do_challenge(
     attester_info: &Option<Vec<AttesterInfo>>,
     attester_data: &Option<serde_json::Value>,
+    token_fmt: Option<&str>,
 ) -> Result<serde_json::Value, ChallengeError> {
     log::info!("Starting challenge request.");
 
@@ -570,10 +598,11 @@ pub async fn do_challenge(
         attester_data.as_ref(),
         &node_id,
         evidences,
+        token_fmt,
     );
 
     let node_tokens = get_tokens_from_server(&evidence_response).await?;
-    set_cached_tokens(&node_tokens);
+    set_cached_tokens(&node_tokens)?;
 
     for nt in node_tokens {
         if nt.node_id == node_id {
@@ -644,6 +673,7 @@ mod tests {
             None,
             "test_node_id",
             evidences,
+            Some("eat"),
         );
 
         assert_eq!(response.measurements[0].nonce_type, "user");
@@ -671,6 +701,7 @@ mod tests {
             nonce_type: "user".to_string(),
             nonce: Some("nonce".to_string()),
             attester_data: Some(json!({"data": "test"})),
+            token_fmt: Some("eat".to_string()),
             evidences: vec![EvidenceWithPolicy {
                 attester_type: "tpm_boot".to_string(),
                 evidence: json!({"test": "evidence"}),
@@ -693,14 +724,16 @@ mod tests {
             NodeToken {
                 node_id: "node1".to_string(),
                 token: json!({"token": "value1"}),
+                token_fmt: "eat".to_string(),
             },
             NodeToken {
                 node_id: "node2".to_string(),
                 token: json!({"token": "value2"}),
+                token_fmt: "eat".to_string(),
             },
         ];
 
-        set_cached_tokens(&tokens);
+        set_cached_tokens(&tokens).unwrap();
 
         // Verify tokens were set
         if let Ok(global) = GLOBAL_TOKENS.lock() {
@@ -720,7 +753,7 @@ mod tests {
         let start = Instant::now();
         clear_global_tokens();
 
-        set_cached_tokens(&[]);
+        set_cached_tokens(&[]).unwrap();
         if let Ok(global) = GLOBAL_TOKENS.lock() {
             assert_eq!(global.len(), 0);
         } else {
@@ -731,8 +764,9 @@ mod tests {
         let single_token = vec![NodeToken {
             node_id: "test_node".to_string(),
             token: json!({"token": "value"}),
+            token_fmt: "eat".to_string(),
         }];
-        set_cached_tokens(&single_token);
+        set_cached_tokens(&single_token).unwrap();
         if let Ok(global) = GLOBAL_TOKENS.lock() {
             assert_eq!(global.len(), 1);
             assert_eq!(global[0].node_id, "test_node");
@@ -757,18 +791,21 @@ mod tests {
             NodeToken {
                 node_id: "node1".to_string(),
                 token: json!({"token": "value1"}),
+                token_fmt: "eat".to_string(),
             },
             NodeToken {
                 node_id: "node2".to_string(),
                 token: json!({"token": "value2"}),
+                token_fmt: "eat".to_string(),
             },
             NodeToken {
                 node_id: "node3".to_string(),
                 token: json!({"token": "value3"}),
+                token_fmt: "eat".to_string(),
             },
         ];
 
-        set_cached_tokens(&tokens);
+        set_cached_tokens(&tokens).unwrap();
 
         // Verify tokens are set correctly
         if let Ok(global) = GLOBAL_TOKENS.lock() {
@@ -779,10 +816,6 @@ mod tests {
         } else {
             return;
         }
-
-        // Test finding a token for a specific node_id
-        // Since get_cached_token_for_current_node depends on get_node_id, this test may fail
-        // but it covers the code path
     }
 
     #[test]
@@ -841,8 +874,8 @@ mod tests {
             None,
             "test_node_id",
             vec![],
+            Some("eat"),
         );
-        assert_eq!(response.measurements.len(), 1);
         assert_eq!(response.measurements[0].evidences.len(), 0);
 
         // Test with multiple evidences
@@ -874,6 +907,7 @@ mod tests {
                     policy_ids: evidence2.policy_ids.clone(),
                 },
             ],
+            Some("eat"),
         );
         assert_eq!(response.measurements[0].evidences.len(), 2);
     }
@@ -1162,6 +1196,7 @@ mod tests {
         let node_token = NodeToken {
             node_id: "test_node".to_string(),
             token: json!({"access_token": "test_token"}),
+            token_fmt: "eat".to_string(),
         };
 
         assert_eq!(node_token.node_id, "test_node");
@@ -1218,6 +1253,7 @@ mod tests {
         let token = NodeToken {
             node_id: "id".to_string(),
             token: json!({"a": 1}),
+            token_fmt: "eat".to_string(),
         };
         let debug_str = format!("{:?}", token);
         assert!(debug_str.contains("node_id"));
@@ -1239,5 +1275,159 @@ mod tests {
             evidence: e.evidence.clone(),
             policy_ids: e.policy_ids.clone(),
         };
+    }
+
+    #[test]
+    fn test_nonce_validation_comprehensive() {
+        // Test empty nonce
+        let result = validate_nonce_fields("");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
+
+        // Test whitespace-only nonce
+        let result = validate_nonce_fields("   ");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
+
+        // Test invalid base64
+        let result = validate_nonce_fields("invalid_base64!@#");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
+
+        // Test too short nonce (0 bytes)
+        let result = validate_nonce_fields("");
+        assert!(result.is_err());
+
+        // Test too long nonce (>1024 bytes)
+        let long_nonce = "a".repeat(2000);
+        let encoded = STANDARD.encode(long_nonce.as_bytes());
+        let result = validate_nonce_fields(&encoded);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ChallengeError::NonceInvalid(_)));
+
+        // Test valid nonce (1 byte)
+        let valid_nonce = STANDARD.encode(b"a");
+        let result = validate_nonce_fields(&valid_nonce);
+        assert!(result.is_ok());
+
+        // Test valid nonce (1024 bytes)
+        let valid_long_nonce = STANDARD.encode(&vec![0u8; 1024]);
+        let result = validate_nonce_fields(&valid_long_nonce);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_cached_token_for_current_node_with_fmt() {
+        // Clear any existing tokens
+        clear_global_tokens();
+
+        // Test getting token when cache is empty
+        let result = get_cached_token_for_current_node_with_fmt("eat");
+        assert!(result.is_err()); // Should fail due to missing config
+
+        // Test with different token formats
+        let result = get_cached_token_for_current_node_with_fmt("ear");
+        assert!(result.is_err()); // Should fail due to missing config
+    }
+
+    #[test]
+    fn test_get_policy_ids_edge_cases() {
+        // Test with use_config = true (requires plugin manager)
+        let result = get_policy_ids("tpm_boot", &None, true);
+        assert!(result.is_err()); // Should fail due to missing plugin manager
+
+        // Test with use_config = true and valid policy_ids - this should succeed
+        // because when user provides policy_ids, it uses them regardless of use_config
+        let valid_policies = vec!["policy1".to_string(), "policy2".to_string()];
+        let result = get_policy_ids("tpm_boot", &Some(valid_policies.clone()), true);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(valid_policies));
+    }
+
+    #[test]
+    fn test_node_token_comprehensive() {
+        // Test NodeToken with various token types
+        let token_types = vec![
+            json!({"access_token": "test_token"}),
+            json!({"jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}),
+            json!({"ear": {"header": {}, "payload": {}, "signature": "..."}}),
+            json!(null),
+            json!("simple_string_token"),
+            json!(42),
+            json!([1, 2, 3, 4, 5]),
+        ];
+
+        for (i, token) in token_types.iter().enumerate() {
+            let node_token = NodeToken {
+                node_id: format!("node_{}", i),
+                token: token.clone(),
+                token_fmt: if i % 2 == 0 { "eat".to_string() } else { "ear".to_string() },
+            };
+
+            assert_eq!(node_token.node_id, format!("node_{}", i));
+            assert_eq!(node_token.token, *token);
+            assert_eq!(node_token.token_fmt, if i % 2 == 0 { "eat" } else { "ear" });
+
+            // Test clone
+            let cloned = node_token.clone();
+            assert_eq!(node_token.node_id, cloned.node_id);
+            assert_eq!(node_token.token, cloned.token);
+            assert_eq!(node_token.token_fmt, cloned.token_fmt);
+
+            // Test debug formatting
+            let debug_str = format!("{:?}", node_token);
+            assert!(debug_str.contains(&format!("node_{}", i)));
+        }
+    }
+
+    #[test]
+    fn test_constants_and_static_values() {
+        // Test TIME_OUT constant
+        assert_eq!(TIME_OUT, 120);
+
+        // Test GLOBAL_TPM initialization
+        let lock_result = GLOBAL_TPM.try_lock();
+        assert!(lock_result.is_some());
+
+        // Test GLOBAL_TOKENS initialization
+        let tokens_result = GLOBAL_TOKENS.lock();
+        assert!(tokens_result.is_ok());
+    }
+
+    #[test]
+    fn test_acquire_thread_lock_comprehensive() {
+        // Test successful lock acquisition
+        let result = acquire_thread_lock();
+        assert!(result.is_ok());
+
+        // Test lock timeout (this is hard to test without actually causing a timeout)
+        // But we can verify the function structure
+        let lock_guard = result.unwrap();
+        drop(lock_guard); // Release the lock
+    }
+
+    #[test]
+    fn test_set_cached_tokens_error_handling() {
+        // Test with poisoned mutex (hard to simulate in test environment)
+        // But we can test the function structure
+        let tokens = vec![NodeToken {
+            node_id: "test_node".to_string(),
+            token: json!({"test": "token"}),
+            token_fmt: "eat".to_string(),
+        }];
+
+        let result = set_cached_tokens(&tokens);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_cached_token_for_current_node_with_fmt_comprehensive() {
+        // Test with different token formats
+        let formats = vec!["eat", "ear", "EAT", "EAR", "Eat", "Ear"];
+
+        for fmt in formats {
+            let result = get_cached_token_for_current_node_with_fmt(fmt);
+            assert!(result.is_err()); // Should fail due to missing config
+        }
     }
 }

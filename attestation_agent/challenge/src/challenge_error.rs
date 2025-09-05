@@ -61,6 +61,8 @@ pub enum TokenError {
     ChallengeError(String),
     /// Token not found error
     TokenNotFound(String),
+    /// Invalid token format error
+    InvalidTokenFormat(String),
 }
 
 // Display implementation for TokenError for readable error messages
@@ -69,6 +71,7 @@ impl fmt::Display for TokenError {
         match self {
             TokenError::ChallengeError(msg) => write!(f, "Challenge error: {}", msg),
             TokenError::TokenNotFound(msg) => write!(f, "Token not found: {}", msg),
+            TokenError::InvalidTokenFormat(msg) => write!(f, "Invalid token format: {}", msg),
         }
     }
 }
@@ -80,6 +83,10 @@ impl TokenError {
 
     pub fn token_not_found<S: Into<String>>(msg: S) -> Self {
         TokenError::TokenNotFound(msg.into())
+    }
+
+    pub fn invalid_token_format<S: Into<String>>(msg: S) -> Self {
+        TokenError::InvalidTokenFormat(msg.into())
     }
 }
 
@@ -450,12 +457,14 @@ mod tests {
         let token_errors = vec![
             TokenError::ChallengeError("challenge".to_string()),
             TokenError::TokenNotFound("not found".to_string()),
+            TokenError::InvalidTokenFormat("invalid".to_string()),
         ];
 
         for error in token_errors {
             match error {
                 TokenError::ChallengeError(_) => {},
                 TokenError::TokenNotFound(_) => {},
+                TokenError::InvalidTokenFormat(_) => {},
             }
         }
     }

@@ -588,6 +588,7 @@ async fn deal_evidence_commands(command: &EvidenceCommands, config: Config) {
                 attesters,
                 nonce_type: Option::from(nonce_type.to_string()),
                 nonce,
+                token_fmt: None,
                 attester_data: attester_data.clone(),
             };
             match EvidenceManager::get_evidence(&evidence_request) {

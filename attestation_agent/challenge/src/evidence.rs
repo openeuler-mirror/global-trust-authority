@@ -18,6 +18,7 @@ use crate::challenge::{
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use crate::nonce_util::NonceUtil;
+use crate::token_fmt as tf;
 
 /// Attester information, including attester type and log types
 #[derive(Debug, Deserialize, Default, Eq, PartialEq)]
@@ -44,6 +45,11 @@ pub struct GetEvidenceRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<String>,
 
+    // Optional token format specification (eat/ear, default: eat)
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_fmt: Option<String>,
+
     // Additional attestation data
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -61,8 +67,28 @@ impl GetEvidenceRequest {
             attesters: self.attesters,
             nonce_type: self.nonce_type.filter(|t| !t.trim().is_empty()),
             nonce: self.nonce.filter(|n| !n.trim().is_empty()),
+            token_fmt: tf::sanitize(self.token_fmt),
             attester_data: self.attester_data.filter(|d| !d.is_null()),
         }
+    }
+
+    /// Validates fields that require semantic checks.
+    /// - token_fmt: if provided and non-empty, must be one of "eat" or "ear" (case-insensitive)
+    pub fn validate(&self) -> Result<(), ChallengeError> {
+        if !tf::is_valid(&self.token_fmt) {
+            let raw = self.token_fmt.as_deref().unwrap_or("");
+            log::error!(
+                "Invalid token_fmt: '{}', only 'eat' and 'ear' are supported",
+                raw
+            );
+            return Err(ChallengeError::RequestParseError(
+                format!(
+                    "Invalid token_fmt: '{}', only 'eat' and 'ear' are supported",
+                    raw
+                )
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -140,6 +166,9 @@ impl EvidenceManager {
 
         let node_id = get_node_id()?;
 
+        // token_fmt: use request value if present, else default to "eat"
+        let token_fmt_value = tf::normalized_or_default(&request.token_fmt);
+
         Ok(GetEvidenceResponse::new(
             env!("CARGO_PKG_VERSION"),
             &nonce_type,
@@ -147,6 +176,7 @@ impl EvidenceManager {
             request.attester_data.as_ref(),
             &node_id,
             evidences,
+            Some(&token_fmt_value),
         ))
     }
 }
@@ -163,6 +193,7 @@ mod tests {
             attesters: vec![],
             nonce_type: Some("verifier".to_string()),
             nonce: Some("test_nonce".to_string()),
+            token_fmt: None,
             attester_data: Some(json!({"key": "value"})),
         };
         let sanitized = request.sanitize();
@@ -173,6 +204,7 @@ mod tests {
             attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("   ".to_string()),
             nonce: Some("test_nonce".to_string()),
+            token_fmt: None,
             attester_data: Some(json!({"key": "value"})),
         };
         let sanitized = request.sanitize();
@@ -183,6 +215,7 @@ mod tests {
             attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("verifier".to_string()),
             nonce: Some("test_nonce".to_string()),
+            token_fmt: None,
             attester_data: Some(json!(null)),
         };
         let sanitized = request.sanitize();
@@ -193,6 +226,7 @@ mod tests {
             attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("verifier".to_string()),
             nonce: Some("test_nonce_value".repeat(5)),
+            token_fmt: Some("EAR".to_string()),
             attester_data: Some(json!({"key": "value"})),
         };
         let sanitized = request.sanitize();
@@ -200,6 +234,7 @@ mod tests {
         assert_eq!(sanitized.nonce_type, Some("verifier".to_string()));
         assert!(sanitized.nonce.is_some());
         assert!(sanitized.attester_data.is_some());
+        assert_eq!(sanitized.token_fmt, Some("ear".to_string()));
     }
 
     #[test]
@@ -263,6 +298,7 @@ mod tests {
             attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("verifier".to_string()),
             nonce: Some("test_nonce_value".repeat(5)),
+            token_fmt: None,
             attester_data: Some(json!({"key": "value"})),
         };
 
@@ -350,6 +386,7 @@ mod tests {
             attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("invalid_type".to_string()),
             nonce: None,
+            token_fmt: None,
             attester_data: None,
         };
         let result = EvidenceManager::get_evidence(&request);
@@ -361,6 +398,7 @@ mod tests {
             attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("user".to_string()),
             nonce: None,
+            token_fmt: None,
             attester_data: None,
         };
         let result = EvidenceManager::get_evidence(&request);
@@ -372,6 +410,7 @@ mod tests {
             attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("verifier".to_string()),
             nonce: None,
+            token_fmt: None,
             attester_data: None,
         };
         let result = EvidenceManager::get_evidence(&request);
@@ -386,6 +425,7 @@ mod tests {
             attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("ignore".to_string()),
             nonce: None,
+            token_fmt: None,
             attester_data: None,
         };
         let result = EvidenceManager::get_evidence(&request);
@@ -398,6 +438,7 @@ mod tests {
             attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
             nonce_type: Some("verifier".to_string()),
             nonce: Some("test_nonce_value".repeat(5)),
+            token_fmt: None,
             attester_data: None,
         };
         let result = EvidenceManager::get_evidence(&request);
