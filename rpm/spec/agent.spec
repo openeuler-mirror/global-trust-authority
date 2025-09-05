@@ -10,7 +10,10 @@ License:  MulanPSL-2.0
 Source0: %{_source_dir}.tar.gz
 Source1: vendor.tar.gz
 
+Requires: systemd, openssl, tpm2-tss
+%ifarch aarch64
 Requires: systemd, openssl, tpm2-tss, virtCCA_sdk, virtCCA_sdk-devel
+%endif
 
 %description
 Global Trust Authority Agent, including main process and plugins
