@@ -180,8 +180,8 @@ cp key_manager/script/generate_test_data.sh /usr/local/key_manager/bin
 Execute the current test data generation script. An example is as follows:
 ```shell
 cd /usr/local/key_manager/bin
-# indicates that two versions of data in rsa3072 format are currently prefabricated for the three types of private keys
-bash generate_test_data.sh rsa_3072 2
+# prefabricate one instance each of RSA3072 format are currently prefabricated for the three types of private keys
+bash generate_test_data.sh rsa_3072 1
 ```
 ### docker
 Use the following command to view the docker container ID of the current Key Manager
@@ -195,6 +195,6 @@ docker exec -it <Container ID> /bin/bash
 Enter the current container deployment directory /opt/key_manager and execute the current script
 ```shell
 cd /opt/key_manager
-# indicates that two versions of data in rsa3072 format are currently prefabricated for the three types of private keys
-bash generate_test_data.sh rsa_3072 2
+# prefabricate one instance each of RSA3072 format data for the three types of private keys
+bash generate_test_data.sh rsa_3072 1
 ```
