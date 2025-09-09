@@ -19,7 +19,7 @@ pub enum RegisterError {
     #[error("Internal service error: {0}")]
     InternalError(String),
 
-    #[error("Pbkdf2 generate key error: {0}")]
+    #[error("Generate key error: {0}")]
     GenerateApiKeyError(String),
 
     #[error("Register access database error: {0}")]

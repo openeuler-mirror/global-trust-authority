@@ -11,13 +11,12 @@
  */
 pub mod register {
     use std::num::NonZero;
-    use rand::distributions::Alphanumeric;
-    use rand::{Rng, RngCore};
-    use rand::rngs::OsRng;
     use ring::digest::SHA256_OUTPUT_LEN;
     use ring::pbkdf2::PBKDF2_HMAC_SHA256;
     use ring::pbkdf2;
+    use ring::rand::{SecureRandom, SystemRandom};
     use uuid::Uuid;
+    use zeroize::Zeroize;
     use crate::error::register_error::RegisterError;
     
     pub static APIKEY_LENGTH: usize = 32; 
@@ -38,8 +37,8 @@ pub mod register {
             apikey: "".to_string(),
             hashed_key: vec![0; SHA256_OUTPUT_LEN],
         };
-        info.apikey = generate_str(APIKEY_LENGTH);
-        info.salt = generate_random(SALT_LENGTH);
+        info.apikey = generate_str(APIKEY_LENGTH)?;
+        info.salt = generate_random(SALT_LENGTH)?;
         // pbkdf2 hash计算
         let non_zero = match NonZero::new(PBKDF2_SIZE) {
             None => return Err(RegisterError::GenerateApiKeyError("".to_string())),
@@ -57,7 +56,7 @@ pub mod register {
     }
     
     pub fn refresh_apikey(apikey: &mut ApiKeyInfo) -> Result<(), RegisterError> {
-        apikey.apikey = generate_str(APIKEY_LENGTH);
+        apikey.apikey = generate_str(APIKEY_LENGTH)?;
         let non_zero = match NonZero::new(PBKDF2_SIZE) {
             None => return Err(RegisterError::GenerateApiKeyError("".to_string())),
             Some(n) => {n}
@@ -89,18 +88,23 @@ pub mod register {
         Ok(hashed_key)
     }
     
-    pub fn generate_str(size: usize) -> String {
-        OsRng
-            .sample_iter(&Alphanumeric)
-            .take(size)
-            .map(char::from)
-            .collect()
+    pub fn generate_str(size: usize) -> Result<String, RegisterError> {
+        const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        let mut rand = vec![0u8; size];
+        SystemRandom::new().fill(&mut rand).map_err(|e| RegisterError::GenerateApiKeyError(format!("{}", e)))?;
+        let mut key = String::with_capacity(size);
+        let length = CHARSET.len() as u8;
+        rand.iter().for_each(|&c| {
+            key.push(CHARSET[(c % length) as usize] as char);
+        });
+        rand.zeroize();
+        Ok(key)
     }
 
-    pub fn generate_random(size: usize) -> Vec<u8> {
+    pub fn generate_random(size: usize) -> Result<Vec<u8>, RegisterError> {
         let mut key = vec![0u8; size];
-        OsRng.fill_bytes(&mut key);
-        key
+        SystemRandom::new().fill(&mut key).map_err(|e| RegisterError::GenerateApiKeyError(format!("{}", e)))?;
+        Ok(key)
     }
 }
 
@@ -140,6 +144,8 @@ mod tests {
     fn test_get_hashed_key() {
         let test_key = "test_api_key";
         let test_salt = generate_random(SALT_LENGTH);
+        assert!(test_salt.is_ok());
+        let test_salt = test_salt.unwrap();
         let result = get_hashed_key(test_key, &test_salt);
         assert!(result.is_ok());
         let hashed_key = result.unwrap();
@@ -147,6 +153,8 @@ mod tests {
         let result2 = get_hashed_key(test_key, &test_salt);
         assert_eq!(hashed_key, result2.unwrap());
         let different_salt = generate_random(SALT_LENGTH);
+        assert!(different_salt.is_ok());
+        let different_salt = different_salt.unwrap();
         let result3 = get_hashed_key(test_key, &different_salt);
         assert_ne!(hashed_key, result3.unwrap());
     }
@@ -155,9 +163,13 @@ mod tests {
     fn test_generate_str() {
         let test_size = 10;
         let result = generate_str(test_size);
+        assert!(result.is_ok());
+        let result = result.unwrap();
         assert_eq!(result.len(), test_size);
         assert!(result.chars().all(|c| c.is_ascii_alphanumeric()));
         let result2 = generate_str(test_size);
+        assert!(result2.is_ok());
+        let result2 = result2.unwrap();
         assert_ne!(result, result2);
     }
 
@@ -165,8 +177,12 @@ mod tests {
     fn test_generate_random() {
         let test_size = 16;
         let result = generate_random(test_size);
+        assert!(result.is_ok());
+        let result = result.unwrap();
         assert_eq!(result.len(), test_size);
         let result2 = generate_random(test_size);
+        assert!(result2.is_ok());
+        let result2 = result2.unwrap();
         assert_ne!(result, result2);
     }
 }
