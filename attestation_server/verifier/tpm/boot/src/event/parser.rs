@@ -509,7 +509,7 @@ pub fn parse_uefi_variable_data_event(
                     EfiVariableData::VariableAuthority(variable_data)
                 },
                 VAR_DB | VAR_SHIM if unicode_name_length == unicode_name.len() as u64 => {
-                    let variable_data = EfiSignatureList::parse_from(parser)?;
+                    let variable_data = EfiSignatureData::parse_from(parser)?;
                     EfiVariableData::AuthoritySignatureList(variable_data)
                 },
                 VAR_MOK_LIST_TRUSTED if unicode_name_length == VAR_MOK_LIST_TRUSTED.len() as u64 => {
