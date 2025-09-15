@@ -1,11 +1,26 @@
-### Certificate Management
+## Certificate Management
 
 ```cmd
 # Query Certificate Management Command Help
  attestation_cli certificate -h
 ```
 
-#### Evidence added
+### Insert Certificate
+
+**Command: attestation_cli certificate set**
+
+**Parameters and options:**
+
+| Long Arguement | Short Arguement | Required | Description                                                  |
+| -------------- | --------------- | -------- | ------------------------------------------------------------ |
+| --name         | -n              | no       | name of the certificate                                      |
+| --description  | -d              | no       | description of the certificate                               |
+| --cert_type    |                 | yes      | type of the certificate, possible values: policy/refvalue,tpm_boot,tpm_ima,crl |
+| --content      |                 | no       | content of the certificate, starting with @ indicates the file path |
+| --crl-content  | -c              | no       | certificate revoked list content, starting with @ indicates the file path |
+| --is-default   | -i              | no       | is default certificate, default to 'No'                      |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
@@ -18,7 +33,7 @@ sudo attestation_cli -u "test_01" certificate set \
 
 sudo attestation_cli -u "test_01" certificate set \
 	--name "new.pem" \
-    --cert-type "policy" "refvalue" \
+	--cert-type "policy" "refvalue" \
 	--content "-----BEGIN CERTIFICATE-----
 xxxxx
 -----END CERTIFICATE-----"
@@ -41,7 +56,19 @@ xxxxx
 -----END X509 CRL-----"
 ```
 
-#### Certificate Deletion
+### Delete Certificate
+
+**Command: attestation_cli certificate delete**
+
+**Parameters and options:**
+
+| Long Arguement | Short Arguement | Required | Description                                                  |
+| -------------- | --------------- | -------- | ------------------------------------------------------------ |
+| --delete-type  | -d              | no       | delete method, possible values: <br />    id (delete by IDs)<br />    type (delete by type)<br />    all (delete all) |
+| --ids          | -i              | no       | certificate ids to delete                                    |
+| --cert-type    | -c              | no       | type of the certificate to delete                            |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
@@ -67,7 +94,21 @@ sudo attestation_cli -u "test_01" certificate delete \
 	--ids "7763f0a1-385a-43b8-84b8-4e4e448de73f"
 ```
 
-#### Certificate Modification
+### Update Certificate
+
+**Command: attestation_cli certificate update**
+
+**Parameters and options:**
+
+| Long Arguement | Short Arguement | Required | Description                             |
+| -------------- | --------------- | -------- | --------------------------------------- |
+| --id           |                 | yes      | ID of the certificate to update         |
+| --name         | -n              | no       | name of the certificate                 |
+| --description  | -d              | no       | description of the certificate          |
+| --cert-type    | -c              | yes      | type of the certificate                 |
+| --is-default   | -i              | no       | is default certificate, default to 'No' |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
@@ -78,7 +119,6 @@ sudo attestation_cli -u "test_01" certificate update \
 	--id "b8481f3e58525f359e12bda53a5779a9" \
 	--name "new_name" \
 	--description "new_description" \
-	--content @/home/test/rsa_2048_certificate.pem
 	--cert-type "policy" "refvalue" \
 	--is-default true
 	
@@ -86,14 +126,26 @@ sudo attestation_cli -u "test_01" certificate update \
 	--id "cada113be95d5689a38a465f211bd9bd" \
 	--name "new_name.pem" \
 	--description "new_description" \
+	--cert-type "policy" "refvalue" \
+	--is-default true \
 	--content "-----BEGIN CERTIFICATE-----
 xxxxx
------END CERTIFICATE-----" \
-	--cert-type "policy" "refvalue" \
-	--is-default true
+-----END CERTIFICATE-----"
+
 ```
 
-#### Certificate Search
+### Query Certificate
+
+**Command: attestation_cli certificate get**
+
+**Parameters and options:**
+
+| Long Arguement | Short Arguement | Required | Description                     |
+| -------------- | --------------- | -------- | ------------------------------- |
+| --ids          | -i              | no       | ID of the certificates to query |
+| --cert-type    | -t              | yes      | certificate type to query       |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
@@ -117,14 +169,29 @@ sudo attestation_cli -u "test_01" certificate get \
 
 
 
-### strategy management
+## Policy Management
 
 ```cmd
 #Query Policy Management Command Help
  attestation_cli policy -h
 ```
 
-#### Strategy Additions
+### Insert Policy
+
+**Command: attestation_cli policy set**
+
+**Parameters and options:**
+
+| Long Arguement  | Short Arguement | Required | Description                                             |
+| --------------- | --------------- | -------- | ------------------------------------------------------- |
+| --name          | -n              | no       | name of the policy                                      |
+| --description   | -d              | no       | description of the policy                               |
+| --attester-type | -a              | yes      | attester type of the policy                             |
+| --content-type  |                 | yes      | policy content type, possible values: jwt/text          |
+| --content       |                 | yes      | policy content, starting with @ indicates the file path |
+| --is-default    | -i              | no       | is default policy, default is 'No'                      |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
@@ -174,7 +241,7 @@ result = {
     }
 }
 
-"\
+" \
 	--attester-type "tpm_ima" "tpm_boot" \
 	--content-type "text" 
 
@@ -205,7 +272,19 @@ sudo attestation_cli -u "test_01" policy set \
 	--is-default
 ```
 
-#### policy deletion
+### Delete Policy
+
+**Command: attestation_cli policy delete**
+
+**Parameters and options:**
+
+| Long Arguement  | Short Arguement | Required | Description                                                  |
+| --------------- | --------------- | -------- | ------------------------------------------------------------ |
+| --delete-type   | -d              | no       | delete method, possible values: <br />    id (delete by IDs)<br />    type (delete by type)<br />    all (delete all) |
+| --ids           | -i              | no       | IDs of the policies to delete                                |
+| --attester-type | -t              | no       | attester type of the policy to delete                        |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
@@ -227,7 +306,23 @@ sudo attestation_cli -u "test_01" policy delete \
 
 ```
 
-#### Update strategy
+### Update Policy
+
+**Command: attestation_cli policy update**
+
+**Parameters and options:**
+
+| Long Arguement  | Short Arguement | Required | Description                                             |
+| --------------- | --------------- | -------- | ------------------------------------------------------- |
+| --id            |                 | yes      | ID of the policy to update                              |
+| --name          | -n              | no       | name of the policy                                      |
+| --description   | -d              | no       | description of the policy                               |
+| --attester-type | -a              | no       | attester type of the policy                             |
+| --content-type  |                 | no       | policy content type, possible values: jwt/text          |
+| --content       |                 | no       | policy content, starting with @ indicates the file path |
+| --is-default    | -i              | no       | is default policy, default is 'No'                      |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
@@ -245,7 +340,18 @@ sudo attestation_cli -u "test_01" policy update \
 
 ```
 
-#### Strategy Query
+###  Query Policy
+
+**Command: attestation_cli policy get**
+
+**Parameters and options:**
+
+| Long Arguement  | Short Arguement | Required | Description                      |
+| --------------- | --------------- | -------- | -------------------------------- |
+| --attester-type | -d              | no       | attester type of policy to query |
+| --ids           | -i              | no       | IDs of policies to query         |
+
+**Usage examples:**
 
 ```cmd
 # Query help
@@ -266,14 +372,28 @@ sudo attestation_cli -u "test_01" policy get \
 
 
 
-### Baseline management
+## Reference Value Management
 
 ```cmd
 #Query Baseline Management Command Help
  attestation_cli baseline -h
 ```
 
-#### Add Baseline
+### Insert Reference Value
+
+**Command: attestation_cli baseline set**
+
+**Parameters and options:**
+
+| Long Arguement  | Short Arguement | Required | Description                                                  |
+| --------------- | --------------- | -------- | ------------------------------------------------------------ |
+| --name          | -n              | no       | name of the reference value                                  |
+| --description   | -d              | no       | description of the reference value                           |
+| --attester-type | -a              | yes      | attester type of the reference value                         |
+| --content       |                 | yes      | reference value content, starting with @ indicates the file path |
+| --is-default    | -i              | no       | is default reference value, default is 'No'                  |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
@@ -295,7 +415,19 @@ sudo attestation_cli -u "test_01" baseline set \
 	--content @/home/test/baseline.txt \
     --is-default
 ```
-#### delete baseline
+### Delete Reference Value
+
+**Command: attestation_cli baseline delete**
+
+**Parameters and options:**
+
+| Long Arguement | Short Arguement | Required | Description                                                  |
+| -------------- | --------------- | -------- | ------------------------------------------------------------ |
+| --delete-type  | -d              | no       | delete method, possible values: <br />    id (delete by IDs)<br />    type (delete by type)<br />    all (delete all) |
+| --ids          | -i              | no       | IDs of the reference value to delete                         |
+| --cert-type    | -t              | no       | type of the reference value to delete                        |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
@@ -315,7 +447,22 @@ sudo attestation_cli -u "test_01" baseline delete \
 	--delete-type "type" \
 	--attester-type "tpm_ima" 
 ```
-#### Baseline modification
+### Update Reference Value
+
+**Command: attestation_cli baseline update**
+
+**Parameters and options:**
+
+| Long Arguement  | Short Arguement | Required | Description                                                  |
+| --------------- | --------------- | -------- | ------------------------------------------------------------ |
+| --id            |                 | yes      | id of the reference value to update                          |
+| --name          | -n              | no       | name of the reference value                                  |
+| --description   | -d              | no       | description of the reference value                           |
+| --attester-type | -a              | no       | attester type of the reference value                         |
+| --content       |                 | no       | reference value content, starting with @ indicates the file path |
+| --is-default    | -i              | no       | is default reference value, default is 'No'                  |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
@@ -338,7 +485,18 @@ sudo attestation_cli -u "test_01" baseline update \
 	--attester-type "tpm_ima" \
 	--is-default false
 ```
-#### query baseline
+### Query Reference Value
+
+**Command: attestation_cli baseline query**
+
+**Parameters and options:**
+
+| Long Arguement  | Short Arguement | Required | Description                               |
+| --------------- | --------------- | -------- | ----------------------------------------- |
+| --attester-type | -d              | no       | attester type of reference value to query |
+| --ids           | -i              | no       | IDs of reference value to query           |
+
+**Usage examples:**
 
 ```cmd
 # Query help
@@ -358,39 +516,61 @@ sudo attestation_cli -u "test_01" baseline get \
 
 
 
-### Nonce management
+## Nonce management
 
 ```cmd
 #Query Nonce Management Command Help
- attestation_cli nonce -h
+ attestation-cli nonce -h
 ```
 
-#### Get Nonce
+### Get Nonce
+
+**Command: attestation_cli nonce get**
+
+**Parameters and options:**
+
+| Long Arguement | Short Arguement | Required | Description      |
+| -------------- | --------------- | -------- | ---------------- |
+| --out          | -o              | no       | output file path |
+
+**Usage examples:**
 
 ```cmd
-#Inquiry Help
- attestation_cli nonce get -h
-	
-#Get Nonce
+	#Get Nonce
 sudo attestation_cli -u "test_01" nonce get --out "/tmp/nonce.txt"
 ```
 
 
 
-### Evidence management
+## Evidence management
 
 ```cmd
 #Query Evidence Management Command Help
  attestation_cli evidence -h
 ```
 
-#### Access to evidence
+###  Collect Evidence
+
+**Note: Configure the plugins before collect evidence (/etc/attestation_agent/agent_config.yaml). This command will automatically collect evidence of all enabled plugins. **
+
+**Command: attestation_cli evidence get**
+
+**Parameters and options:**
+
+| Long Arguement  | Short Arguement | Required | Description      |
+| --------------- | --------------- | -------- | ---------------- |
+| --nonce-type    | -t              | yes      | nonce type       |
+| --nonce         | -n              | no       | nonce            |
+| --out           | -o              | yes      | output file path |
+| --attester-data | -a              | no       | user data        |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
  attestation_cli evidence get -h
 
-#Access to evidence
+#Collect evidence of all enabled plugins
 sudo attestation_cli evidence get \
 	--nonce-type "ignore" \
 	--out "/tmp/evidence.txt"
@@ -413,7 +593,25 @@ sudo attestation_cli evidence get \
 
 
 
-### Challenge management
+## Attestation
+
+```cmd
+#Query Challenge Management Command Help
+ attestation_cli attest -h
+```
+
+### Get attestation result
+
+**Command: attestation_cli attest **
+
+**Parameters and options:**
+
+| Long Arguement | Short Arguement | Required | Description                         |
+| -------------- | --------------- | -------- | ----------------------------------- |
+| --file         | -f              | yes      | file path of the evidence to attest |
+| --out          | -o              | no       | output file path                    |
+
+**Usage examples:**
 
 ```cmd
 #Query Challenge Management Command Help
@@ -427,14 +625,25 @@ sudo attestation_cli -u "test_01" attest \
 
 
 
-### Token Management
+## Token Validation
 
 ```cmd
 #Query Token Management Command Help
  attestation_cli token -h
 ```
 
-#### Token Validation
+### Get Token Validation Result
+
+**Command: attestation_cli token verify **
+
+**Parameters and options:**
+
+| Long Arguement | Short Arguement | Required | Description                      |
+| -------------- | --------------- | -------- | -------------------------------- |
+| --file         | -f              | no       | file path of the token to verify |
+| --token        | -t              | no       | content of the token to verify   |
+
+**Usage examples:**
 
 ```cmd
 #Inquiry Help
@@ -449,7 +658,8 @@ sudo attestation_cli token verify \
 	--token "xxxxx"
 ```
 
-### APIKey Management
+## APIKey Management
+
 ```cmd
 #Query APIKey Management Command Help
 attestation_cli token -h
