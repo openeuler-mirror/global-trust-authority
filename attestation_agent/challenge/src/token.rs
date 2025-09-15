@@ -52,7 +52,7 @@ impl TokenRequest {
             attester_info: self.attester_info.and_then(|info| if info.is_empty() { None } else { Some(info) }),
             challenge: self.challenge,
             attester_data: self.attester_data.and_then(|data| if data.is_null() { None } else { Some(data) }),
-            token_fmt: tf::sanitize(self.token_fmt),
+            token_fmt: self.token_fmt.map(|s| s.to_lowercase()),
         }
     }
 
@@ -86,8 +86,11 @@ impl TokenManager {
     ///
     /// Returns an error if the token cannot be retrieved.
     pub async fn get_token(token_request: &TokenRequest) -> Result<serde_json::Value, TokenError> {
-        // Get normalized token format, defaulting to "eat" if not specified or empty
-        let token_fmt = tf::normalized_or_default(&token_request.token_fmt);
+        // Get normalized token format, defaulting to "eat" only if not specified (None)
+        let token_fmt = token_request
+            .token_fmt
+            .clone()
+            .unwrap_or_else(|| config::config::DEFAULT_TOKEN_FORMAT.to_string());
 
         // Try to get cached token if challenge is not forced
         if !token_request.challenge.unwrap_or(false) {
@@ -595,7 +598,7 @@ mod tests {
         let sanitized = request.sanitize();
         assert_eq!(sanitized.token_fmt, Some("ear".to_string()));
 
-        // Test empty string token_fmt (should be converted to None)
+        // Test empty string token_fmt (should be invalid and remain empty after sanitize)
         let request = TokenRequest {
             attester_info: None,
             challenge: None,
@@ -603,7 +606,8 @@ mod tests {
             token_fmt: Some("".to_string()),
         };
         let sanitized = request.sanitize();
-        assert!(sanitized.token_fmt.is_none());
+        assert_eq!(sanitized.token_fmt, Some("".to_string()));
+        assert!(sanitized.validate().is_err());
 
         // Test None token_fmt (should return None)
         let request = TokenRequest {
@@ -629,7 +633,7 @@ mod tests {
         let err = sanitized.validate().unwrap_err();
         assert!(err.to_string().contains("Invalid token format"));
 
-        // Test empty string token_fmt (should be converted to None, not error)
+        // Test empty string token_fmt (should be invalid)
         let request = TokenRequest {
             attester_info: None,
             challenge: None,
@@ -637,8 +641,8 @@ mod tests {
             token_fmt: Some("".to_string()),
         };
         let sanitized = request.sanitize();
-        assert!(sanitized.validate().is_ok());
-        assert!(sanitized.token_fmt.is_none());
+        let err = sanitized.validate().unwrap_err();
+        assert!(err.to_string().contains("Invalid token format"));
 
         let request = TokenRequest {
             attester_info: None,

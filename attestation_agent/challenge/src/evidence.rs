@@ -67,7 +67,7 @@ impl GetEvidenceRequest {
             attesters: self.attesters,
             nonce_type: self.nonce_type.filter(|t| !t.trim().is_empty()),
             nonce: self.nonce.filter(|n| !n.trim().is_empty()),
-            token_fmt: tf::sanitize(self.token_fmt),
+            token_fmt: self.token_fmt.map(|s| s.to_lowercase()),
             attester_data: self.attester_data.filter(|d| !d.is_null()),
         }
     }
@@ -166,9 +166,6 @@ impl EvidenceManager {
 
         let node_id = get_node_id()?;
 
-        // token_fmt: use request value if present, else default to "eat"
-        let token_fmt_value = tf::normalized_or_default(&request.token_fmt);
-
         Ok(GetEvidenceResponse::new(
             env!("CARGO_PKG_VERSION"),
             &nonce_type,
@@ -176,7 +173,7 @@ impl EvidenceManager {
             request.attester_data.as_ref(),
             &node_id,
             evidences,
-            Some(&token_fmt_value),
+            request.token_fmt.as_deref(),
         ))
     }
 }

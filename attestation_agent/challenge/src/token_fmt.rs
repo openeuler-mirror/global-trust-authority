@@ -10,24 +10,17 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use config::config::{VALID_TOKEN_FORMATS, DEFAULT_TOKEN_FORMAT};
+use config::config::{VALID_TOKEN_FORMATS};
 
-/// Sanitize an Option<String> token_fmt: lowercase, empty -> None
-pub fn sanitize(token_fmt: Option<String>) -> Option<String> {
-    token_fmt.and_then(|fmt| {
-        if fmt.is_empty() { None } else { Some(fmt.to_lowercase()) }
-    })
-}
-
-/// None or empty is considered valid (means default will be used).
+/// None is considered valid (means default will be used). Empty string is invalid.
 pub fn is_valid(opt_fmt: &Option<String>) -> bool {
-    match opt_fmt.as_deref().filter(|s| !s.is_empty()) {
-        Some(fmt) => VALID_TOKEN_FORMATS.iter().any(|&v| fmt.eq_ignore_ascii_case(v)),
+    match opt_fmt {
         None => true,
+        Some(s) => {
+            if s.is_empty() {
+                return false;
+            }
+            VALID_TOKEN_FORMATS.iter().any(|&v| s.eq_ignore_ascii_case(v))
+        }
     }
-}
-
-/// Return normalized token_fmt string or default "eat" when None
-pub fn normalized_or_default(opt_fmt: &Option<String>) -> String {
-    sanitize(opt_fmt.clone()).unwrap_or_else(|| DEFAULT_TOKEN_FORMAT.to_string())
 }
