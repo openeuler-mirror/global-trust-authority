@@ -37,7 +37,7 @@ pub enum CertificateCommands {
         #[clap(short, long, allow_hyphen_values = true )]
         crl_content: Option<String>,
 
-        /// Is default certificate, default is' No '
+        /// Is default certificate, default is 'No'
         #[clap(short, long)]
         is_default: bool,
     },
@@ -104,7 +104,7 @@ pub enum PolicyCommands {
         #[clap(short, long)]
         description: Option<String>,
 
-        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virtCCA
+        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virt_cca
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
         attester_type: Vec<String>,
 
@@ -116,7 +116,7 @@ pub enum PolicyCommands {
         #[clap(long, required = true)]
         content: String,
 
-        /// Is default policy, default is' No '
+        /// Is default policy, default is 'No'
         #[clap(short, long)]
         is_default: bool,
     },
@@ -130,7 +130,7 @@ pub enum PolicyCommands {
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
         ids: Option<Vec<String>>,
 
-        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virtCCA
+        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virt_cca
         #[clap(short, long)]
         attester_type: Option<String>,
     },
@@ -148,7 +148,7 @@ pub enum PolicyCommands {
         #[clap(short, long)]
         description: Option<String>,
 
-        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virtCCA
+        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virt_cca
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
         attester_type: Option<Vec<String>>,
 
@@ -160,13 +160,13 @@ pub enum PolicyCommands {
         #[clap(long)]
         content: Option<String>,
 
-        /// Is default policy, default is' No '
+        /// Is default policy, default is 'No'
         #[clap(short, long)]
         is_default: Option<bool>,
     },
     /// Query policy information
     Get {
-        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virtCCA
+        /// Applicable types of challenge plugins: tpm_ima/tpm_boot/virt_cca
         #[clap(short, long)]
         attester_type: Option<String>,
 
@@ -213,7 +213,7 @@ pub enum BaselineCommands {
         #[clap(short, long)]
         description: Option<String>,
 
-        /// Applicable types of challenge plugins: tpm_ima/virtCCA
+        /// Applicable types of challenge plugins: tpm_ima/virt_cca
         #[clap(short, long, default_value = "tpm_ima")]
         attester_type: String,
 
@@ -221,7 +221,7 @@ pub enum BaselineCommands {
         #[clap(short, long, required = true)]
         content: String,
 
-        /// Is default baseline, default is' No '
+        /// Is default baseline, default is 'No'
         #[clap(short, long)]
         is_default: bool,
     },
@@ -235,7 +235,7 @@ pub enum BaselineCommands {
         #[clap(short, long, num_args = 1.., value_delimiter = ' ')]
         ids: Option<Vec<String>>,
 
-        /// Applicable types of challenge plugins: tpm_ima/virtCCA
+        /// Applicable types of challenge plugins: tpm_ima/virt_cca
         #[clap(short, long)]
         attester_type: Option<String>,
     },
@@ -253,7 +253,7 @@ pub enum BaselineCommands {
         #[clap(short, long)]
         description: Option<String>,
 
-        /// Applicable types of challenge plugins: tpm_ima/virtCCA
+        /// Applicable types of challenge plugins: tpm_ima/virt_cca
         #[clap(short, long)]
         attester_type: Option<String>,
 
@@ -261,13 +261,13 @@ pub enum BaselineCommands {
         #[clap(short, long)]
         content: Option<String>,
 
-        /// Is default baseline, default is' No '
+        /// Is default baseline, default is 'No'
         #[clap(short, long)]
         is_default: Option<bool>,
     },
     /// Query baseline information
     Get {
-        /// Applicable types of challenge plugins: tpm_ima/virtCCA
+        /// Applicable types of challenge plugins: tpm_ima/virt_cca
         #[clap(short, long)]
         attester_type: Option<String>,
 
