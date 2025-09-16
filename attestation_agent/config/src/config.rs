@@ -236,7 +236,14 @@ impl Config {
     fn validate_token_fmt(&self) -> Result<(), String> {
         let Some(ref token_fmt) = self.agent.token_fmt else { return Ok(()); };
 
-        if token_fmt.is_empty() { return Ok(()); }
+        if token_fmt.is_empty() {
+            return Err(format!(
+                "Invalid token_fmt: '{}', only '{}' and '{}' are supported",
+                token_fmt,
+                VALID_TOKEN_FORMATS[0],
+                VALID_TOKEN_FORMATS[1]
+            ));
+        }
 
         let fmt_lower = token_fmt.to_lowercase();
         if VALID_TOKEN_FORMATS.contains(&fmt_lower.as_str()) { return Ok(()); }
@@ -525,7 +532,7 @@ mod tests {
         };
         assert!(config.validate().is_ok());
 
-        // Test empty string token_fmt (should not error)
+        // Test empty string token_fmt (should error)
         let config = Config {
             agent: AgentConfig {
                 listen_enabled: true,
@@ -547,7 +554,7 @@ mod tests {
                 file: "/tmp/test.log".to_string(),
             },
         };
-        assert!(config.validate().is_ok());
+        assert!(config.validate().is_err());
 
         // Test None token_fmt (should not error)
         let config = Config {

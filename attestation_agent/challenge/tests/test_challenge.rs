@@ -434,8 +434,8 @@ fn test_json_serialization_edge_cases() {
             attester_data: None,
         };
         let sanitized = req.sanitize();
-        assert!(sanitized.token_fmt.is_none());
-        assert!(sanitized.validate().is_ok());
+        assert_eq!(sanitized.token_fmt.as_deref(), Some(""));
+        assert!(sanitized.validate().is_err());
 
         // valid 'EAR' mixed case should become lowercase and pass
         let req = GetEvidenceRequest {
