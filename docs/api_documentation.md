@@ -367,7 +367,7 @@ empty
 {
 	"name": "root.crt",
 	"type": ["tpm_ima", "tpm_boot"],
-	"content": "-----BEGIN CERTIFICATE-----\nxxxxx\n-----END CERTIFICATE-----",
+	"content": "-----BEGIN CERTIFICATE-----\nxxxxx\n-----END CERTIFICATE-----"
 }
 ```
 
@@ -811,6 +811,8 @@ When content_type is jwt, jwt content:
 | header         | alg    | string | Yes      | Token signature algorithm |
 | header         | kid    | string | No       | Public key ID             |
 | body           | policy | string | Yes      | Policy content            |
+
+The content requires Base64 encoding. For the original content, please refer to:https://gitee.com/openeuler/global-trust-authority/blob/master/docs/Challenge_Request_Challenge_Response_Environment_Preparation.md#tpm_boot
 
 ##### Response Parameters
 | Field   | Sub-field | Type   | Required                   | Description                                             |
