@@ -312,8 +312,8 @@ impl Serialize for EfiVariableData {
             },
             EfiVariableData::AuthoritySignatureList(list) => {
                 let mut state = serializer.serialize_struct("AuthoritySignatureList", 1)?;
-                state.serialize_field("signature_type", &list.signature_type)?;
-                state.serialize_field("signatures", &list.signatures)?;
+                state.serialize_field("signature_owner", &list.signature_owner)?;
+                state.serialize_field("signature_data", &list.signature_data)?;
                 state.end()
             },
             EfiVariableData::Unknown(value) => {

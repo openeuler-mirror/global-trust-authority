@@ -361,7 +361,7 @@ pub enum EfiVariableData {
     SignatureList(Vec<EfiSignatureList>),       // Signature list
     SecureBoot(EfiVariableSecureBoot),          // Secure boot status
     VariableAuthority(EventBaseString),         // Variable authority
-    AuthoritySignatureList(EfiSignatureList),   // Authority signature list
+    AuthoritySignatureList(EfiSignatureData),   // Authority signature list
     BootOrder(Vec<String>),                     // Boot order
     Boot(EfiLoadOption),                        // Boot option
     Unknown(String),                            // Unknown data
