@@ -192,7 +192,10 @@ impl AscendNpuEvidence {
         // Check certificate validity period
         self.check_cert_validity(&cert, "AK")?;
 
-        // Here you can add more certificate verification logic, such as certificate chain verification
+        // TODO: Implement certificate chain verification
+        // TODO: Verify certificate signature against trusted root CA
+        // TODO: Check certificate extensions and policies
+        // TODO: Validate certificate subject and issuer fields
         log::info!("AK certificate verification passed");
         Ok(())
     }
@@ -219,8 +222,12 @@ impl AscendNpuEvidence {
         let signature = general_purpose::STANDARD.decode(&self.quote.signature)
             .map_err(|e| PluginError::InputError(format!("Failed to decode base64 signature: {}", e)))?;
 
-        // Here should implement TPM Quote verification logic
-        // Including signature verification, nonce checking, etc.
+        // TODO: Implement TPM Quote verification logic
+        // TODO: Verify quote signature using AK certificate public key
+        // TODO: Parse TPMS_ATTEST structure and validate fields
+        // TODO: Check nonce matches the provided nonce
+        // TODO: Verify quote is fresh (check clock info)
+        // TODO: Validate PCR selection and values
         log::info!("Quote verification passed");
         log::debug!("Quote data length: {}, Signature length: {}", quote_data.len(), signature.len());
         
@@ -250,6 +257,10 @@ impl AscendNpuEvidence {
             }
         }
 
+        // TODO: Implement PCR value validation against expected values
+        // TODO: Check PCR values against known good measurements
+        // TODO: Validate PCR extension sequence and integrity
+        // TODO: Implement PCR value comparison with reference measurements
         log::info!("PCR verification passed with {} PCR values", self.pcrs.pcr_values.len());
         Ok(())
     }
@@ -273,6 +284,10 @@ impl AscendNpuEvidence {
     ) -> Result<Value, PluginError> {
         log::info!("Starting AscendNPU evidence verification for user: {}", user_id);
         
+        // TODO: Implement evidence freshness check (timestamp validation)
+        // TODO: Add evidence integrity verification (hash validation)
+        // TODO: Implement user-specific policy validation
+        
         // Verify AK certificate
         self.verify_ak_cert()?;
 
@@ -291,6 +306,10 @@ impl AscendNpuEvidence {
 
         // Build verification result
         let mut evidence_result_map = serde_json::Map::new();
+        
+        // TODO: Add comprehensive verification metrics and statistics
+        // TODO: Include security posture assessment results
+        // TODO: Add compliance status and policy evaluation results
         
         // Add certificate information
         evidence_result_map.insert("cert_info".to_string(), 

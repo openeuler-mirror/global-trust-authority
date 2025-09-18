@@ -90,7 +90,12 @@ async fn verify_boot_measurement(
     let log_data = general_purpose::STANDARD.decode(&log.log_data)
         .map_err(|e| PluginError::InputError(format!("Failed to decode base64 boot measurement log: {}", e)))?;
 
-    //todo： add verification logic
+    // TODO: Implement boot measurement verification logic
+    // TODO: Parse TPM event log structure
+    // TODO: Verify measurement value integrity
+    // TODO: Check measurement sequence and ordering
+    // TODO: Validate boot components against known good values
+    // TODO: Implement PCR extension verification
     
     log::debug!("Boot measurement log data length: {} bytes", log_data.len());
     
@@ -102,7 +107,12 @@ async fn verify_boot_measurement(
         ));
     }
 
-    //todo： add verification logic
+    // TODO: Implement boot measurement verification logic
+    // TODO: Parse TPM event log structure
+    // TODO: Verify measurement value integrity
+    // TODO: Check measurement sequence and ordering
+    // TODO: Validate boot components against known good values
+    // TODO: Implement PCR extension verification
     
     Ok(LogResult::success(
         log.log_type.clone(),
@@ -121,7 +131,12 @@ async fn verify_runtime_measurement(
     let log_data = general_purpose::STANDARD.decode(&log.log_data)
         .map_err(|e| PluginError::InputError(format!("Failed to decode base64 runtime measurement log: {}", e)))?;
 
-     //todo： add verification logic
+    // TODO: Implement runtime measurement verification logic
+    // TODO: Parse IMA log entries and verify file integrity
+    // TODO: Check file hashes against expected values
+    // TODO: Validate measurement timestamps and sequence
+    // TODO: Implement file access pattern analysis
+    // TODO: Verify runtime security policies compliance
     
     log::debug!("Runtime measurement log data length: {} bytes", log_data.len());
     
@@ -133,7 +148,12 @@ async fn verify_runtime_measurement(
         ));
     }
 
-     //todo： add verification logic
+    // TODO: Implement boot measurement verification logic
+    // TODO: Parse TPM event log structure
+    // TODO: Verify measurement value integrity
+    // TODO: Check measurement sequence and ordering
+    // TODO: Validate boot components against known good values
+    // TODO: Implement PCR extension verification
     
     Ok(LogResult::success(
         log.log_type.clone(),
@@ -149,6 +169,11 @@ pub async fn verify_all_logs(
     node_id: Option<&str>,
 ) -> Result<Vec<LogResult>, PluginError> {
     let mut results = Vec::new();
+
+    // TODO: Implement log correlation analysis
+    // TODO: Add log integrity verification across multiple logs
+    // TODO: Implement log sequence validation
+    // TODO: Add log-based security policy evaluation
 
     for log in logs {
         match verify_single_log(log, plugin, user_id, node_id).await {
