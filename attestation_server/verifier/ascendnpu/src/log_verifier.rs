@@ -162,6 +162,9 @@ async fn verify_runtime_measurement(
 }
 
 /// Verify all logs
+/// 
+/// Note: Logs are optional in AscendNPU evidence. If no logs are provided,
+/// verification will still pass as long as other evidence components are valid.
 pub async fn verify_all_logs(
     logs: &[Log],
     plugin: &AscendNpuPlugin,
@@ -175,6 +178,7 @@ pub async fn verify_all_logs(
     // TODO: Implement log sequence validation
     // TODO: Add log-based security policy evaluation
 
+    // Process each log individually
     for log in logs {
         match verify_single_log(log, plugin, user_id, node_id).await {
             Ok(result) => results.push(result),

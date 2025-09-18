@@ -298,6 +298,8 @@ impl AscendNpuEvidence {
         self.verify_pcrs()?;
 
         // Verify logs (if present)
+        // Note: Logs are optional in AscendNPU evidence. Verification will pass
+        // even if no logs are provided, as long as other components are valid.
         let log_results = if let Some(logs) = &self.logs {
             crate::log_verifier::verify_all_logs(logs, plugin, user_id, node_id).await?
         } else {
@@ -336,11 +338,21 @@ impl AscendNpuEvidence {
             }));
 
         // Add log verification results
-        let log_results_vec = log_results.into_iter().map(|log_result| log_result.to_json_value()).collect::<Vec<Value>>();
-        for log_value in log_results_vec {
-            if let Some(log_map) = log_value.as_object() {
-                evidence_result_map.extend(log_map.clone());
+        if !log_results.is_empty() {
+            let log_results_vec = log_results.into_iter().map(|log_result| log_result.to_json_value()).collect::<Vec<Value>>();
+            for log_value in log_results_vec {
+                if let Some(log_map) = log_value.as_object() {
+                    evidence_result_map.extend(log_map.clone());
+                }
             }
+        } else {
+            // Add log info when no logs are present
+            evidence_result_map.insert("log_info".to_string(),
+                serde_json::json!({
+                    "logs_present": false,
+                    "log_count": 0,
+                    "message": "No logs provided - verification passed without log validation"
+                }));
         }
 
         let evidence_result = Value::Object(evidence_result_map);

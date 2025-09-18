@@ -150,6 +150,18 @@ async fn test_log_result_creation() {
 }
 
 #[tokio::test]
+async fn test_empty_log_list_verification() {
+    let logs = vec![]; // Empty log list
+
+    let plugin = AscendNpuPlugin::new("test_config".to_string(), create_mock_host_functions());
+    let results = verify_all_logs(&logs, &plugin, "test_user", None).await;
+    
+    assert!(results.is_ok());
+    let results = results.unwrap();
+    assert_eq!(results.len(), 0); // No logs to verify
+}
+
+#[tokio::test]
 async fn test_log_result_json_conversion() {
     let result = LogResult::success("test_log".to_string(), "Test message".to_string());
     let json_value = result.to_json_value();
