@@ -22,6 +22,7 @@ members = [
     "attestation_server/verifier/tpm/boot",
     "attestation_server/verifier/tpm/ima",
     "attestation_server/verifier/virtcca",
+    "attestation_server/verifier/ascendnpu",
     "attestation_common/cache",
     "attestation_common/config_manager",
     "attestation_common/distributed_lock",
