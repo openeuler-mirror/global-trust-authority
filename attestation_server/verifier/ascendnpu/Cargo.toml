@@ -18,7 +18,8 @@ base64.workspace = true
 hex.workspace = true
 openssl.workspace = true
 tokio.workspace = true
-anyhow.workspace = true
+tpm_common_verifier = { path = "../tpm/common" }
+common_verifier = { path = "../common" }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

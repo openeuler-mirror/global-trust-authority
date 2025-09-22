@@ -74,7 +74,7 @@ impl GenerateEvidence for TpmImaPlugin {
             return Err(PluginError::InputError("Log type is not ImaLog".to_string()));
         }
         let mut ima_log = ImaLog::new(&log_data.log_data, &pcr_values.hash_alg)?;
-        let (replay_result, ref_value_result) = match ima_log.verify(pcr_values, &self.service_host_functions, user_id).await {
+        let (replay_result, ref_value_result) = match ima_log.verify(pcr_values, &self.service_host_functions, user_id, self.get_plugin_type()).await {
             Ok(res) => res,
             Err(_) => (false, false)
         };

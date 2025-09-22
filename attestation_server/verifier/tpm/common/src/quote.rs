@@ -21,6 +21,36 @@ use openssl::bn::BigNum;
 use plugin_manager::PluginError;
 use crate::structure::{TpmsAttest, TpmtSignature, SignatureData, Tpm2SignatureAlgID, AlgorithmId};
 use crate::crypto_utils::{CryptoVerifier, SignatureType};
+use base64::{Engine as _, engine::general_purpose};
+
+/// Simple quote data structure for storing base64-encoded quote and signature
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QuoteData {
+    /// Quote data, base64 encoded TPMS_ATTEST
+    pub quote_data: String,
+    /// Signature, base64 encoded TPMT_SIGNATURE
+    pub signature: String,
+}
+
+impl QuoteData {
+    /// Create a new QuoteData instance
+    pub fn new(quote_data: String, signature: String) -> Self {
+        Self {
+            quote_data,
+            signature,
+        }
+    }
+    
+    /// Convert to QuoteVerifier for verification
+    pub fn to_verifier(&self) -> Result<QuoteVerifier, PluginError> {
+        let quote_bytes = general_purpose::STANDARD.decode(&self.quote_data)
+            .map_err(|e| PluginError::InputError(format!("Failed to decode quote data: {}", e)))?;
+        let signature_bytes = general_purpose::STANDARD.decode(&self.signature)
+            .map_err(|e| PluginError::InputError(format!("Failed to decode signature: {}", e)))?;
+        
+        QuoteVerifier::new(&quote_bytes, &signature_bytes)
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QuoteVerifier {
