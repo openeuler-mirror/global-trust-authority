@@ -13,6 +13,8 @@
 use base64::{engine::general_purpose, Engine as _};
 use openssl::x509::X509;
 use openssl::asn1::Asn1Time;
+use openssl::pkey::PKey;
+use openssl::pkey::Public;
 use plugin_manager::PluginError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -20,6 +22,29 @@ use std::cmp::Ordering::{Greater, Less};
 
 use super::log_verifier::LogResult;
 use crate::verifier::AscendNpuPlugin;
+use tpm_common_verifier::{
+    QuoteVerifier, PcrValues, PcrValueEntry, QuoteData
+};
+use tpm_common_verifier::pcr::validate_pcr_values;
+
+/// Supported hash algorithms for PCR verification (P256 only)
+const SUPPORTED_HASH_ALGORITHMS: &[&str] = &["sha256"];
+
+/// Default hash algorithm
+const DEFAULT_HASH_ALGORITHM: &str = "sha256";
+
+/// Validates if the given hash algorithm is supported
+fn is_supported_hash_algorithm(algorithm: &str) -> bool {
+    SUPPORTED_HASH_ALGORITHMS.contains(&algorithm)
+}
+
+
+
+// Use TpmsAttest from tpm_common_verifier instead of custom TpmQuoteAttest
+
+// Use TpmsClockInfo from tpm_common_verifier instead of custom TpmClockInfo
+
+// Use TpmsQuoteInfo and TpmsPcrSelection from tpm_common_verifier instead of custom structures
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Log {
@@ -27,34 +52,16 @@ pub struct Log {
     pub log_data: String,
 }
 
-/// AscendNPU Quote structure
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AscendNpuQuote {
-    /// Quote data, base64 encoded TPMS_ATTEST
-    pub quote_data: String,
-    /// Signature, base64 encoded TPMT_SIGNATURE
-    pub signature: String,
-}
+/// `AscendNPU` Quote structure - now using `tpm_common_verifier` `QuoteData`
+pub type AscendNpuQuote = QuoteData;
 
-/// AscendNPU PCRs structure
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AscendNpuPcrs {
-    /// Hash algorithm, default is sha256
-    pub hash_alg: String,
-    /// PCR values list
-    pub pcr_values: Vec<AscendNpuPcrValue>,
-}
+/// `AscendNPU` PCRs structure - now using `tpm_common_verifier` `PcrValues`
+pub type AscendNpuPcrs = PcrValues;
 
-/// AscendNPU PCR value structure
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AscendNpuPcrValue {
-    /// PCR index
-    pub pcr_index: i32,
-    /// PCR value, hexadecimal encoded
-    pub pcr_value: String,
-}
+/// `AscendNPU` PCR value structure - now using `tpm_common_verifier` `PcrValueEntry`
+pub type AscendNpuPcrValue = PcrValueEntry;
 
-/// Represents the AscendNPU evidence structure.
+/// Represents the `AscendNPU` evidence structure.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AscendNpuEvidence {
     /// Attestation Key certificate, base64 encoded DER format
@@ -80,6 +87,22 @@ impl AscendNpuEvidence {
     ///
     /// # Parameters
     /// - `json_value`: The JSON value to parse.
+    ///
+    /// # Errors
+    /// 
+    /// This function will return an error if:
+    /// - Required fields are missing
+    /// - Field types are incorrect
+    /// - JSON parsing fails
+    /// - Certificate parsing fails
+    /// - Quote data parsing fails
+    /// - PCR data parsing fails
+    /// - Log data parsing fails
+    ///
+    /// # Panics
+    /// 
+    /// This function may panic if:
+    /// - The logs array is not actually an array (after type checking)
     ///
     /// # Returns
     /// A `Result` containing the `AscendNpuEvidence` or a `PluginError`.
@@ -112,10 +135,7 @@ impl AscendNpuEvidence {
             .ok_or(PluginError::InputError("quote.signature must be a string".to_string()))?
             .to_string();
 
-        let quote = AscendNpuQuote {
-            quote_data,
-            signature,
-        };
+        let quote = QuoteData::new(quote_data, signature);
 
         // Parse PCR data
         let pcrs_obj = json_value.get("pcrs")
@@ -123,7 +143,7 @@ impl AscendNpuEvidence {
 
         let hash_alg = pcrs_obj.get("hash_alg")
             .and_then(|v| v.as_str())
-            .unwrap_or("sha256")
+            .unwrap_or(DEFAULT_HASH_ALGORITHM)
             .to_string();
 
         let pcr_values_array = pcrs_obj.get("pcr_values")
@@ -134,20 +154,22 @@ impl AscendNpuEvidence {
         for (idx, pcr_value_obj) in pcr_values_array.iter().enumerate() {
             let pcr_index = pcr_value_obj.get("pcr_index")
                 .and_then(|v| v.as_i64())
-                .ok_or(PluginError::InputError(format!("pcr_values[{}].pcr_index must be an integer", idx)))? as i32;
+                .ok_or(PluginError::InputError(format!("pcr_values[{}].pcr_index must be an integer", idx)))? as u32;
 
             let pcr_value = pcr_value_obj.get("pcr_value")
                 .and_then(|v| v.as_str())
                 .ok_or(PluginError::InputError(format!("pcr_values[{}].pcr_value must be a string", idx)))?
                 .to_string();
 
-            pcr_values.push(AscendNpuPcrValue {
+            pcr_values.push(PcrValueEntry {
                 pcr_index,
                 pcr_value,
+                replay_value: None,
+                is_matched: None,
             });
         }
 
-        let pcrs = AscendNpuPcrs {
+        let pcrs = PcrValues {
             hash_alg,
             pcr_values,
         };
@@ -182,7 +204,7 @@ impl AscendNpuEvidence {
     }
 
     /// Verify AK certificate
-    fn verify_ak_cert(&self) -> Result<(), PluginError> {
+    async fn verify_ak_cert(&self, plugin: &AscendNpuPlugin, user_id: &str) -> Result<(), PluginError> {
         let cert_bytes = general_purpose::STANDARD.decode(&self.ak_cert)
             .map_err(|e| PluginError::InputError(format!("Failed to decode base64 AK certificate: {}", e)))?;
 
@@ -190,18 +212,20 @@ impl AscendNpuEvidence {
             .map_err(|e| PluginError::InputError(format!("Failed to parse AK certificate: {}", e)))?;
 
         // Check certificate validity period
-        self.check_cert_validity(&cert, "AK")?;
+        Self::check_cert_validity(&cert, "AK")?;
 
-        // TODO: Implement certificate chain verification
-        // TODO: Verify certificate signature against trusted root CA
-        // TODO: Check certificate extensions and policies
-        // TODO: Validate certificate subject and issuer fields
+        // Validate certificate chain using host functions
+        let validate_cert_chain = &plugin.get_host_functions().validate_cert_chain;
+        if !(validate_cert_chain)(plugin.get_plugin_type(), user_id, &cert_bytes).await {
+            return Err(PluginError::InputError("Certificate chain validation failed".to_string()));
+        }
+
         log::info!("AK certificate verification passed");
         Ok(())
     }
 
     /// Check certificate validity period
-    fn check_cert_validity(&self, cert: &X509, cert_type: &str) -> Result<(), PluginError> {
+    fn check_cert_validity(cert: &X509, cert_type: &str) -> Result<(), PluginError> {
         let now = Asn1Time::days_from_now(0)
             .map_err(|e| PluginError::InputError(format!("Failed to get current time: {}", e)))?;
 
@@ -212,57 +236,102 @@ impl AscendNpuEvidence {
         Ok(())
     }
 
-    /// Verify Quote data
-    fn verify_quote(&self, nonce: Option<&[u8]>) -> Result<(), PluginError> {
-        // Decode quote_data
-        let quote_data = general_purpose::STANDARD.decode(&self.quote.quote_data)
-            .map_err(|e| PluginError::InputError(format!("Failed to decode base64 quote data: {}", e)))?;
-
-        // Decode signature
-        let signature = general_purpose::STANDARD.decode(&self.quote.signature)
-            .map_err(|e| PluginError::InputError(format!("Failed to decode base64 signature: {}", e)))?;
-
-        // TODO: Implement TPM Quote verification logic
-        // TODO: Verify quote signature using AK certificate public key
-        // TODO: Parse TPMS_ATTEST structure and validate fields
-        // TODO: Check nonce matches the provided nonce
-        // TODO: Verify quote is fresh (check clock info)
-        // TODO: Validate PCR selection and values
-        log::info!("Quote verification passed");
-        log::debug!("Quote data length: {}, Signature length: {}", quote_data.len(), signature.len());
+    /// Verify Quote data and PCR values using `tpm_common_verifier`
+    fn verify_quote_and_pcrs(&self, nonce: Option<&[u8]>) -> Result<(), PluginError> {
+        log::info!("Starting Quote and PCR verification");
         
-        if let Some(nonce_bytes) = nonce {
-            log::debug!("Nonce provided for verification: {} bytes", nonce_bytes.len());
-        }
+        // Create QuoteVerifier instance from QuoteData
+        let quote_verifier = self.quote.to_verifier()
+            .map_err(|e| PluginError::InputError(format!("Failed to create QuoteVerifier: {}", e)))?;
+        
+        // Get AK certificate public key
+        let public_key = self.get_ak_public_key()?;
+        
+        // Get quote data for verification
+        let quote_data = general_purpose::STANDARD.decode(&self.quote.quote_data)
+            .map_err(|e| PluginError::InputError(format!("Failed to decode quote data: {}", e)))?;
+        
+        log::debug!("Quote data length: {}, Signature length: {}", quote_data.len(), self.quote.signature.len());
 
+        // Verify quote
+        quote_verifier.verify(&quote_data, &public_key, nonce)
+            .map_err(|e| PluginError::InputError(format!("Quote verification failed: {}", e)))?;
+        
+        // Verify PCR data validity and against Quote
+        self.verify_pcrs(&quote_verifier)?;
+       
+        log::info!("Quote and PCR verification passed successfully");
         Ok(())
     }
 
-    /// Verify PCR data
-    fn verify_pcrs(&self) -> Result<(), PluginError> {
+    /// Get AK certificate public key
+    fn get_ak_public_key(&self) -> Result<PKey<Public>, PluginError> {
+        // Decode AK certificate
+        let cert_bytes = general_purpose::STANDARD.decode(&self.ak_cert)
+            .map_err(|e| PluginError::InputError(format!("Failed to decode AK certificate: {}", e)))?;
+        
+        let cert = X509::from_der(&cert_bytes)
+            .map_err(|e| PluginError::InputError(format!("Failed to parse AK certificate: {}", e)))?;
+        
+        // Get public key from certificate
+        let public_key = cert.public_key()
+            .map_err(|e| PluginError::InputError(format!("Failed to extract public key: {}", e)))?;
+        
+        Ok(public_key)
+    }
+
+
+
+    /// Verify PCR data validity
+    /// 
+    /// This function validates PCR values for format correctness and basic constraints.
+    /// Verify PCR values using `tpm_common_verifier`
+    fn verify_pcrs(&self, quote_verifier: &QuoteVerifier) -> Result<(), PluginError> {
+        log::info!("Starting PCR verification");
+        
         // Verify hash algorithm
-        if self.pcrs.hash_alg != "sha256" && self.pcrs.hash_alg != "sha1" && self.pcrs.hash_alg != "sha384" && self.pcrs.hash_alg != "sha512" {
-            return Err(PluginError::InputError(format!("Unsupported hash algorithm: {}", self.pcrs.hash_alg)));
+        if !is_supported_hash_algorithm(&self.pcrs.hash_alg) {
+            let supported_algs = SUPPORTED_HASH_ALGORITHMS.join(", ");
+            return Err(PluginError::InputError(format!(
+                "Unsupported hash algorithm: '{}'. Supported algorithms: {}",
+                self.pcrs.hash_alg, supported_algs
+            )));
         }
 
-        // Verify PCR value format
-        for pcr_value in &self.pcrs.pcr_values {
-            if pcr_value.pcr_index < 0 || pcr_value.pcr_index > 23 {
-                return Err(PluginError::InputError(format!("Invalid PCR index: {}", pcr_value.pcr_index)));
-            }
+        // Validate PCR values using comprehensive validation
+        validate_pcr_values(&self.pcrs.pcr_values)?;
 
-            // Verify hexadecimal format
-            if hex::decode(&pcr_value.pcr_value).is_err() {
-                return Err(PluginError::InputError(format!("Invalid hex format for PCR value at index {}", pcr_value.pcr_index)));
-            }
-        }
-
-        // TODO: Implement PCR value validation against expected values
-        // TODO: Check PCR values against known good measurements
-        // TODO: Validate PCR extension sequence and integrity
-        // TODO: Implement PCR value comparison with reference measurements
-        log::info!("PCR verification passed with {} PCR values", self.pcrs.pcr_values.len());
+        // Verify PCR values against Quote
+        // This ensures PCR values match those in the Quote and haven't been tampered with
+        self.verify_pcrs_against_quote(quote_verifier)?;
+       
+        log::info!(
+            "PCR validity verification passed with {} PCR values using {} algorithm",
+            self.pcrs.pcr_values.len(),
+            self.pcrs.hash_alg
+        );
         Ok(())
+    }
+
+    /// Verify PCR values against Quote using `tpm_common_verifier`
+    fn verify_pcrs_against_quote(&self, quote_verifier: &QuoteVerifier) -> Result<(), PluginError> {
+        log::info!("Starting PCR verification against Quote");
+        
+        // Convert AscendNPU PCR data to PcrValues format
+        let pcr_values = self.convert_to_pcr_values()?;
+        
+        // Use tpm_common_verifier to verify PCR values against Quote
+        pcr_values.verify(quote_verifier)
+            .map_err(|e| PluginError::InputError(format!("PCR verification failed: {}", e)))?;
+        
+        log::info!("PCR verification against Quote passed successfully");
+        Ok(())
+    }
+
+    /// Convert `AscendNPU` PCR data to `tpm_common_verifier` `PcrValues` format
+    /// Since `AscendNpuPcrs` is now a type alias for `PcrValues`, we can return it directly
+    fn convert_to_pcr_values(&self) -> Result<PcrValues, PluginError> {
+        Ok(self.pcrs.clone())
     }
 
     /// Verifies the evidence asynchronously.
@@ -272,6 +341,15 @@ impl AscendNpuEvidence {
     /// - `node_id`: Optional node identifier.
     /// - `nonce`: Optional nonce for verification.
     /// - `plugin`: Reference to the `AscendNpuPlugin`.
+    ///
+    /// # Errors
+    /// 
+    /// This function will return an error if:
+    /// - AK certificate verification fails
+    /// - Quote verification fails
+    /// - PCR verification fails
+    /// - Log verification fails
+    /// - JSON serialization fails
     ///
     /// # Returns
     /// A `Result` containing the verification result as `Value` or a `PluginError`.
@@ -284,34 +362,23 @@ impl AscendNpuEvidence {
     ) -> Result<Value, PluginError> {
         log::info!("Starting AscendNPU evidence verification for user: {}", user_id);
         
-        // TODO: Implement evidence freshness check (timestamp validation)
-        // TODO: Add evidence integrity verification (hash validation)
-        // TODO: Implement user-specific policy validation
-        
         // Verify AK certificate
-        self.verify_ak_cert()?;
+        self.verify_ak_cert(plugin, user_id).await?;
 
         // Verify Quote data
-        self.verify_quote(nonce)?;
-
-        // Verify PCR data
-        self.verify_pcrs()?;
+        self.verify_quote_and_pcrs(nonce)?;
 
         // Verify logs (if present)
         // Note: Logs are optional in AscendNPU evidence. Verification will pass
         // even if no logs are provided, as long as other components are valid.
         let log_results = if let Some(logs) = &self.logs {
-            crate::log_verifier::verify_all_logs(logs, plugin, user_id, node_id).await?
+            crate::log_verifier::verify_all_logs(logs, plugin, user_id, node_id, &self.pcrs).await?
         } else {
             Vec::new()
         };
 
         // Build verification result
         let mut evidence_result_map = serde_json::Map::new();
-        
-        // TODO: Add comprehensive verification metrics and statistics
-        // TODO: Include security posture assessment results
-        // TODO: Add compliance status and policy evaluation results
         
         // Add certificate information
         evidence_result_map.insert("cert_info".to_string(), 
@@ -334,17 +401,35 @@ impl AscendNpuEvidence {
                 "pcr_verified": true,
                 "hash_algorithm": self.pcrs.hash_alg,
                 "pcr_count": self.pcrs.pcr_values.len(),
-                "pcr_indices": self.pcrs.pcr_values.iter().map(|p| p.pcr_index).collect::<Vec<i32>>()
+                "pcr_indices": self.pcrs.pcr_values.iter().map(|p| p.pcr_index).collect::<Vec<u32>>()
             }));
 
         // Add log verification results
         if !log_results.is_empty() {
-            let log_results_vec = log_results.into_iter().map(|log_result| log_result.to_json_value()).collect::<Vec<Value>>();
-            for log_value in log_results_vec {
-                if let Some(log_map) = log_value.as_object() {
-                    evidence_result_map.extend(log_map.clone());
+            // Group logs by type and create structured results
+            let mut boot_logs = Vec::new();
+            let mut runtime_logs = Vec::new();
+            let mut other_logs = Vec::new();
+            
+            for log_result in log_results {
+                match log_result.log_type.as_str() {
+                    "boot_measurement" => boot_logs.push(log_result.to_json_value()),
+                    "runtime_measurement" => runtime_logs.push(log_result.to_json_value()),
+                    _ => other_logs.push(log_result.to_json_value()),
                 }
             }
+            
+            // Add structured log results
+            if !boot_logs.is_empty() {
+                evidence_result_map.insert("boot_logs".to_string(), Value::Array(boot_logs));
+            }
+            if !runtime_logs.is_empty() {
+                evidence_result_map.insert("runtime_logs".to_string(), Value::Array(runtime_logs));
+            }
+            if !other_logs.is_empty() {
+                evidence_result_map.insert("other_logs".to_string(), Value::Array(other_logs));
+            }
+            
         } else {
             // Add log info when no logs are present
             evidence_result_map.insert("log_info".to_string(),

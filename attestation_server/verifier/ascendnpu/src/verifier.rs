@@ -18,7 +18,7 @@ use serde_json::Value;
 
 use crate::evidence::AscendNpuEvidence;
 
-/// Represents the AscendNPU plugin for verification services.
+/// Represents the `AscendNPU` plugin for verification services.
 pub struct AscendNpuPlugin {
     plugin_type: String,
     service_host_functions: ServiceHostFunctions,
@@ -127,6 +127,12 @@ impl ServicePlugin for AscendNpuPlugin {
 /// - `host_functions`: The service host functions.
 /// - `plugin_type`: The type of the plugin as `&str`.
 ///
+/// # Errors
+/// 
+/// This function will return an error if:
+/// - The plugin type is invalid
+/// - Plugin creation fails
+/// 
 /// # Returns
 /// A `Result` containing a boxed `dyn ServicePlugin` or an error.
 pub fn create_plugin(host_functions: ServiceHostFunctions, plugin_type: &str) -> Result<Box<dyn ServicePlugin>, Box<dyn Error>> {
