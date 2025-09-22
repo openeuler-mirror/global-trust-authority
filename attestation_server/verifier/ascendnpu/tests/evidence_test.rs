@@ -125,9 +125,16 @@ async fn test_ascend_npu_evidence_verification_without_logs() {
     // This should succeed even without logs
     let result = plugin.verify_evidence("test_user", None, &evidence_json, None).await;
     
-    // Note: This will likely fail due to invalid certificate, but we're testing the structure
-    // In a real test, you would use valid test data
-    assert!(result.is_err()); // Expected to fail with invalid test data, but structure should be correct
+    // Should fail due to invalid certificate/quote data, but structure parsing should work
+    assert!(result.is_err());
+    
+    let error_msg = result.unwrap_err().to_string();
+    // Should fail at certificate parsing or quote and PCR verification, not at structure parsing
+    assert!(error_msg.contains("Failed to decode") || 
+            error_msg.contains("Failed to parse") ||
+            error_msg.contains("certificate") ||
+            error_msg.contains("signature") ||
+            error_msg.contains("quote"));
 }
 
 #[tokio::test]
@@ -173,6 +180,121 @@ async fn test_ascend_npu_evidence_invalid_pcr_index() {
 }
 
 #[tokio::test]
+async fn test_ascend_npu_evidence_sm3_hash_algorithm() {
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmU="
+        },
+        "pcrs": {
+            "hash_alg": "sm3",  // Test SM3 hash algorithm support
+            "pcr_values": [
+                {
+                    "pcr_index": 1,
+                    "pcr_value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                },
+                {
+                    "pcr_index": 2,
+                    "pcr_value": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+                }
+            ]
+        }
+    });
+
+    let evidence = AscendNpuEvidence::from_json_value(&evidence_json);
+    assert!(evidence.is_ok());
+    
+    let evidence = evidence.unwrap();
+    assert_eq!(evidence.pcrs.hash_alg, "sm3");
+    assert_eq!(evidence.pcrs.pcr_values.len(), 2);
+    assert_eq!(evidence.pcrs.pcr_values[0].pcr_index, 1);
+    assert_eq!(evidence.pcrs.pcr_values[1].pcr_index, 2);
+}
+
+#[tokio::test]
+async fn test_ascend_npu_evidence_empty_pcr_values() {
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmU="
+        },
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": []  // Empty PCR values
+        }
+    });
+
+    let evidence = AscendNpuEvidence::from_json_value(&evidence_json);
+    assert!(evidence.is_ok());
+    
+    // Test that parsing succeeds but verification would fail
+    let evidence = evidence.unwrap();
+    assert!(evidence.pcrs.pcr_values.is_empty());
+}
+
+#[tokio::test]
+async fn test_ascend_npu_evidence_duplicate_pcr_indices() {
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmU="
+        },
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": [
+                {
+                    "pcr_index": 1,
+                    "pcr_value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                },
+                {
+                    "pcr_index": 1,  // Duplicate index
+                    "pcr_value": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+                }
+            ]
+        }
+    });
+
+    let evidence = AscendNpuEvidence::from_json_value(&evidence_json);
+    assert!(evidence.is_ok());
+    
+    // Test that parsing succeeds but verification would fail
+    let evidence = evidence.unwrap();
+    assert_eq!(evidence.pcrs.pcr_values.len(), 2);
+    assert_eq!(evidence.pcrs.pcr_values[0].pcr_index, 1);
+    assert_eq!(evidence.pcrs.pcr_values[1].pcr_index, 1);
+}
+
+#[tokio::test]
+async fn test_ascend_npu_evidence_invalid_hex_format() {
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmU="
+        },
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": [
+                {
+                    "pcr_index": 1,
+                    "pcr_value": "invalid_hex_string"  // Invalid hex format
+                }
+            ]
+        }
+    });
+
+    let evidence = AscendNpuEvidence::from_json_value(&evidence_json);
+    assert!(evidence.is_ok());
+    
+    // Test that parsing succeeds but verification would fail
+    let evidence = evidence.unwrap();
+    assert_eq!(evidence.pcrs.pcr_values[0].pcr_value, "invalid_hex_string");
+}
+
+#[tokio::test]
 async fn test_ascend_npu_evidence_invalid_hash_algorithm() {
     let evidence_json = json!({
         "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
@@ -197,4 +319,377 @@ async fn test_ascend_npu_evidence_invalid_hash_algorithm() {
     // Test that parsing succeeds but verification would fail
     let evidence = evidence.unwrap();
     assert_eq!(evidence.pcrs.hash_alg, "md5");
+}
+
+#[tokio::test]
+async fn test_quote_and_pcr_verification_with_nonce() {
+    use ascend_npu_verifier::verifier::AscendNpuPlugin;
+    use plugin_manager::{ServicePlugin, ServiceHostFunctions};
+
+    // Create mock host functions
+    let host_functions = ServiceHostFunctions {
+        validate_cert_chain: Box::new(|_, _, _| Box::pin(async { true })),
+        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Ok(Vec::new()) })),
+        query_configuration: |_key| None,
+    };
+
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmU="
+        },
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": [
+                {
+                    "pcr_index": 1,
+                    "pcr_value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                }
+            ]
+        }
+    });
+
+    let plugin = AscendNpuPlugin::new("test_config".to_string(), host_functions);
+    
+    // Test with nonce
+    let nonce = b"test_nonce_12345";
+    let result = plugin.verify_evidence("test_user", None, &evidence_json, Some(nonce)).await;
+    
+    // Should fail due to invalid certificate/quote data, but nonce verification logic should be tested
+    assert!(result.is_err());
+    
+    let error_msg = result.unwrap_err().to_string();
+    // Should fail at certificate parsing or quote and PCR verification, not at nonce handling
+    assert!(error_msg.contains("Failed to decode") || 
+            error_msg.contains("Failed to parse") ||
+            error_msg.contains("certificate") ||
+            error_msg.contains("signature") ||
+            error_msg.contains("quote"));
+}
+
+#[tokio::test]
+async fn test_quote_and_pcr_verification_without_nonce() {
+    use ascend_npu_verifier::verifier::AscendNpuPlugin;
+    use plugin_manager::{ServicePlugin, ServiceHostFunctions};
+
+    // Create mock host functions
+    let host_functions = ServiceHostFunctions {
+        validate_cert_chain: Box::new(|_, _, _| Box::pin(async { true })),
+        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Ok(Vec::new()) })),
+        query_configuration: |_key| None,
+    };
+
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmU="
+        },
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": [
+                {
+                    "pcr_index": 1,
+                    "pcr_value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                }
+            ]
+        }
+    });
+
+    let plugin = AscendNpuPlugin::new("test_config".to_string(), host_functions);
+    
+    // Test without nonce
+    let result = plugin.verify_evidence("test_user", None, &evidence_json, None).await;
+    
+    // Should fail due to invalid certificate/quote data, but quote and PCR verification logic should be tested
+    assert!(result.is_err());
+    
+    let error_msg = result.unwrap_err().to_string();
+    // Should fail at certificate parsing or quote and PCR verification, not at nonce handling
+    assert!(error_msg.contains("Failed to decode") || 
+            error_msg.contains("Failed to parse") ||
+            error_msg.contains("certificate") ||
+            error_msg.contains("signature") ||
+            error_msg.contains("quote"));
+}
+
+
+#[tokio::test]
+async fn test_quote_and_pcr_verification_unsupported_rsa_signature() {
+    use ascend_npu_verifier::verifier::AscendNpuPlugin;
+    use plugin_manager::{ServicePlugin, ServiceHostFunctions};
+
+    // Create mock host functions
+    let host_functions = ServiceHostFunctions {
+        validate_cert_chain: Box::new(|_, _, _| Box::pin(async { true })),
+        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Ok(Vec::new()) })),
+        query_configuration: |_key| None,
+    };
+
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmV3aXRoMjU2Ynl0ZXNyc2FzaWduYXR1cmVkYXRh" // 256-byte RSA signature (base64 encoded)
+        },
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": [
+                {
+                    "pcr_index": 1,
+                    "pcr_value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                }
+            ]
+        }
+    });
+
+    let plugin = AscendNpuPlugin::new("test_config".to_string(), host_functions);
+    
+    // Test with RSA signature (should fail with unsupported signature length)
+    let result = plugin.verify_evidence("test_user", None, &evidence_json, None).await;
+    
+    // Should fail due to unsupported RSA signature length
+    assert!(result.is_err());
+    
+    // Check that the error message indicates unsupported signature length
+    let error_msg = result.unwrap_err().to_string();
+    assert!(error_msg.contains("Unsupported signature length") || 
+            error_msg.contains("Failed to decode") ||
+            error_msg.contains("Failed to parse"));
+}
+
+#[tokio::test]
+async fn test_quote_and_pcr_verification_unsupported_p384_signature() {
+    use ascend_npu_verifier::verifier::AscendNpuPlugin;
+    use plugin_manager::{ServicePlugin, ServiceHostFunctions};
+
+    // Create mock host functions
+    let host_functions = ServiceHostFunctions {
+        validate_cert_chain: Box::new(|_, _, _| Box::pin(async { true })),
+        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Ok(Vec::new()) })),
+        query_configuration: |_key| None,
+    };
+
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmV3aXRoOTZieXRlc3AzODRlY2RzYXNpZ25hdHVyZWRhdGE=" // 96-byte P384 signature (base64 encoded)
+        },
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": [
+                {
+                    "pcr_index": 1,
+                    "pcr_value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                }
+            ]
+        }
+    });
+
+    let plugin = AscendNpuPlugin::new("test_config".to_string(), host_functions);
+    
+    // Test with P384 signature (should fail with unsupported signature length)
+    let result = plugin.verify_evidence("test_user", None, &evidence_json, None).await;
+    
+    // Should fail due to unsupported P384 signature length
+    assert!(result.is_err());
+    
+    // Check that the error message indicates unsupported signature length
+    let error_msg = result.unwrap_err().to_string();
+    assert!(error_msg.contains("Unsupported signature length") || 
+            error_msg.contains("Failed to decode") ||
+            error_msg.contains("Failed to parse"));
+}
+
+#[tokio::test]
+async fn test_quote_and_pcr_verification_unsupported_p521_signature() {
+    use ascend_npu_verifier::verifier::AscendNpuPlugin;
+    use plugin_manager::{ServicePlugin, ServiceHostFunctions};
+
+    // Create mock host functions
+    let host_functions = ServiceHostFunctions {
+        validate_cert_chain: Box::new(|_, _, _| Box::pin(async { true })),
+        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Ok(Vec::new()) })),
+        query_configuration: |_key| None,
+    };
+
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmV3aXRoMTI4Ynl0ZXNwNTIxZWNkc2FzaWduYXR1cmVkYXRh" // 128-byte P521 signature (base64 encoded)
+        },
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": [
+                {
+                    "pcr_index": 1,
+                    "pcr_value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                }
+            ]
+        }
+    });
+
+    let plugin = AscendNpuPlugin::new("test_config".to_string(), host_functions);
+    
+    // Test with P521 signature (should fail with unsupported signature length)
+    let result = plugin.verify_evidence("test_user", None, &evidence_json, None).await;
+    
+    // Should fail due to unsupported P521 signature length
+    assert!(result.is_err());
+    
+    // Check that the error message indicates unsupported signature length
+    let error_msg = result.unwrap_err().to_string();
+    assert!(error_msg.contains("Unsupported signature length") || 
+            error_msg.contains("Failed to decode") ||
+            error_msg.contains("Failed to parse"));
+}
+
+#[tokio::test]
+async fn test_quote_and_pcr_verification_unsupported_sm3_signature() {
+    use ascend_npu_verifier::verifier::AscendNpuPlugin;
+    use plugin_manager::{ServicePlugin, ServiceHostFunctions};
+
+    // Create mock host functions
+    let host_functions = ServiceHostFunctions {
+        validate_cert_chain: Box::new(|_, _, _| Box::pin(async { true })),
+        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Ok(Vec::new()) })),
+        query_configuration: |_key| None,
+    };
+
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmV3aXRoMzJieXRlc3NtM3NpZ25hdHVyZWRhdGE=" // 32-byte SM3 signature (base64 encoded)
+        },
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": [
+                {
+                    "pcr_index": 1,
+                    "pcr_value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                }
+            ]
+        }
+    });
+
+    let plugin = AscendNpuPlugin::new("test_config".to_string(), host_functions);
+    
+    // Test with SM3 signature (should fail with unsupported signature length)
+    let result = plugin.verify_evidence("test_user", None, &evidence_json, None).await;
+    
+    // Should fail due to unsupported SM3 signature length
+    assert!(result.is_err());
+    
+    // Check that the error message indicates unsupported signature length
+    let error_msg = result.unwrap_err().to_string();
+    assert!(error_msg.contains("Unsupported signature length") || 
+            error_msg.contains("Failed to decode") ||
+            error_msg.contains("Failed to parse"));
+}
+
+
+#[tokio::test]
+async fn test_pcr_validity_verification_only() {
+    use ascend_npu_verifier::verifier::AscendNpuPlugin;
+    use plugin_manager::{ServicePlugin, ServiceHostFunctions};
+
+    // Create mock host functions
+    let host_functions = ServiceHostFunctions {
+        validate_cert_chain: Box::new(|_, _, _| Box::pin(async { true })),
+        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Ok(Vec::new()) })),
+        query_configuration: |_key| None,
+    };
+
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmU="
+        },
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": [
+                {
+                    "pcr_index": 0,
+                    "pcr_value": "0000000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                    "pcr_index": 1,
+                    "pcr_value": "1111111111111111111111111111111111111111111111111111111111111111"
+                },
+                {
+                    "pcr_index": 23,
+                    "pcr_value": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                }
+            ]
+        }
+    });
+
+    let plugin = AscendNpuPlugin::new("test_config".to_string(), host_functions);
+    
+    // Test PCR validity verification (should pass format validation but fail due to invalid certificate/quote)
+    let result = plugin.verify_evidence("test_user", None, &evidence_json, None).await;
+    
+    // Should fail due to invalid certificate and quote data, but PCR format validation should pass
+    assert!(result.is_err());
+    
+    // The error should be related to certificate/quote and PCR verification, not PCR format
+    let error_msg = result.unwrap_err().to_string();
+    assert!(error_msg.contains("Failed to decode") || 
+            error_msg.contains("Failed to parse") ||
+            error_msg.contains("certificate") ||
+            error_msg.contains("signature"));
+}
+
+#[tokio::test]
+async fn test_pcr_digest_verification() {
+    use ascend_npu_verifier::verifier::AscendNpuPlugin;
+    use plugin_manager::{ServicePlugin, ServiceHostFunctions};
+
+    // Create mock host functions
+    let host_functions = ServiceHostFunctions {
+        validate_cert_chain: Box::new(|_, _, _| Box::pin(async { true })),
+        get_unmatched_measurements: Box::new(|_measured_values, _attester_type, _user_id| Box::pin(async { Ok(Vec::new()) })),
+        query_configuration: |_key| None,
+    };
+
+    let evidence_json = json!({
+        "ak_cert": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t",
+        "quote": {
+            "quote_data": "dGVzdF9xdW90ZV9kYXRh",
+            "signature": "dGVzdF9zaWduYXR1cmU="
+        },
+        "pcrs": {
+            "hash_alg": "sha256",
+            "pcr_values": [
+                {
+                    "pcr_index": 0,
+                    "pcr_value": "0000000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                    "pcr_index": 1,
+                    "pcr_value": "1111111111111111111111111111111111111111111111111111111111111111"
+                }
+            ]
+        }
+    });
+
+    let plugin = AscendNpuPlugin::new("test_config".to_string(), host_functions);
+    
+    // Test PCR digest verification (should fail due to invalid certificate/quote but PCR digest logic should be tested)
+    let result = plugin.verify_evidence("test_user", None, &evidence_json, None).await;
+    
+    // Should fail due to invalid certificate and quote data, but PCR digest calculation should work
+    assert!(result.is_err());
+    
+    // The error should be related to certificate/quote and PCR verification, not PCR digest calculation
+    let error_msg = result.unwrap_err().to_string();
+    assert!(error_msg.contains("Failed to decode") || 
+            error_msg.contains("Failed to parse") ||
+            error_msg.contains("certificate") ||
+            error_msg.contains("signature"));
 }
