@@ -49,6 +49,7 @@ COPY attestation_server/verifier/tpm/boot/Cargo.toml ./attestation_server/verifi
 COPY attestation_server/verifier/tpm/ima/Cargo.toml ./attestation_server/verifier/tpm/ima/Cargo.toml
 COPY attestation_server/verifier/common/Cargo.toml ./attestation_server/verifier/common/Cargo.toml
 COPY attestation_server/verifier/virtcca/Cargo.toml ./attestation_server/verifier/virtcca/Cargo.toml
+COPY attestation_server/verifier/ascendnpu/Cargo.toml ./attestation_server/verifier/ascendnpu/Cargo.toml
 COPY attestation_server/registry/Cargo.toml ./attestation_server/registry/Cargo.toml
 COPY plugin_manager/Cargo.toml ./plugin_manager/Cargo.toml
 COPY attestation_common/cache/Cargo.toml ./attestation_common/cache/Cargo.toml
