@@ -46,6 +46,7 @@ pub async fn get_policy_by_ids(
 pub async fn get_default_policies_by_type(
     db: &DatabaseConnection,
     attester_type: String<>,
+    user_id: &str,
 ) -> Result<Vec<Policy>, PolicyError> {
-    QueryPolicyHandler::get_default_policies_by_type(db, attester_type).await
+    QueryPolicyHandler::get_default_policies_by_type(db, attester_type, user_id).await
 }

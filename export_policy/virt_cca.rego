@@ -1,5 +1,8 @@
 package verification
 
+default hardware_value = 96
+default executables_value = 96
+
 get(key) = value {
     value := object.get(input, key, "___KEY_NOT_EXIST___")
     value != "___KEY_NOT_EXIST___"
@@ -44,4 +47,30 @@ extra_fields = {} {
     firmware_state == null
 }
 
-result := object.union(filtered_base_fields, extra_fields)
+# hardware value calculation
+hardware_value = 2 {
+    filtered_base_fields.vcca_ccel_log_status == "replay_success"
+    filtered_base_fields.vcca_ccel_ref_value_match_status == "ignore"
+}
+
+hardware_value = 0 {
+    filtered_base_fields.vcca_ccel_log_status == "no_log"
+}
+
+# executables value calculation
+executables_value = 2 {
+    filtered_base_fields.vcca_ima_log_status == "replay_success"
+    filtered_base_fields.vcca_ima_ref_value_match_status == "matched"
+}
+
+executables_value = 0 {
+    filtered_base_fields.vcca_ima_log_status == "no_log"
+}
+
+result := {
+    "annotated_evidence": object.union(filtered_base_fields, extra_fields),
+    "ear_trustworthiness_vector": {
+        "hardware": hardware_value,
+        "executables": executables_value
+    }
+}

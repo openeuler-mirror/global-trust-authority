@@ -10,9 +10,10 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use crate::challenge::{do_challenge, get_cached_token_for_current_node, AttesterInfo};
+use crate::challenge::{do_challenge, get_cached_token_for_current_node_with_fmt, AttesterInfo};
 use crate::challenge_error::TokenError;
 use serde::{Deserialize, Serialize};
+use crate::token_fmt as tf;
 
 /// Request structure for token acquisition, including attester info and challenge flag
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -31,6 +32,11 @@ pub struct TokenRequest {
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attester_data: Option<serde_json::Value>,
+
+    // Optional token format specification (eat/ear, default: eat)
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_fmt: Option<String>,
 }
 
 impl TokenRequest {
@@ -39,12 +45,34 @@ impl TokenRequest {
     /// - Converts empty `attester_info` vector to None
     /// - Keeps challenge flag as is (Option<bool> is already well-handled)
     /// - Converts empty or whitespace-only `attester_data` to None
+    /// - Normalizes token_fmt to lowercase if provided
+    /// - Converts empty token_fmt string to None (will use default "eat")
     pub fn sanitize(self) -> Self {
         TokenRequest {
             attester_info: self.attester_info.and_then(|info| if info.is_empty() { None } else { Some(info) }),
             challenge: self.challenge,
             attester_data: self.attester_data.and_then(|data| if data.is_null() { None } else { Some(data) }),
+            token_fmt: self.token_fmt.map(|s| s.to_lowercase()),
         }
+    }
+
+    /// Validates fields that require semantic checks.
+    /// - token_fmt: if provided and non-empty, must be one of "eat" or "ear" (case-insensitive)
+    pub fn validate(&self) -> Result<(), TokenError> {
+        if !tf::is_valid(&self.token_fmt) {
+            let raw = self.token_fmt.as_deref().unwrap_or("");
+            log::error!(
+                "Invalid token_fmt: '{}', only 'eat' and 'ear' are supported",
+                raw
+            );
+            return Err(TokenError::invalid_token_format(
+                format!(
+                    "Invalid token_fmt: '{}', only 'eat' and 'ear' are supported",
+                    raw
+                )
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -58,19 +86,32 @@ impl TokenManager {
     ///
     /// Returns an error if the token cannot be retrieved.
     pub async fn get_token(token_request: &TokenRequest) -> Result<serde_json::Value, TokenError> {
+        // Get normalized token format, defaulting to "eat" only if not specified (None)
+        let token_fmt = token_request
+            .token_fmt
+            .clone()
+            .unwrap_or_else(|| config::config::DEFAULT_TOKEN_FORMAT.to_string());
+
+        // Try to get cached token if challenge is not forced
         if !token_request.challenge.unwrap_or(false) {
-            if let Some(token) = get_cached_token_for_current_node() {
-                return Ok(token);
+            match get_cached_token_for_current_node_with_fmt(token_fmt.as_str()) {
+                Ok(Some(token)) => return Ok(token),
+                Ok(None) => {
+                    log::info!("No cached token for requested format, proceeding to challenge");
+                },
+                Err(e) => {
+                    log::warn!("Cache lookup failed ({}), proceeding to challenge", e);
+                },
             }
         }
 
-        match do_challenge(&token_request.attester_info, &token_request.attester_data).await {
-            Ok(token) => Ok(token),
-            Err(e) => {
+        // Perform challenge to get new token
+        do_challenge(&token_request.attester_info, &token_request.attester_data, Some(token_fmt.as_str()))
+            .await
+            .map_err(|e| {
                 log::error!("Challenge failed, {}", e);
-                Err(TokenError::challenge_error(e.to_string()))
-            },
-        }
+                TokenError::challenge_error(e.to_string())
+            })
     }
 }
 
@@ -79,55 +120,82 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    /// Helper function to create a basic TokenRequest for testing
+    fn create_test_request(
+        attester_info: Option<Vec<AttesterInfo>>,
+        challenge: Option<bool>,
+        attester_data: Option<serde_json::Value>,
+        token_fmt: Option<String>,
+    ) -> TokenRequest {
+        TokenRequest {
+            attester_info,
+            challenge,
+            attester_data,
+            token_fmt,
+        }
+    }
+
+    /// Helper function to create a basic AttesterInfo for testing
+    fn create_test_attester_info(
+        attester_type: &str,
+        policy_ids: Option<Vec<String>>,
+        log_types: Option<Vec<String>>,
+    ) -> AttesterInfo {
+        AttesterInfo {
+            attester_type: attester_type.to_string(),
+            policy_ids,
+            log_types,
+        }
+    }
+
     #[test]
     fn test_token_request_sanitize() {
         // Test empty attester_info
-        let request = TokenRequest {
-            attester_info: Some(vec![]),
-            challenge: Some(false),
-            attester_data: Some(json!({"key": "value"})),
-        };
+        let request = create_test_request(
+            Some(vec![]),
+            Some(false),
+            Some(json!({"key": "value"})),
+            Some("ear".to_string()),
+        );
         let sanitized = request.sanitize();
         assert!(sanitized.attester_info.is_none());
+        assert_eq!(sanitized.token_fmt, Some("ear".to_string()));
 
         // Test null attester_data
-        let request = TokenRequest {
-            attester_info: Some(vec![AttesterInfo {
-                attester_type: "tpm_boot".to_string(),
-                log_types: Some(vec!["TcgEventLog".to_string()]),
-                policy_ids: None,
-            }]),
-            challenge: Some(true),
-            attester_data: Some(json!(null)),
-        };
+        let request = create_test_request(
+            Some(vec![create_test_attester_info("tpm_boot", None, Some(vec!["TcgEventLog".to_string()]))]),
+            Some(true),
+            Some(json!(null)),
+            Some("eat".to_string()),
+        );
         let sanitized = request.sanitize();
         assert!(sanitized.attester_data.is_none());
+        assert_eq!(sanitized.token_fmt, Some("eat".to_string()));
 
         // Test valid request
-        let request = TokenRequest {
-            attester_info: Some(vec![AttesterInfo {
-                attester_type: "tpm_boot".to_string(),
-                policy_ids: Some(vec!["policy1".to_string()]),
-                log_types: Some(vec!["TcgEventLog".to_string()]),
-            }]),
-            challenge: Some(false),
-            attester_data: Some(json!({"key": "value"})),
-        };
+        let request = create_test_request(
+            Some(vec![create_test_attester_info(
+                "tpm_boot",
+                Some(vec!["policy1".to_string()]),
+                Some(vec!["TcgEventLog".to_string()]),
+            )]),
+            Some(false),
+            Some(json!({"key": "value"})),
+            Some("ear".to_string()),
+        );
         let sanitized = request.sanitize();
         assert!(sanitized.attester_info.is_some());
         assert_eq!(sanitized.challenge, Some(false));
         assert!(sanitized.attester_data.is_some());
+        assert_eq!(sanitized.token_fmt, Some("ear".to_string()));
 
         // Test None values
-        let request = TokenRequest {
-            attester_info: None,
-            challenge: None,
-            attester_data: None,
-        };
+        let request = create_test_request(None, None, None, None);
         let sanitized = request.sanitize();
         assert!(sanitized.attester_info.is_none());
         assert!(sanitized.challenge.is_none());
         assert!(sanitized.attester_data.is_none());
+        assert!(sanitized.token_fmt.is_none());
     }
 
     #[test]
@@ -140,6 +208,7 @@ mod tests {
             }]),
             challenge: Some(true),
             attester_data: Some(json!({"test": "data"})),
+            token_fmt: Some("ear".to_string()),
         };
 
         let serialized = serde_json::to_string(&request).unwrap();
@@ -148,6 +217,7 @@ mod tests {
         assert_eq!(request.attester_info, deserialized.attester_info);
         assert_eq!(request.challenge, deserialized.challenge);
         assert_eq!(request.attester_data, deserialized.attester_data);
+        assert_eq!(request.token_fmt, deserialized.token_fmt);
     }
 
     #[test]
@@ -160,13 +230,15 @@ mod tests {
                 }
             ],
             "challenge": true,
-            "attester_data": {"test": "data"}
+            "attester_data": {"test": "data"},
+            "token_fmt": "ear"
         }"#;
 
         let request: TokenRequest = serde_json::from_str(json_str).unwrap();
         assert!(request.attester_info.is_some());
         assert_eq!(request.challenge, Some(true));
         assert!(request.attester_data.is_some());
+        assert_eq!(request.token_fmt, Some("ear".to_string()));
     }
 
     #[test]
@@ -175,6 +247,7 @@ mod tests {
         assert!(request.attester_info.is_none());
         assert!(request.challenge.is_none());
         assert!(request.attester_data.is_none());
+        assert!(request.token_fmt.is_none());
     }
 
     #[test]
@@ -223,22 +296,26 @@ mod tests {
             attester_info: None,
             challenge: None,
             attester_data: None,
+            token_fmt: None,
         };
         let sanitized = request.sanitize();
         assert!(sanitized.attester_info.is_none());
         assert!(sanitized.challenge.is_none());
         assert!(sanitized.attester_data.is_none());
+        assert!(sanitized.token_fmt.is_none());
 
         // Test with empty attester_info
         let request = TokenRequest {
             attester_info: Some(vec![]),
             challenge: Some(true),
             attester_data: Some(json!({"key": "value"})),
+            token_fmt: Some("ear".to_string()),
         };
         let sanitized = request.sanitize();
         assert!(sanitized.attester_info.is_none());
         assert_eq!(sanitized.challenge, Some(true));
         assert!(sanitized.attester_data.is_some());
+        assert_eq!(sanitized.token_fmt, Some("ear".to_string()));
 
         // Test with null attester_data
         let request = TokenRequest {
@@ -249,11 +326,13 @@ mod tests {
             }]),
             challenge: Some(false),
             attester_data: Some(json!(null)),
+            token_fmt: Some("eat".to_string()),
         };
         let sanitized = request.sanitize();
         assert!(sanitized.attester_info.is_some());
         assert_eq!(sanitized.challenge, Some(false));
         assert!(sanitized.attester_data.is_none());
+        assert_eq!(sanitized.token_fmt, Some("eat".to_string()));
 
         // Test with very large attester_info
         let large_attester_info = vec![
@@ -272,12 +351,14 @@ mod tests {
             attester_info: Some(large_attester_info.clone()),
             challenge: Some(true),
             attester_data: Some(json!({"complex": {"nested": "data"}})),
+            token_fmt: Some("ear".to_string()),
         };
         let sanitized = request.sanitize();
         assert!(sanitized.attester_info.is_some());
         assert_eq!(sanitized.attester_info.unwrap(), large_attester_info);
         assert_eq!(sanitized.challenge, Some(true));
         assert!(sanitized.attester_data.is_some());
+        assert_eq!(sanitized.token_fmt, Some("ear".to_string()));
     }
 
     #[test]
@@ -304,6 +385,7 @@ mod tests {
             }]),
             challenge: Some(true),
             attester_data: Some(complex_data.clone()),
+            token_fmt: Some("ear".to_string()),
         };
 
         let serialized = serde_json::to_string(&request).unwrap();
@@ -312,6 +394,7 @@ mod tests {
         assert_eq!(request.attester_info, deserialized.attester_info);
         assert_eq!(request.challenge, deserialized.challenge);
         assert_eq!(request.attester_data, deserialized.attester_data);
+        assert_eq!(request.token_fmt, deserialized.token_fmt);
     }
 
     #[test]
@@ -322,6 +405,7 @@ mod tests {
         assert!(request.attester_info.is_none());
         assert!(request.challenge.is_none());
         assert!(request.attester_data.is_none());
+        assert!(request.token_fmt.is_none());
 
         // Test with partial JSON
         let json_str = r#"{"challenge": true}"#;
@@ -329,6 +413,7 @@ mod tests {
         assert!(request.attester_info.is_none());
         assert_eq!(request.challenge, Some(true));
         assert!(request.attester_data.is_none());
+        assert!(request.token_fmt.is_none());
 
         // Test with complex attester_info
         let json_str = r#"{
@@ -343,13 +428,15 @@ mod tests {
                 }
             ],
             "challenge": false,
-            "attester_data": {"test": "data"}
+            "attester_data": {"test": "data"},
+            "token_fmt": "ear"
         }"#;
 
         let request: TokenRequest = serde_json::from_str(json_str).unwrap();
         assert!(request.attester_info.is_some());
         assert_eq!(request.challenge, Some(false));
         assert!(request.attester_data.is_some());
+        assert_eq!(request.token_fmt, Some("ear".to_string()));
 
         let attester_info = request.attester_info.unwrap();
         assert_eq!(attester_info.len(), 2);
@@ -366,6 +453,7 @@ mod tests {
             attester_info: None,
             challenge: Some(true),
             attester_data: None,
+            token_fmt: Some("ear".to_string()),
         };
         let result = futures::executor::block_on(TokenManager::get_token(&request));
         // This would require mocking do_challenge to succeed
@@ -376,10 +464,9 @@ mod tests {
             attester_info: None,
             challenge: Some(false),
             attester_data: None,
+            token_fmt: Some("ear".to_string()),
         };
         let result = futures::executor::block_on(TokenManager::get_token(&request));
-        // This would require mocking get_cached_token_for_current_node to return None
-        // and then do_challenge to succeed
         assert!(result.is_err()); // Expected to fail due to missing plugin manager
     }
 
@@ -393,6 +480,7 @@ mod tests {
             }]),
             challenge: Some(true),
             attester_data: Some(json!({"key": "value"})),
+            token_fmt: Some("ear".to_string()),
         };
 
         let request2 = TokenRequest {
@@ -403,6 +491,7 @@ mod tests {
             }]),
             challenge: Some(true),
             attester_data: Some(json!({"key": "value"})),
+            token_fmt: Some("ear".to_string()),
         };
 
         let request3 = TokenRequest {
@@ -413,12 +502,14 @@ mod tests {
             }]),
             challenge: Some(true),
             attester_data: Some(json!({"key": "value"})),
+            token_fmt: Some("ear".to_string()),
         };
 
         // Since TokenRequest doesn't implement PartialEq, we compare individual fields
         assert_eq!(request1.attester_info.as_ref().unwrap().len(), request2.attester_info.as_ref().unwrap().len());
         assert_eq!(request1.challenge, request2.challenge);
         assert_eq!(request1.attester_data, request2.attester_data);
+        assert_eq!(request1.token_fmt, request2.token_fmt);
 
         // Test that they are different from request3
         assert_ne!(request1.attester_info.as_ref().unwrap()[0].attester_type, request3.attester_info.as_ref().unwrap()[0].attester_type);
@@ -465,5 +556,102 @@ mod tests {
 
         assert_eq!(attester_info.attester_type, deserialized.attester_type);
         assert_eq!(attester_info.policy_ids, deserialized.policy_ids);
+    }
+
+    #[test]
+    fn test_token_fmt_validation() {
+        // Test valid token_fmt values
+        let request = TokenRequest {
+            attester_info: None,
+            challenge: None,
+            attester_data: None,
+            token_fmt: Some("eat".to_string()),
+        };
+        let sanitized = request.sanitize();
+        assert_eq!(sanitized.token_fmt, Some("eat".to_string()));
+
+        let request = TokenRequest {
+            attester_info: None,
+            challenge: None,
+            attester_data: None,
+            token_fmt: Some("ear".to_string()),
+        };
+        let sanitized = request.sanitize();
+        assert_eq!(sanitized.token_fmt, Some("ear".to_string()));
+
+        // Test case insensitive
+        let request = TokenRequest {
+            attester_info: None,
+            challenge: None,
+            attester_data: None,
+            token_fmt: Some("EAT".to_string()),
+        };
+        let sanitized = request.sanitize();
+        assert_eq!(sanitized.token_fmt, Some("eat".to_string()));
+
+        let request = TokenRequest {
+            attester_info: None,
+            challenge: None,
+            attester_data: None,
+            token_fmt: Some("EAR".to_string()),
+        };
+        let sanitized = request.sanitize();
+        assert_eq!(sanitized.token_fmt, Some("ear".to_string()));
+
+        // Test empty string token_fmt (should be invalid and remain empty after sanitize)
+        let request = TokenRequest {
+            attester_info: None,
+            challenge: None,
+            attester_data: None,
+            token_fmt: Some("".to_string()),
+        };
+        let sanitized = request.sanitize();
+        assert_eq!(sanitized.token_fmt, Some("".to_string()));
+        assert!(sanitized.validate().is_err());
+
+        // Test None token_fmt (should return None)
+        let request = TokenRequest {
+            attester_info: None,
+            challenge: None,
+            attester_data: None,
+            token_fmt: None,
+        };
+        let sanitized = request.sanitize();
+        assert!(sanitized.token_fmt.is_none());
+    }
+
+    #[test]
+    fn test_token_fmt_validation_errors() {
+        // Test invalid token_fmt values
+        let request = TokenRequest {
+            attester_info: None,
+            challenge: None,
+            attester_data: None,
+            token_fmt: Some("invalid".to_string()),
+        };
+        let sanitized = request.sanitize();
+        let err = sanitized.validate().unwrap_err();
+        assert!(err.to_string().contains("Invalid token format"));
+
+        // Test empty string token_fmt (should be invalid)
+        let request = TokenRequest {
+            attester_info: None,
+            challenge: None,
+            attester_data: None,
+            token_fmt: Some("".to_string()),
+        };
+        let sanitized = request.sanitize();
+        let err = sanitized.validate().unwrap_err();
+        assert!(err.to_string().contains("Invalid token format"));
+
+        let request = TokenRequest {
+            attester_info: None,
+            challenge: None,
+            attester_data: None,
+            token_fmt: Some("EAT_TOKEN".to_string()),
+        };
+        let sanitized = request.sanitize();
+        let err = sanitized.validate().unwrap_err();
+        assert!(err.to_string().contains("Invalid token format"));
     }
 }

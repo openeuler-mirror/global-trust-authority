@@ -1,0 +1,14 @@
+[Unit]
+Description=Remote attestation service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/attestation_service
+ExecReload=/usr/bin/attestation_service
+Restart=always
+RestartSec=10s
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target

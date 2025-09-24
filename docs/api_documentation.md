@@ -1,6 +1,7 @@
 # API Documentation
 
 ## Table of Contents
+
 - [1. General Information](#1-general-information)
 - [2. Agent API](#2-agent-api)
   - [2.1 Get Token](#21-get-token)
@@ -17,8 +18,9 @@
 ## 1. General Information
 
 ### 1.1 Request Headers
+
 | Field        | Type   | Required | Description                                             |
-|--------------|--------|----------|---------------------------------------------------------|
+| ------------ | ------ | -------- | ------------------------------------------------------- |
 | Content-Type | string | Yes      | Content-Type header                                     |
 | Accept       | string | No       | Accept header                                           |
 | API-Key      | string | No       | For API authentication, mutually exclusive with User-Id |
@@ -29,22 +31,26 @@
 ## 2. Agent API
 
 ### 2.1 Get Token
+
 **Description**: Get token
 
 **Request Method**: `POST /global-trust-authority/agent/v1/tokens`
 
 #### Request Parameters
-| Field         | Sub-field     | Type           | Required | parameter constraint       | Description                                                  |
-| ------------- | ------------- | -------------- | -------- | -------------------------- | ------------------------------------------------------------ |
-| attester_info |               | list of object | No       |                            | Challenge information                                        |
+
+| Field         | Sub-field     | Type           | Required | parameter constraint       | Description                                                                      |
+| ------------- | ------------- | -------------- | -------- | -------------------------- | -------------------------------------------------------------------------------- |
+| attester_info |               | list of object | No       |                            | Challenge information                                                            |
 |               | attester_type | string         | No       | tpm_boot/tpm_ima/virt_cca  | Challenge type, defaults to traversing activated client plugins if not specified |
-|               | policy_ids    | list of string | No       | The number is less than 10 | Applied policies, uses default policy if not specified       |
-| challenge     |               | bool           | No       |                            | Whether to challenge, defaults to no challenge               |
-| attester_data |               | object         | No       |                            | User data, reserved field                                    |
+|               | policy_ids    | list of string | No       | The number is less than 10 | Applied policies, uses default policy if not specified                           |
+| challenge     |               | bool           | No       |                            | Whether to challenge, defaults to no challenge                                   |
+| token_fmt     |               | string         | No       | eat/ear                    | Token format, default value is eat                                               |
+| attester_data |               | object         | No       |                            | User data, reserved field                                                        |
 
 #### Response Parameters
+
 | Field   | Type   | Required                   | Description   |
-|---------|--------|----------------------------|---------------|
+| ------- | ------ | -------------------------- | ------------- |
 | message | string | Yes for failed request     | Error message |
 | token   | object | Yes for successful request | Token object  |
 
@@ -61,42 +67,48 @@
       }
     ],
     "challenge": true,
+    "token_fmt": eat,
     "attester_data": {"test_key": "test_value"}
 }
 ```
 
 ###### response body
 
- ```
+```
  {
     "token":"xxx"
  }
- ```
+```
 
 ### 2.2 Get Evidence
+
 **Description**: Provides encapsulated Evidence data
 
 **Request Method**: `POST /global-trust-authority/agent/v1/evidences`
 
 #### Request Parameters
+
 | Field         | Sub-field     | Type            | Required | parameter constraint      | Description                                                                                                              |
-|---------------|---------------|-----------------|----------|---------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| ------------- | ------------- | --------------- | -------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | attesters     |               | list of objects | Yes      |                           | challenge information                                                                                                    |
 |               | attester_type | string          | yes      | tpm_boot/tpm_ima/virt_cca | challenge types                                                                                                          |
 |               | log_types     | list of strings | No       | ImaLog/TcgEventLog/CCEL   | types of log to collect                                                                                                  |
-| nonce_type    |               | string          | No       | ignore、user or verifier   | ignore/user/verifier(default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
+| nonce_type    |               | string          | No       | ignore、user or verifier  | ignore/user/verifier(default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
 | nonce         |               | string          | No       | Lenght 1-1024 bytes       | Nonce value, format: Base64                                                                                              |
+| token_fmt     |               | string          | No       | eat/ear                   | Token format, default value is eat                                                                                       |
 | attester_data |               | object          | No       |                           | User data, reserved field                                                                                                |
 
 #### Response Parameters
+
 | Field         | Sub-field     | Second-level Sub-field | Type            | Required | Description                                                           |
-|---------------|---------------|------------------------|-----------------|----------|-----------------------------------------------------------------------|
+| ------------- | ------------- | ---------------------- | --------------- | -------- | --------------------------------------------------------------------- |
 | agent_version |               |                        | string          | No       | Client version number                                                 |
 | measurements  |               |                        | list of objects | No       | Measurement data                                                      |
 |               | node_id       |                        | string          | No       | Node ID, corresponds to ueid                                          |
 |               | nonce_type    |                        | string          | No       | Nonce type, possible values: ignore, user or verifier                 |
 |               | nonce         |                        | string          | No       | Nonce value, format: Base64                                           |
 |               | attester_data |                        | object          | No       | User-defined data to be passed through, must be placed in token as-is |
+|               | token_fmt     |                        | string          | No       | Token format, default value is eat                                    |
 |               | evidences     |                        | list of objects | No       | Challenge report                                                      |
 |               |               | attester_type          | string          | No       | Challenge type                                                        |
 |               |               | evidence               | list of objects | No       | Specific evidence                                                     |
@@ -107,40 +119,39 @@
 
 ```
 {
-    "attesters": [{
+    "attesters": [
+      {
         "attester_type": "tpm_boot",
         "log_types": ["TcgEventLog"]
-    }],
+      }
+    ],
     "nonce_type": "verifier",
-    "nonce": {
-      "iat": 1749721474,
-      "value": "ImQiIm+6vwdKhAH6FC58XFxfuQ8TWvGxO6qlYwQK6P11Fi/ole/VMN9+4PJodOGt8E6+sbkfJOmuU96/Wc0JSw==",
-      "signature": "eEZHR66P+wPOuTTJanS0OhjqPLquLlJci2KxdptPz8+yLJpOVsOSUDsdeadv0a3aFStY130NdthZ/aBWQNWusblABhq0uepaS/29UFVUXT9tbSQG2PGhsG1+NQxkNr1/u/zktQLqThk9oxiEF8nwFozZTyaSJAvzV5b/3lIvJxa588OUug6PhurMKxIOx0KqpPxv/sHq74IUjW50r4ZtLUlRUxERLPORuobHaCjmJ9UMby6NZ6xlvjKVb5gAWGcupZS4M1PSAYb3+90MpflFrfu6gGLbe29o5CIWDgrwMYfgFGsJ9GaWdTZ20rbdn60USYPvManw0dkNr4Q4tKhs4VYX+IkByVddfexg9t5en/wC8axVk2zH6C7edoepgZfW2AJo8TKYdb8XEGIBteadlvGohX3w957/uZc3lAcJmNEImYTEzwJu4aj4pcOH54YhOWoIYY3fGaIw5JQ87VslG256VUo0h8QIlYUEtEisFpZzwuInOlNwB9o4TMbPuosd"
-    },
+    "nonce": "eyJpYXQiOjE3NTY5ODAwNjMsInZhbHVlIjoiZjMrYVc0cm1vWHUxSjNjaGlJZWNkMkJUWWYrdS84WXU0Q2VTZWYwUmt4MXYzeHJhNHZNYkNrc1locC9UaTRVWW9wN1ZvMm5XNXlsMGs4VXNQNnZrTkE9PSIsInNpZ25hdHVyZSI6Im9Mc09WbTh2OHY3ZllUTW9SZHdySjBrbWl4blFmRXIwTVliNExDa2NyZUpveUFDZmFBdlpGdmJiYURHTFJjOW9ndWkycVhMbnUwWFgvZDhEc1hhK2xwQzg2dXhSeWZtYklSdVpza2xscHd5WVV4TXlEbmFZQS9SSlFGaEtEakJjYUp0Ri9sQnpZYWMzVVNzQmFkNE5tMVE1cnBEb3RscFpHbHd5akhhdGtxUENPVzZORG9wbU9pZWtzM3RNVXpJV0NyNVZPVGhhRnpZdUdIZUZJMHdhdVdMWHY4TnlwRnlIbnllay8zdWhjdEhIc2gyRExZZUVBZW1keWQ2VnVDWmNqNjBzSjNyenF5ME9LTUFIQVRuOWhhZjk0M0k3SllDUlkvTU0xQ08rWmk1MHNTUXV1UHllVUpuTERpMGxwQmdDZmwyeWgyQ2phcU9QdE15ckhTREJwRlNNaC8xVW5xdDBlaXFzcFRESDNtNm81TXd3dUFQWGJmRFZvaDArR2dPaUowaENLUnhLY3NXSXVHNythemNoS0U3U1kyakIxWWg0NjlpSTN2MUpQRWhobnVtdC9YWENhRXBYd29aVENLRUN6NjJMYnByOWp3SzZXVVZyS2t5L3hmbkdKTlR3NWxHNGFBS1hlOFdzSldtYnpXK0Yvd0JFa0E2amdHK1hWT1J6In0=",
+    "token_fmt": "eat",
     "attester_data": {"test_key": "test_value"}
-  }'
+}
 ```
 
 ###### response body
 
- ```
-{
-    "agent_version":"0.1.0","measurements":[{"node_id":"TPM AK","nonce_type":"verifier","nonce":"eyJpYXQiOjE3NTU2NzQ2MzQsInZhbHVlIjoiZld0M2I0N1lMcUhUZFB2ZXRQUHBCL3ZqOW0vTDR1bU4vL0RrYU0xUHE4cFdKN3hKc1BsSXUxUmhQWmFQYTZ5T09IQW1kU0pxQVdsUFF6aWcyeDdxbGc9PSIsInNpZ25hdHVyZSI6ImVVSDlGbmdpWU1rYlV6S051a0hpZTQxYUE5dmlTQXdCSTRwTWlhTHhIaEppZG5GK09aUDFPcnBmTVBVU3hpZllJZERCWEM3ekJHb3lXeG9QbFhDM2FuaUcwU3RnbVZWbnFRTyt5LzE2bGowS211Z0ZNTzdzQWwraEkvcXhTUHJmUXJlZE9TTUVrM055a0oxczhFT2VROHlmR1BwT0YvOXFaWGNkVGVPYVppOEtBQ2M5bll5K3NtS2tha0FiS2RueFp6NUJlOWJBREtZSWN5REQxR0dnQ2RxNzBDQ1NiM3ZyWXcxWXJxOEhiTlUxRGpRelNvOFUva2lQQm1LdWp2SndHWCtFKzErSUFzRmtSUW5ZMjQwbGpRQzcxbjMwZ3VJUnRxN1FXUTNKY2ZWR3BpYjAyK3V5ZHVZQjAwL21Ub2l3dDhhbTFiR1cwckdDSXQ3bmcvWFZjQnJ5SWhuOXd6MzJybHpaZk5BaksrVVVicUNhSzNDYlp2Uzc2YzNUUEVuc2phRGc0MUYzM0pXN2duUE9lVFFvckJmNCsxb1ZEMXI2MlhyckdFaHVFdVBFVllDRE5uZHh2cGtUU1k2MlVZeWxWaDUyNC9ES1ZwcjlYNTVyWVhJMmN3UGVUeGkxejNEL3BEMHcxNkNBOHFDSThEZVVYalBMWCtud3lha0hSa3dCIn0=","attester_data":{"test_key":"test_value"},"evidences":[{"attester_type":"tpm_boot","evidence":{"ak_cert":"-----BEGIN CERTIFICATE-----\nxxxxx\n-----END CERTIFICATE-----","quote":{"quote_data":"/1RDR4AYACIAC6dK2j3UWnqCmI9se9Itpmwo+GB2VAKRbS/VU2Iczqe1ACA1SjdRM3NRYkY2WXA2UjZUMVFtOGsxZ1g3ajlZenZINAAAAACDq3eBAAAAGwAAAAABIBkQIwAWNjYAAAABAAsD/wAAACDmjVToNmS/+eKvnv6kvbrY+7FU8ALNmB8Ntz2L9wJotw==","signature":"ABQACwEAnm7Y3gZrwC81wPiFtz6I+2agoG7FOmFCSCz6OwuJScJ1fJTSL+UD0V/9R0NVDeH5ooRCc6z7r+khisBUiuOaC4o61W0CLrjZH35VXiLFtj2tQgmB8AKVKmTrj7sUN5Lu77NqUcKr4AWO2NgJyWqZgns1K5KKu/pcAzS679xUk6ZMdNg0hzJYQM6ufG90hjJO7Xa6Uww0T8fufWWEVOWnKlQmRM2DOSGIwWhuMf5/vHYSNab5s0roICIKj3wNlsP25t69kfy6PLBN2h/ZH2R5KsqplueKQr1ekuvwOtShBzfuijcxnbnLLyJkfjSWzkfSYACthMUvpkqI6by8v0ThLQ=="},"pcrs":{"hash_alg":"sha256","pcr_values":[{"pcr_index":0,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":1,"pcr_value":"a32bf8bf329907dc2b4839ff3c61b456a9856d12110f49d490df33baf189340e"},{"pcr_index":2,"pcr_value":"a9d5bdf3b0b034a434ef3adde2d5cb0a7533803f97f8889f1174ab60bd4dcb70"},{"pcr_index":3,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":4,"pcr_value":"fce7f1083082b16cfe2b085dd7858bb11a37c09b78e36c79e5a2fd529353c4e2"},{"pcr_index":5,"pcr_value":"8edde912699ceddddc7d9a3d7ee44a8b1b1910815692def6c9e637e2b939f941"},{"pcr_index":6,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":7,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"}]},"logs":[{"log_type":"TcgEventLog","log_data":"AAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACEAAABTcGVjIElEIEV2ZW50MDMAAAAAAAACAgIBAAAACwAgAAABAAAABgAAAAEAAAALAKUQl5WfT2u4kWVrAbSwFzFjH47hjONtvzakrA+LlDtEHAAAAAEAAAAUAAAAP56Gs4+udkBZNHIbDv9fS+P5kjUCAAAABQAAAAEAAAALAM6xuxF9FKN/B+I8luWAcp4/zBL3SZFbvcjtrfwg4hrPFQAAAFN0YXJ0IE9wdGlvbiBST00gU2NhbgIAAAAGAAAAAQAAAAsAQsNfc9yoYaT2lBuIXP60QTs/V44tYaVIrSbo/STF/vIgAAAABwAAABgAAAAAAAAAh/vA7LHufU2MjIjH2KL7Psj5nqUCAAAABgAAAAEAAAALAEhCcfsTwdRfjq1K1720aNnRAZTpRdNnOcSJR3WojkSDIAAAAAcAAAAYAAAAAAAAAKF3/pUe76cFAoGMcB9F4l1zCtadAgAAAAYAAAABAAAACwDoVl9LfTKvNQynp1Xau/dtFxpE0UeBPIM0P3be9myybSAAAAAHAAAAGAAAAAAAAABnDJzHm0hZlEcF7s5xDcMyGIt5tAQAAAAFAAAAAQAAAAsAehmlpW/SxKnJ29jHRTfzTQvEQqSlKMNvtEo8zYWN8SsPAAAAQ2FsbGluZyBJTlQgMTloAAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAUAAAABAAAACwCTSuIFkroG1wKWsgvJKnBsFgwLvBFfJlCJS3Y3UhxlOhwAAABCb290aW5nIEJDViBkZXZpY2UgODBoIChIREQpBAAAAA0AAAABAAAACwCfj8pNuhjuU9V1PHZiqzy9cTY3G9yjOqzfC6pJyRPlLAMAAABNQlIFAAAADgAAAAEAAAALAANFsCy5TpPzbQ926+9+lu9QuPhi1KuuUrcygr0MMilREwAAAE1CUiBQQVJUSVRJT05fVEFCTEU="}]}}]}]
-}
- ```
+```
+{"agent_version":"0.1.0","measurements":[{"node_id":"TPM AK","nonce":"eyJpYXQiOjE3NTY5ODAwNjMsInZhbHVlIjoiZjMrYVc0cm1vWHUxSjNjaGlJZWNkMkJUWWYrdS84WXU0Q2VTZWYwUmt4MXYzeHJhNHZNYkNrc1locC9UaTRVWW9wN1ZvMm5XNXlsMGs4VXNQNnZrTkE9PSIsInNpZ25hdHVyZSI6Im9Mc09WbTh2OHY3ZllUTW9SZHdySjBrbWl4blFmRXIwTVliNExDa2NyZUpveUFDZmFBdlpGdmJiYURHTFJjOW9ndWkycVhMbnUwWFgvZDhEc1hhK2xwQzg2dXhSeWZtYklSdVpza2xscHd5WVV4TXlEbmFZQS9SSlFGaEtEakJjYUp0Ri9sQnpZYWMzVVNzQmFkNE5tMVE1cnBEb3RscFpHbHd5akhhdGtxUENPVzZORG9wbU9pZWtzM3RNVXpJV0NyNVZPVGhhRnpZdUdIZUZJMHdhdVdMWHY4TnlwRnlIbnllay8zdWhjdEhIc2gyRExZZUVBZW1keWQ2VnVDWmNqNjBzSjNyenF5ME9LTUFIQVRuOWhhZjk0M0k3SllDUlkvTU0xQ08rWmk1MHNTUXV1UHllVUpuTERpMGxwQmdDZmwyeWgyQ2phcU9QdE15ckhTREJwRlNNaC8xVW5xdDBlaXFzcFRESDNtNm81TXd3dUFQWGJmRFZvaDArR2dPaUowaENLUnhLY3NXSXVHNythemNoS0U3U1kyakIxWWg0NjlpSTN2MUpQRWhobnVtdC9YWENhRXBYd29aVENLRUN6NjJMYnByOWp3SzZXVVZyS2t5L3hmbkdKTlR3NWxHNGFBS1hlOFdzSldtYnpXK0Yvd0JFa0E2amdHK1hWT1J6In0=","nonce_type":"verifier","attester_data":{"test_key":"test_value"},"token_fmt":"eat","evidences":[{"attester_type":"tpm_boot","evidence":{"ak_certs":[{"cert_type":"iak","cert_data":"-----BEGIN CERTIFICATE-----\nMIIDBjCCAe4CFBL8z+Gow59PViXBqsqFMR2GhOUdMA0GCSqGSIb3DQEBCwUAMEcxCzAJBgNVBAYTAkNOMRAwDgYDVQQKDAd0ZXN0IENBMQ0wCwYDVQQLDAR0ZXN0MRcwFQYDVQQDDA5UUE0gUm9vdCBDQSB2MjAeFw0yNTA0MjgxNDA2MjJaFw0zNTA0MjYxNDA2MjJaMDgxDzANBgNVBAMMBlRQTSBBSzEYMBYGA1UECgwPTXkgT3JnYW5pemF0aW9uMQswCQYDVQQGEwJDTjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALKuVeLxr1WUlf3/IgDEmQ4KcIZQfsuu38U6s8PeiNbQytEBhMSIiqdteGevb+DHU7jtO+n39GJaBwp1OjuOJCo5QemaKidlG1IEfRxVO82cQ99FPXuqxFNIWcM4c6nWTmx+e3WDDSv8hRAowVgRsdqFkcR9fP9H7ahl8kyrOm5aSU2wKGfopxVBdUDlD+H+EaflwU0okXV8NW/Vq6+dFloCo6dMp37e3VI+YDc73Jp8xed7KmXqzUGUOWclBjAADg1W5hBdSDdCEzwJ9+1DspcyNkMYhs0UlXsHfxRY28Fmk66MIPEmcbbL/9Fs68qa0KEENABV5Vwb+rWFLlYviEkCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAw3l3M5Mq2hlL3mt01kzgRDJH5zLooWpq1Ze2BKKGaSbpqcvLI48WV0pvtJXrKELZecyTnVWMHjOVqrsWXUpzIx7sd4Gwrg4wa5xAU4azSI70Fa8apESI/m9K0ECUyhIOWdIo1xUHr21wPlLn09v1Ey59MQnfu/HvIhRifaEqEbHTw6PyQBBuWJ+YoAJ+Ry1Xs445Pvq2/wvBq6uypRcBnki/1mfabkOacE+pTQTvmji1iAl+40t6wcU+5KI6l4Mdor5wOzxWPIJJaq4NVUErAwtY/o44ZU1YAqdw2z5tyFz1SapWCDvqaEqm3FaOHtcozkHoHeZPMzKlWEupJf/Ekw==\n-----END CERTIFICATE-----"}],"quote":{"quote_data":"/1RDR4AYACIAC6dK2j3UWnqCmI9se9Itpmwo+GB2VAKRbS/VU2Iczqe1ACCt3tsBfBuY8awf4+x3f57JuaOsDHMDnS5mMyIN/sRT5gAAAAKiT1w+AAAAHgAAAAABIBkQIwAWNjYAAAABAAsD/wAAACDmjVToNmS/+eKvnv6kvbrY+7FU8ALNmB8Ntz2L9wJotw==","signature":"ABQACwEAcV8BD4Y+6Gi4sR2MkhbqVpN/Zr7UxkcWBXAEpbnbVOX/dF5Z3mvSr/mFSoxCpK6NFL2TtsILblT0nw4nKvc6B3Sl8wzzOrGMWPKvN15Akj6qgvvmvZjq5yvH5LJ32Al/iY0HQvLee68r8IumPiInlYNzGYUPeZu8AuJv/gdngmE8s1gtEsZFe3wvlAcY3Tn/LboDBsl3f10aPLmzEdVRB1lJQMyTSfayJtJunjPz3RjXJ2F8jNYo0pNei6Ut9LalTKC598GsKV3Jhy6Oc0lh0rAlPH7AsO6gMpaf7t2XuiYuKVQYSipmM9sniHEZKkSUo3YdO77CAvpgpQcTkJ6zfw=="},"pcrs":{"hash_alg":"sha256","pcr_values":[{"pcr_index":0,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":1,"pcr_value":"a32bf8bf329907dc2b4839ff3c61b456a9856d12110f49d490df33baf189340e"},{"pcr_index":2,"pcr_value":"a9d5bdf3b0b034a434ef3adde2d5cb0a7533803f97f8889f1174ab60bd4dcb70"},{"pcr_index":3,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":4,"pcr_value":"fce7f1083082b16cfe2b085dd7858bb11a37c09b78e36c79e5a2fd529353c4e2"},{"pcr_index":5,"pcr_value":"8edde912699ceddddc7d9a3d7ee44a8b1b1910815692def6c9e637e2b939f941"},{"pcr_index":6,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"},{"pcr_index":7,"pcr_value":"e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93"}]},"logs":[{"log_type":"TcgEventLog","log_data":"AAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACEAAABTcGVjIElEIEV2ZW50MDMAAAAAAAACAgIBAAAACwAgAAABAAAABgAAAAEAAAALAKUQl5WfT2u4kWVrAbSwFzFjH47hjONtvzakrA+LlDtEHAAAAAEAAAAUAAAAP56Gs4+udkBZNHIbDv9fS+P5kjUCAAAABQAAAAEAAAALAM6xuxF9FKN/B+I8luWAcp4/zBL3SZFbvcjtrfwg4hrPFQAAAFN0YXJ0IE9wdGlvbiBST00gU2NhbgIAAAAGAAAAAQAAAAsAQsNfc9yoYaT2lBuIXP60QTs/V44tYaVIrSbo/STF/vIgAAAABwAAABgAAAAAAAAAh/vA7LHufU2MjIjH2KL7Psj5nqUCAAAABgAAAAEAAAALAEhCcfsTwdRfjq1K1720aNnRAZTpRdNnOcSJR3WojkSDIAAAAAcAAAAYAAAAAAAAAKF3/pUe76cFAoGMcB9F4l1zCtadAgAAAAYAAAABAAAACwDoVl9LfTKvNQynp1Xau/dtFxpE0UeBPIM0P3be9myybSAAAAAHAAAAGAAAAAAAAABnDJzHm0hZlEcF7s5xDcMyGIt5tAQAAAAFAAAAAQAAAAsAehmlpW/SxKnJ29jHRTfzTQvEQqSlKMNvtEo8zYWN8SsPAAAAQ2FsbGluZyBJTlQgMTloAAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////AwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BQAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BgAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BwAAAAQAAAABAAAACwCtlRMbwLeZwLGvR3+xT88mpqn3YHnki/CQrLfoNnv9DgQAAAD/////BAAAAAUAAAABAAAACwCTSuIFkroG1wKWsgvJKnBsFgwLvBFfJlCJS3Y3UhxlOhwAAABCb290aW5nIEJDViBkZXZpY2UgODBoIChIREQpBAAAAA0AAAABAAAACwCfj8pNuhjuU9V1PHZiqzy9cTY3G9yjOqzfC6pJyRPlLAMAAABNQlIFAAAADgAAAAEAAAALAANFsCy5TpPzbQ926+9+lu9QuPhi1KuuUrcygr0MMilREwAAAE1CUiBQQVJUSVRJT05fVEFCTEU="}]}}]}]}
+```
 
 ## 3. Service API
 
 ### 3.1 Reference Value Management
 
 #### 3.1.1 Add Reference Value
+
 **Description**: Add reference value
 
 **Request Method**: `POST /global-trust-authority/service/v1/ref_value`
 
 ##### Request Parameters
+
 | Field         | Sub-field | Type    | Required | parameter constraint    | Description                                             |
-|---------------|-----------|---------|----------|-------------------------|---------------------------------------------------------|
+| ------------- | --------- | ------- | -------- | ----------------------- | ------------------------------------------------------- |
 | name          |           | string  | Yes      | Length 1-255 characters | Reference value name                                    |
 | description   |           | string  | No       | Length 0-512 characters | Reference value description                             |
 | attester_type |           | string  | Yes      | only support tpm_ima    | Applicable challenge plugin type                        |
@@ -148,8 +159,9 @@
 | is_default    |           | boolean | No       | true or false           | Whether it's default reference value, defaults to false |
 
 ##### Response Parameters
+
 | Field     | Sub-field | Type   | Required                   | Description                    |
-|-----------|-----------|--------|----------------------------|--------------------------------|
+| --------- | --------- | ------ | -------------------------- | ------------------------------ |
 | message   |           | string | Yes for failed request     | Error message                  |
 | ref_value |           | object | Yes for successful request | Reference value information    |
 |           | id        | string | Yes                        | Reference value ID             |
@@ -172,7 +184,7 @@
 
 ###### response body
 
- ```
+```
 {
     "ref_value": {
         "id": "7255326052342740548",
@@ -180,9 +192,7 @@
         "name": "test"
     }
 }
- ```
-
-
+```
 
 #### 3.1.2 Update Reference Value
 
@@ -191,8 +201,9 @@
 **Request Method**: `PUT /global-trust-authority/service/v1/ref_value`
 
 ##### Request Parameters
+
 | Field         | Sub-field | Type    | Required | parameter constraint    | Description                                                     |
-|---------------|-----------|---------|----------|-------------------------|-----------------------------------------------------------------|
+| ------------- | --------- | ------- | -------- | ----------------------- | --------------------------------------------------------------- |
 | id            |           | string  | Yes      | Length 1-32 characters  | Reference value ID                                              |
 | name          |           | string  | No       | Length 1-255 characters | Reference value name, directly overwrites when name is the same |
 | description   |           | string  | No       | Length 0-512 characters | Reference value description                                     |
@@ -201,8 +212,9 @@
 | attester_type |           | string  | No       | only support tpm_ima    | Applicable challenge plugin type                                |
 
 ##### Response Parameters
+
 | Field     | Sub-field | Type   | Required                   | Description                           |
-|-----------|-----------|--------|----------------------------|---------------------------------------|
+| --------- | --------- | ------ | -------------------------- | ------------------------------------- |
 | message   |           | string | Yes for failed request     | Error message                         |
 | ref_value |           | object | Yes for successful request | Reference value information           |
 |           | id        | string | Yes                        | Reference value ID                    |
@@ -225,7 +237,7 @@
 
 ###### response body
 
- ```
+```
 {
     "ref_value": {
         "id": "7255326052342740548",
@@ -233,7 +245,7 @@
         "name": "test"
     }
 }
- ```
+```
 
 #### 3.1.3 Query Reference Value
 
@@ -242,14 +254,16 @@
 **Request Method**: `GET /global-trust-authority/service/v1/ref_value`
 
 ##### Request Parameters
+
 | Field         | Sub-field | Type           | Required | parameter constraint   | Description                                 |
-|---------------|-----------|----------------|----------|------------------------|---------------------------------------------|
+| ------------- | --------- | -------------- | -------- | ---------------------- | ------------------------------------------- |
 | attester_type |           | string         | No       | tpm_ima                | Query reference value for specified purpose |
 | ids           |           | List of String | No       | Length 1-32 characters | Reference value name, if empty, input 10    |
 
 ##### Response Parameters
+
 | Field      | Sub-field     | Type            | Required                   | Description                                             |
-|------------|---------------|-----------------|----------------------------|---------------------------------------------------------|
+| ---------- | ------------- | --------------- | -------------------------- | ------------------------------------------------------- |
 | message    |               | string          | Yes for failed request     | Error message                                           |
 | ref_values |               | list of objects | Yes for successful request | Reference value information                             |
 |            | id            | string          | Yes                        | Reference value ID                                      |
@@ -275,7 +289,7 @@ http(s)://ip:port/global-trust-authority/service/v1/refvalue?ids=2b0ead4b-6a15-4
 
 ###### response body
 
- ```
+```
 {
     "ref_value": [
         {
@@ -293,7 +307,7 @@ http(s)://ip:port/global-trust-authority/service/v1/refvalue?ids=2b0ead4b-6a15-4
         }
     ]
 }
- ```
+```
 
 #### 3.1.4 Delete Reference Value
 
@@ -302,15 +316,17 @@ http(s)://ip:port/global-trust-authority/service/v1/refvalue?ids=2b0ead4b-6a15-4
 **Request Method**: `DELETE /global-trust-authority/service/v1/ref_value`
 
 ##### Request Parameters
+
 | Field         | Sub-field | Type           | Required | parameter constraint   | Description          |
-|---------------|-----------|----------------|----------|------------------------|----------------------|
+| ------------- | --------- | -------------- | -------- | ---------------------- | -------------------- |
 | ids           |           | List of String | No       | Length 1-32 characters | Reference value IDs  |
 | attester_type |           | string         | No       | tpm_ima                | Reference value type |
 | delete_type   |           | string         | Yes      | id, type, all          | Delete Type          |
 
 ##### Response Parameters
+
 | Field   | Type   | Required               | Description   |
-|---------|--------|------------------------|---------------|
+| ------- | ------ | ---------------------- | ------------- |
 | message | string | Yes for failed request | Error message |
 
 ##### Example of request
@@ -326,20 +342,22 @@ http(s)://ip:port/global-trust-authority/service/v1/refvalue?ids=2b0ead4b-6a15-4
 
 ###### response body
 
- ```
+```
 empty
- ```
+```
 
 ### 3.2 Certificate Management
 
 #### 3.2.1 Add Certificate
+
 **Description**: Add certificate
 
 **Request Method**: `POST /global-trust-authority/service/v1/cert`
 
 ##### Request Parameters
+
 | Field       | Sub-field | Type           | Required | parameter constraint                 | Description                                                             |
-|-------------|-----------|----------------|----------|--------------------------------------|-------------------------------------------------------------------------|
+| ----------- | --------- | -------------- | -------- | ------------------------------------ | ----------------------------------------------------------------------- |
 | name        |           | string         | Yes      | Length 1-255 characters              | Certificate name                                                        |
 | description |           | string         | No       | Length 0-512 characters              | Description                                                             |
 | type        |           | List of String | Yes      | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, supported enums: refvalue/policy/tpm_boot/tpm_ima/crl |
@@ -348,8 +366,9 @@ empty
 | crl_content |           | string         | No       |                                      | Certificate revocation list                                             |
 
 ##### Response Parameters
+
 | Field   | Sub-field | Type   | Required                   | Description                      |
-|---------|-----------|--------|----------------------------|----------------------------------|
+| ------- | --------- | ------ | -------------------------- | -------------------------------- |
 | message |           | string | Yes for failed request     | Error message                    |
 | cert    |           | object | Yes for successful request | Certificate                      |
 |         | cert_id   | string | Yes                        | Certificate ID                   |
@@ -373,7 +392,7 @@ empty
 
 ###### insert cert response body
 
- ```
+```
 {
     "cert": {
         "cert_id": "4740ac7fb9c659e5a1cafad301e1ed00",
@@ -381,7 +400,7 @@ empty
         "version": 1
     }
 }
- ```
+```
 
 ###### insert crl request body
 
@@ -395,14 +414,14 @@ empty
 
 ###### insert crl response body
 
- ```
+```
 {
     "crl": {
         "crl_id": "11398858-cc4b-49f8-8e6e-b98c82aaf496",
         "crl_name": "crl.pem"
     }
 }
- ```
+```
 
 #### 3.2.2 Update Certificate
 
@@ -411,8 +430,9 @@ empty
 **Request Method**: `PUT /global-trust-authority/service/v1/cert`
 
 ##### Request Parameters
+
 | Field       | Type           | Required | parameter constraint                 | Description                                                    |
-|-------------|----------------|----------|--------------------------------------|----------------------------------------------------------------|
+| ----------- | -------------- | -------- | ------------------------------------ | -------------------------------------------------------------- |
 | id          | string         | Yes      | Length 1-32 characters               | Certificate ID                                                 |
 | name        | string         | No       | Length 1-255 characters              | Certificate name                                               |
 | description | string         | No       | Length 0-512 characters              | Description                                                    |
@@ -420,8 +440,9 @@ empty
 | is_default  | boolean        | No       | true or false                        | Whether it's default certificate, defaults to false            |
 
 ##### Response Parameters
+
 | Field   | Sub-field | Type   | Required                   | Description                       |
-|---------|-----------|--------|----------------------------|-----------------------------------|
+| ------- | --------- | ------ | -------------------------- | --------------------------------- |
 | message |           | string | Yes for failed request     | Error message                     |
 | cert    |           | object | Yes for successful request |                                   |
 |         | cert_id   | string | Yes                        | Certificate ID                    |
@@ -442,7 +463,7 @@ empty
 
 ###### response body
 
- ```
+```
 {
     "cert": {
         "cert_id": "4740ac7fb9c659e5a1cafad301e1ed00",
@@ -450,7 +471,7 @@ empty
         "version": 2
     }
 }
- ```
+```
 
 #### 3.2.3 Query Certificate
 
@@ -459,16 +480,18 @@ empty
 **Request Method**: `GET /global-trust-authority/service/v1/cert`
 
 ##### Request Parameters
+
 Note: To query revoked certificates, type must specify crl.
 
 | Field     | Sub-field | Type           | Required | parameter constraint                 | Description                             |
-|-----------|-----------|----------------|----------|--------------------------------------|-----------------------------------------|
+| --------- | --------- | -------------- | -------- | ------------------------------------ | --------------------------------------- |
 | cert_type |           | string         | No       | refvalue/policy/tpm_boot/tpm_ima/crl | Query certificate for specified purpose |
 | ids       |           | List of String | No       |                                      | Certificate ID, maximum 100             |
 
 ##### Response Parameters
+
 | Field   | Sub-field           | Type           | Required                   | Description                                              |
-|---------|---------------------|----------------|----------------------------|----------------------------------------------------------|
+| ------- | ------------------- | -------------- | -------------------------- | -------------------------------------------------------- |
 | message |                     | string         | Yes for failed request     | Error message                                            |
 | certs   |                     | List of Object | Yes for successful request | Certificate information                                  |
 |         | cert_id             | string         | Yes                        | Certificate ID                                           |
@@ -490,7 +513,6 @@ Note: To query revoked certificates, type must specify crl.
 
 > Note: When querying with ids, returns all fields of entries filtered by id; without ids, only returns required fields like id, name, version, etc., does not return specific content (entries filtered by type, if type not filled returns all for that user)
 
-
 ##### Example of request
 
 ###### query cert request url
@@ -501,7 +523,7 @@ http(s)://ip:port/global-trust-authority/service/v1/cert?ids=4740ac7fb9c659e5a1c
 
 ###### query cert response body
 
- ```
+```
 {
   "certs": [
     {
@@ -519,7 +541,7 @@ http(s)://ip:port/global-trust-authority/service/v1/cert?ids=4740ac7fb9c659e5a1c
     }
   ]
 }
- ```
+```
 
 ###### query crl request url
 
@@ -529,7 +551,7 @@ http(s)://ip:port/global-trust-authority/service/v1/cert?cert_type=crl
 
 ###### query crl response body
 
- ```
+```
 {
     "crls": [
         {
@@ -539,7 +561,7 @@ http(s)://ip:port/global-trust-authority/service/v1/cert?cert_type=crl
         }
     ]
 }
- ```
+```
 
 #### 3.2.4 Delete Certificate
 
@@ -548,17 +570,19 @@ http(s)://ip:port/global-trust-authority/service/v1/cert?cert_type=crl
 **Request Method**: `DELETE /global-trust-authority/service/v1/cert`
 
 ##### Request Parameters
+
 Note: To delete revoked certificates, type must specify crl.
 
 | Field       | Sub-field | Type           | Required | parameter constraint                 | Description                                                                    |
-|-------------|-----------|----------------|----------|--------------------------------------|--------------------------------------------------------------------------------|
+| ----------- | --------- | -------------- | -------- | ------------------------------------ | ------------------------------------------------------------------------------ |
 | delete_type |           | string         | Yes      | "id""type""all"                      | Delete type "id""type""all", When the type is crl, there is no need to pass it |
 | ids         |           | List of String | No       | Maximum 10 ids                       | Certificate ID list                                                            |
 | type        |           | string         | No       | refvalue/policy/tpm_boot/tpm_ima/crl | Certificate type, refvalue/policy/tpm_boot/tpm_ima/crl                         |
 
 ##### Response Parameters
+
 | Field   | Type   | Required               | Description   |
-|---------|--------|------------------------|---------------|
+| ------- | ------ | ---------------------- | ------------- |
 | message | string | Yes for failed request | Error message |
 
 ###### delete cert request body
@@ -582,23 +606,25 @@ Note: To delete revoked certificates, type must specify crl.
 ### 3.3 Challenge Related
 
 #### 3.3.1 Request Nonce
+
 **Description**: Request nonce
 
 **Request Method**: `POST /global-trust-authority/service/v1/challenge`
 
 ##### Request Parameters
-| Field         | Type           | Required | parameter constraint            | Description                                        | Note                               |
-|---------------|----------------|----------|---------------------------------|----------------------------------------------------|------------------------------------|
-| agent_version | string         | No       | Length 1-50 characters          | Client version number                              | Format is x.x.x, e.g., 1.0.0       |
-| attester_type | list of string | Yes      | "tpm_boot","tpm_ima","virt_cca" | Plugin type, server returns error if not supported | Only supports "tpm_boot","tpm_ima" |
+
+| Field         | Type           | Required | parameter constraint   | Description                                        | Note                               |
+| ------------- | -------------- | -------- | ---------------------- | -------------------------------------------------- | ---------------------------------- |
+| agent_version | string         | No       | Length 1-50 characters | Client version number                              | Format is x.x.x, e.g., 1.0.0       |
+| attester_type | list of string | Yes      | "tpm_boot","tpm_ima"   | Plugin type, server returns error if not supported | Only supports "tpm_boot","tpm_ima" |
 
 ##### Response Parameters
 
-| Field           | Type   | Required                   | Description       | Note                                                         |
-| --------------- | ------ | -------------------------- | ----------------- | ------------------------------------------------------------ |
-| service_version | string | Yes                        | Server version    | Format is x.x.x, e.g., 1.0.0                                 |
-| message         | string | Yes for failed request     | Error message     | Maximum length 1024 bytes                                    |
-| nonce           | string | Yes for successful request | Nonce information | Base64 encoded of nonce struct. <br />Nonce struct is described in following table. |
+| Field           | Type   | Required                   | Description       | Note                                                                               |
+| --------------- | ------ | -------------------------- | ----------------- | ---------------------------------------------------------------------------------- |
+| service_version | string | Yes                        | Server version    | Format is x.x.x, e.g., 1.0.0                                                       |
+| message         | string | Yes for failed request     | Error message     | Maximum length 1024 bytes                                                          |
+| nonce           | string | Yes for successful request | Nonce information | Base64 encoded of nonce struct.<br />Nonce struct is described in following table. |
 
 **nonce struct:**
 
@@ -607,8 +633,6 @@ Note: To delete revoked certificates, type must specify crl.
 | iat       | number | Yes      | Timestamp for issuance                     |
 | value     | string | Yes      | Random bytes, base64 encoded               |
 | signature | string | Yes      | Signature of iat and value, base64 encoded |
-
-
 
 ##### Example of request
 
@@ -623,12 +647,12 @@ Note: To delete revoked certificates, type must specify crl.
 
 ###### response body
 
- ```json
+```json
 {
     "service_version": "1.0",
     "nonce": "eyJpYXQiOjE3NTQ1NTIzNjQsInZhbHVlIjoiR3dvL3Z4WUZCYU5ZMWZlUGJUNytYdVZ2QXZ1ck9qU1JBTEx0bWg2OTZVcGFDR21qM1RrT1NRK3pqYkVBSWlkbUNvSmlySVF0RFAyZkJKdHFlNVFnT0E9PSIsInNpZ25hdHVyZSI6Im9VOFYwVnZYenhEbFJQRG56UzdnTGF4bkQvVEticGVwcytUNEpmenBPQkZ2ekR0b0NmOEEwRTF3RVB0dVVGajJmYjVSQkVsZkoxajc3WXQya1lQWFU5ZjIzWExOeXhFejRDZnZmQnZKQ2NFVjZCT0hYcVNTd3RKN25PUjZZN1JjekhoWnJ5UnhYd093N3dzcU9ZYVdRSGl0aW52ZGtRYzNjSDhUS1JzUjFaaS9FeFhHNHNYMXl6LzZ4eW9tbFRFOC9rYVZTY1dZSkI5K3A3ZnBMZTQ0S29MQXN5N3ZxcWhob1JYZXhaZXRzOUlLaE5FMmNXNityWHYxTFBOYzdXT3RWT2ZOQm1ZNUhrTW5hOHRIbUVHM0Z1SUNaVDdadjI3V3IxNmh1V2s5SEh6T1BDZjlhVHk5SnkvcnV0UUVRenZTOEhhbitweGZjZThQV0greFpKUFFVSFpZZkI3SmFZZVkwb1ltUWIzbDFHZ3RVWmc2TjZmVHFTRWdRMzBhL1BEMjVaNkNzb3Njdi9zb1B2b0NSZzNUQ2xwKzM0cFVpSXM2c2Z2OG56ZzZFQ2ZtOXBKazhKS2p3ZlNtcHA2N2VUWDVUN1cyNjFGdGlRcDNMQnVKbzF6Y1pZWmxXVlpFRCtqUDdYdk1OZnB1Ulg3emlJMFFUbVhVelBmSldoY3pzbUFTIn0="
 }
- ```
+```
 
 Note: nonce can be base64 decoded as:
 
@@ -640,8 +664,6 @@ Note: nonce can be base64 decoded as:
 }
 ```
 
-
-
 #### 3.3.2 Remote Attestation
 
 **Description**: Report evidence for remote attestation
@@ -649,22 +671,25 @@ Note: nonce can be base64 decoded as:
 **Request Method**: `POST /global-trust-authority/service/v1/attest`
 
 ##### Request Parameters
-| Field         | Sub-field     | Second-level Sub-field | Type            | Required | parameter constraint    | Description                                                  |
-| ------------- | ------------- | ---------------------- | --------------- | -------- | ----------------------- | ------------------------------------------------------------ |
-| agent_version |               |                        | string          | No       | Length 1-50 characters  | Client version number                                        |
-| measurements  |               |                        | list of objects | Yes      |                         | Measurement data                                             |
-|               | node_id       |                        | string          | No       | Length 1-255 characters | Node ID, corresponds to uied, recommended 32~128 characters, based on actual device |
+
+| Field         | Sub-field     | Second-level Sub-field | Type            | Required | parameter constraint    | Description                                                                                                               |
+| ------------- | ------------- | ---------------------- | --------------- | -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| agent_version |               |                        | string          | No       | Length 1-50 characters  | Client version number                                                                                                     |
+| measurements  |               |                        | list of objects | Yes      |                         | Measurement data                                                                                                          |
+|               | node_id       |                        | string          | No       | Length 1-255 characters | Node ID, corresponds to uied, recommended 32~128 characters, based on actual device                                       |
 |               | nonce_type    |                        | string          | No       |                         | ignore/user/verifier (default value) corresponds to not verifying nonce, using user nonce, using verifier-generated nonce |
-|               | nonce         |                        | string          | No       |                         | Nonce, base64 encoded, 1~1024bytes                           |
-|               | attester_data |                        | object          | No       |                         | User-defined data to be passed through, must be placed in token as-is |
-|               | evidences     |                        | list of objects | Yes      |                         | Challenge report                                             |
-|               |               | attester_type          | string          | Yes      |                         | Challenge type, see attester_type specification              |
-|               |               | evidence               | object          | Yes      |                         | Specific evidence                                            |
-|               |               | policy_ids             | list of string  | No       | Length 1-36 characters  | Policy ID list to verify, maximum 10                         |
+|               | nonce         |                        | string          | No       |                         | Nonce, base64 encoded, 1~1024bytes                                                                                        |
+|               | token_fmt     |                        | string          | No       | eat/ear                 | Token format, only support ear or eat, default is eat                                                                     |
+|               | attester_data |                        | object          | No       |                         | User-defined data to be passed through, must be placed in token as-is                                                     |
+|               | evidences     |                        | list of objects | Yes      |                         | Challenge report                                                                                                          |
+|               |               | attester_type          | string          | Yes      |                         | Challenge type, see attester_type specification                                                                           |
+|               |               | evidence               | object          | Yes      |                         | Specific evidence                                                                                                         |
+|               |               | policy_ids             | list of string  | No       | Length 1-36 characters  | Policy ID list to verify, maximum 10                                                                                      |
 
 ##### Response Parameters
+
 | Field           | Sub-field | Type            | Required                   | Description                                                                               |
-|-----------------|-----------|-----------------|----------------------------|-------------------------------------------------------------------------------------------|
+| --------------- | --------- | --------------- | -------------------------- | ----------------------------------------------------------------------------------------- |
 | service_version |           | string          | Yes                        | Server version number, format is x.x.x, e.g., 1.0.0                                       |
 | message         |           | string          | Yes for failed request     | Error message, maximum 1024 characters                                                    |
 | tokens          |           | list of objects | Yes for successful request |                                                                                           |
@@ -672,34 +697,35 @@ Note: nonce can be base64 decoded as:
 |                 | token     | string          | Yes                        | JWT format object, see token structure                                                    |
 
 ##### Token Object Structure
-| Field Location | Field            | Sub-field                 | Second-level Sub-field | Type           | Required | Description                                                  | Filled By                 |
-| -------------- | ---------------- | ------------------------- | ---------------------- | -------------- | -------- | ------------------------------------------------------------ | ------------------------- |
-| header         | alg              |                           |                        | string         | Yes      | Token signature algorithm                                    | Token generation module   |
+
+| Field Location | Field            | Sub-field                 | Second-level Sub-field | Type           | Required | Description                                                                                                                     | Filled By                 |
+| -------------- | ---------------- | ------------------------- | ---------------------- | -------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| header         | alg              |                           |                        | string         | Yes      | Token signature algorithm                                                                                                       | Token generation module   |
 | header         | jku              |                           |                        | string         | No       | JSON Web Key Set URI. URL containing JSON-encoded public token signing keys identified by kid. Retrieved based on configuration | Token generation module   |
-| header         | kid              |                           |                        | string         | No       | Signature key ID, retrieved based on configuration           | Token generation module   |
-| header         | typ              |                           |                        | string         | Yes      | Token type, fixed as JWT                                     | Token generation module   |
-| body           | iat              |                           |                        | number         | Yes      | Issue time                                                   | Token generation module   |
-| body           | exp              |                           |                        | number         | Yes      | Expiration time                                              | Token generation module   |
-| body           | iss              |                           |                        | string         | No       | Issuer                                                       | Token generation module   |
-| body           | jti              |                           |                        | string         | Yes      | JWT identifier                                               | Token generation module   |
-| body           | ver              |                           |                        | string         | Yes      | Token version                                                | Token generation module   |
-| body           | nbf              |                           |                        | string         | No       | Not before time                                              | Token generation module   |
-| body           | eat_profile      |                           |                        | string         | Yes      | URL, EAT content description website, defaults to code repository | Token generation module   |
-| body           | intuse           |                           |                        | string         | No       | Expected usage                                               | Challenge response module |
-| body           | dbgstat          |                           |                        | object         | No       | Debug status                                                 | Challenge response module |
-| body           | ueid             |                           |                        | string         | No       | Device unique identifier (taken from certificate)            | Challenge response module |
-| body           | verifier_id      |                           |                        | string         | No       | Verifier ID (consider container ID?)                         | Challenge response module |
-| body           | status           |                           |                        | string         | Yes      | Overall verification status, pass/fail                       | Challenge response module |
-| body           | eat_nonce        |                           |                        | string         | No       | Nonce value, not filled for ignore_nonce                     | Challenge response module |
-| body           | attester_data    |                           |                        | object         | No       | User-defined information                                     | Challenge response module |
-| body           | ${attester_type} |                           |                        | object         | Yes      | Verification result corresponding to attester_type           | Challenge response module |
-|                |                  | attestation_status        |                        | string         | Yes      | Verification status corresponding to attester_type, pass/fail | Challenge response module |
-|                |                  | evidence flattened fields |                        | object         | No       | Evidence uploaded by attester, e.g., pcr value; generated according to default policy | Challenge response module |
-|                |                  | policy_info               |                        | list of object | Yes      | Policy information                                           | Challenge response module |
-|                |                  |                           | appraisal_policy_id    | string         | Yes      | Applied policy ID                                            | Challenge response module |
-|                |                  |                           | policy_version         | string         | Yes      | Policy version                                               | Challenge response module |
-|                |                  |                           | attestation_valid      | boolean        | Yes      | Whether policy matching passed                               | Challenge response module |
-|                |                  |                           | custom_data            | object         | No       | Policy-defined output                                        | Challenge response module |
+| header         | kid              |                           |                        | string         | No       | Signature key ID, retrieved based on configuration                                                                              | Token generation module   |
+| header         | typ              |                           |                        | string         | Yes      | Token type, fixed as JWT                                                                                                        | Token generation module   |
+| body           | iat              |                           |                        | number         | Yes      | Issue time                                                                                                                      | Token generation module   |
+| body           | exp              |                           |                        | number         | Yes      | Expiration time                                                                                                                 | Token generation module   |
+| body           | iss              |                           |                        | string         | No       | Issuer                                                                                                                          | Token generation module   |
+| body           | jti              |                           |                        | string         | Yes      | JWT identifier                                                                                                                  | Token generation module   |
+| body           | ver              |                           |                        | string         | Yes      | Token version                                                                                                                   | Token generation module   |
+| body           | nbf              |                           |                        | string         | No       | Not before time                                                                                                                 | Token generation module   |
+| body           | eat_profile      |                           |                        | string         | Yes      | URL, EAT content description website, defaults to code repository                                                               | Token generation module   |
+| body           | intuse           |                           |                        | string         | No       | Expected usage                                                                                                                  | Challenge response module |
+| body           | dbgstat          |                           |                        | object         | No       | Debug status                                                                                                                    | Challenge response module |
+| body           | ueid             |                           |                        | string         | No       | Device unique identifier (taken from certificate)                                                                               | Challenge response module |
+| body           | verifier_id      |                           |                        | string         | No       | Verifier ID (consider container ID?)                                                                                            | Challenge response module |
+| body           | status           |                           |                        | string         | Yes      | Overall verification status, pass/fail                                                                                          | Challenge response module |
+| body           | eat_nonce        |                           |                        | string         | No       | Nonce value, not filled for ignore_nonce                                                                                        | Challenge response module |
+| body           | attester_data    |                           |                        | object         | No       | User-defined information                                                                                                        | Challenge response module |
+| body           | ${attester_type} |                           |                        | object         | Yes      | Verification result corresponding to attester_type                                                                              | Challenge response module |
+|                |                  | attestation_status        |                        | string         | Yes      | Verification status corresponding to attester_type, pass/fail                                                                   | Challenge response module |
+|                |                  | evidence flattened fields |                        | object         | No       | Evidence uploaded by attester, e.g., pcr value; generated according to default policy                                           | Challenge response module |
+|                |                  | policy_info               |                        | list of object | Yes      | Policy information                                                                                                              | Challenge response module |
+|                |                  |                           | appraisal_policy_id    | string         | Yes      | Applied policy ID                                                                                                               | Challenge response module |
+|                |                  |                           | policy_version         | string         | Yes      | Policy version                                                                                                                  | Challenge response module |
+|                |                  |                           | attestation_valid      | boolean        | Yes      | Whether policy matching passed                                                                                                  | Challenge response module |
+|                |                  |                           | custom_data            | object         | No       | Policy-defined output                                                                                                           | Challenge response module |
 
 ##### Example of request
 
@@ -712,6 +738,7 @@ Note: nonce can be base64 decoded as:
         {
             "node_id": "TPM AK",
             "nonce_type": "ignore",
+            "token_fmt": "eat",
             "evidences": [
                 {
                     "attester_type": "tpm_boot",
@@ -868,8 +895,9 @@ When content_type is jwt, jwt content:
 | is_default    | boolean        | No       | true or false                                  | Whether it's default policy, defaults to false |
 
 ##### Response Parameters
+
 | Field    | Sub-field | Type   | Required                   | Description        |
-|----------|-----------|--------|----------------------------|--------------------|
+| -------- | --------- | ------ | -------------------------- | ------------------ |
 | message  |           | string | Yes for failed request     | Error message      |
 | policies |           | string | Yes for successful request | Policy information |
 |          | id        | string | Yes                        | Policy ID          |
@@ -892,7 +920,7 @@ When content_type is jwt, jwt content:
 
 ###### response body
 
- ```
+```
 {
     "policy": {
         "id": "349fb201-311d-4cd9-9ef5-a7b9f33a5ecf",
@@ -900,7 +928,7 @@ When content_type is jwt, jwt content:
         "version": 2
     }
 }
- ```
+```
 
 #### 3.4.3 Delete Policy
 
@@ -909,15 +937,17 @@ When content_type is jwt, jwt content:
 **Request Method**: `DELETE /global-trust-authority/service/v1/policy`
 
 ##### Request Parameters
+
 | Field         | Type           | Required | parameter constraint     | Description                          |
-|---------------|----------------|----------|--------------------------|--------------------------------------|
+| ------------- | -------------- | -------- | ------------------------ | ------------------------------------ |
 | delete_type   | string         | Yes      | "id""attester_type""all" | Delete type "id""attester_type""all" |
 | ids           | List of String | No       | maximum 10               | Policy IDs, maximum 10               |
 | attester_type | string         | No       | length 1~255 characters  | Policy type                          |
 
 ##### Response Parameters
+
 | Field   | Type   | Required               | Description   |
-|---------|--------|------------------------|---------------|
+| ------- | ------ | ---------------------- | ------------- |
 | message | string | Yes for failed request | Error message |
 
 ##### Example of request
@@ -933,24 +963,27 @@ When content_type is jwt, jwt content:
 
 ###### response body
 
- ```
+```
 empty
- ```
+```
 
 #### 3.4.4 Query Policy
+
 **Description**: Query policy
 
 **Request Method**: `GET /global-trust-authority/service/v1/policy`
 
 ##### Request Parameters
+
 | Field         | Type           | Required | Description                                                     |
-|---------------|----------------|----------|-----------------------------------------------------------------|
+| ------------- | -------------- | -------- | --------------------------------------------------------------- |
 | ids           | List of String | No       | Policy IDs maximum 10, error if exceeding maximum message limit |
 | attester_type | string         | No       | Policy type                                                     |
 
 ##### Response Parameters
+
 | Field    | Sub-field     | Type            | Required                   | Description                                    |
-|----------|---------------|-----------------|----------------------------|------------------------------------------------|
+| -------- | ------------- | --------------- | -------------------------- | ---------------------------------------------- |
 | message  |               | string          | Yes for failed request     | Error message                                  |
 | policies |               | list of objects | Yes for successful request | Policy information                             |
 |          | id            | string          | Yes                        | Policy ID                                      |
@@ -975,7 +1008,7 @@ http(s)://ip:port/global-trust-authority/service/v1/policy?ids=2b0ead4b-6a15-423
 
 ###### response body
 
- ```
+```
 {
     "policies": [
         {
@@ -993,28 +1026,30 @@ http(s)://ip:port/global-trust-authority/service/v1/policy?ids=2b0ead4b-6a15-423
         }
     ]
 }
- ```
+```
 
 ### 3.5 Token Validation
 
 #### 3.5.1 Validate Token
+
 **Description**: Validate Token
 
 **Request Method**: `POST /global-trust-authority/service/v1/token/verify`
 
 ##### Request Parameters
+
 | Field | Type   | Required | Description                      |
-|-------|--------|----------|----------------------------------|
+| ----- | ------ | -------- | -------------------------------- |
 | token | string | Yes      | Token to be validated and parsed |
 
 ##### Response Parameters
+
 | Field             | Type    | Required                   | Description                                                    |
-|-------------------|---------|----------------------------|----------------------------------------------------------------|
+| ----------------- | ------- | -------------------------- | -------------------------------------------------------------- |
 | message           | string  | Yes for failed request     | Error message                                                  |
 | verification_pass | boolean | Yes for successful request | Whether signature verification passed                          |
 | token_body        | object  | No                         | Required when verification passes, returns parsed token body   |
 | token_header      | object  | No                         | Required when verification passes, returns parsed token header |
-
 
 ##### Example of request
 
@@ -1115,45 +1150,52 @@ http(s)://ip:port/global-trust-authority/service/v1/policy?ids=2b0ead4b-6a15-423
  ```
 
 ### 3.6 register apikey
+
 **Description**: When the request header is empty, to obtain User Id and API Key, when these two parameters are passed in the request header, to update User Id and API Key
 
 **Request Method**: `GET /global-trust-authority/service/v1/register`
 
 ##### Request Headers
+
 | Field   | Type   | Required | Description                         |
-|---------|--------|----------|-------------------------------------|
+| ------- | ------ | -------- | ----------------------------------- |
 | User-Id | string | Yes      | Used to distinguish users           |
 | API-Key | string | Yes      | Used to verify the current identity |
 
 ##### Response Parameters
-| Field   | Type    | Required                   | Description                                                    |
-|---------|---------|----------------------------|----------------------------------------------------------------|
-| User-Id | string  | Yes for failed request     | Error message                                                  |
-| API-Key | boolean | Yes for successful request | Whether signature verification passed                          |
+
+| Field   | Type    | Required                   | Description                           |
+| ------- | ------- | -------------------------- | ------------------------------------- |
+| User-Id | string  | Yes for failed request     | Error message                         |
+| API-Key | boolean | Yes for successful request | Whether signature verification passed |
 
 ##### Example of request
 
 ###### response body
 
- ```
+```
 {
     "User-Id": "xxxxx"
     "API-Key": "xxxxx"
 }
- ```
+```
+
 ## 4. Key Manager API
 
 ### 4.1 Query key
+
 **Description**: Query all the keys of the current key management component
 
 **Request Method**: `GET /v1/vault/get_signing_keys`
 
 #### Request Parameters
+
 None
 
 #### Response Parameters
+
 | Field | Sub-field   | Type   | Required | Description           |
-|-------|-------------|--------|----------|-----------------------|
+| ----- | ----------- | ------ | -------- | --------------------- |
 | NSK   |             | string | YES      | key NSK               |
 |       | private_key | string | Yes      | key info              |
 |       | algorithm   | string | Yes      | Private key algorithm |
