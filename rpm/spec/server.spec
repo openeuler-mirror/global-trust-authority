@@ -46,6 +46,7 @@ CARGO_BUILD_JOBS=$(nproc) cargo build --release -p attestation_service --feature
 CARGO_BUILD_JOBS=$(nproc) cargo build --release -p tpm_boot_verifier
 CARGO_BUILD_JOBS=$(nproc) cargo build --release -p tpm_ima_verifier
 CARGO_BUILD_JOBS=$(nproc) cargo build --release -p virtcca_verifier
+CARGO_BUILD_JOBS=$(nproc) cargo build --release -p ascend_npu_verifier
 
 %install
 rm -rf %{buildroot}
@@ -62,6 +63,7 @@ install -pm 550 %{server_output_dir}/libkey_management.so     %{buildroot}%{_lib
 install -pm 550 %{server_output_dir}/libtpm_ima_verifier.so   %{buildroot}%{_libdir}
 install -pm 550 %{server_output_dir}/libtpm_boot_verifier.so  %{buildroot}%{_libdir}
 install -pm 550 %{server_output_dir}/libvirtcca_verifier.so  %{buildroot}%{_libdir}
+install -pm 550 %{server_output_dir}/libascend_npu_verifier.so %{buildroot}%{_libdir}
 install -pm 640 service/attestation_server.service             %{buildroot}%{server_systemd_dir}
 install -pm 644 server_config_rpm.yaml                            %{buildroot}%{_sysconfdir}/attestation_server/server_config_rpm.yaml
 install -pm 644 logging.yaml                                  %{buildroot}%{_sysconfdir}/attestation_server/logging.yaml
@@ -70,6 +72,7 @@ install -pm 644 rdb_sql/attestation_service/mysql/mysql_v1.sql         %{buildro
 install -pm 644 export_policy/tpm_ima.rego                                     %{buildroot}%{_sysconfdir}/attestation_server/export_policy/tpm_ima.rego
 install -pm 644 export_policy/tpm_boot.rego                                          %{buildroot}%{_sysconfdir}/attestation_server/export_policy/tpm_boot.rego
 install -pm 644 export_policy/virt_cca.rego                                          %{buildroot}%{_sysconfdir}/attestation_server/export_policy/virt_cca.rego
+install -pm 644 export_policy/ascend_npu.rego                                        %{buildroot}%{_sysconfdir}/attestation_server/export_policy/ascend_npu.rego
 
 
 %files
@@ -82,6 +85,7 @@ install -pm 644 export_policy/virt_cca.rego                                     
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_ima.rego
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/tpm_boot.rego
 %config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/virt_cca.rego
+%config %attr(0640, root, root) %{_sysconfdir}/attestation_server/export_policy/ascend_npu.rego
 %config %attr(0640, root, root) %{server_systemd_dir}/attestation_server.service
 
 %attr(0550, root, root) %{_bindir}/attestation_service
@@ -90,6 +94,7 @@ install -pm 644 export_policy/virt_cca.rego                                     
 %attr(0550, root, root) %{_libdir}/libtpm_boot_verifier.so
 %attr(0550, root, root) %{_libdir}/libtpm_ima_verifier.so
 %attr(0550, root, root) %{_libdir}/libvirtcca_verifier.so
+%attr(0550, root, root) %{_libdir}/libascend_npu_verifier.so
 
 %post
 %systemd_post attestation_server.service

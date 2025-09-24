@@ -92,6 +92,7 @@ RUN cargo build --release --package attestation_service --features docker_build
 RUN cargo build --release --package tpm_boot_verifier
 RUN cargo build --release --package tpm_ima_verifier
 RUN cargo build --release --package virtcca_verifier
+RUN cargo build --release --package ascend_npu_verifier
 
 # Copy rust standard library files to build directory
 RUN cp $(find $(rustc --print sysroot) -name "libstd-*.so") /var/test_docker/app/target/release/
