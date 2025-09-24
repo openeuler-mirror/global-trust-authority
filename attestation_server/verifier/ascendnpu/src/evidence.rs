@@ -20,7 +20,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cmp::Ordering::{Greater, Less};
 
-use super::log_verifier::LogResult;
 use crate::verifier::AscendNpuPlugin;
 use tpm_common_verifier::{
     QuoteVerifier, PcrValues, PcrValueEntry, QuoteData
@@ -74,13 +73,6 @@ pub struct AscendNpuEvidence {
     pub logs: Option<Vec<Log>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct EvidenceResult {
-    log_info: Vec<LogResult>,
-    quote_info: Value,
-    pcr_info: Value,
-    cert_info: Value,
-}
 
 impl AscendNpuEvidence {
     /// Creates an `AscendNpuEvidence` instance from a JSON value.
@@ -229,10 +221,16 @@ impl AscendNpuEvidence {
         let now = Asn1Time::days_from_now(0)
             .map_err(|e| PluginError::InputError(format!("Failed to get current time: {}", e)))?;
 
-        if now.compare(cert.not_before()).map_err(|e| PluginError::InputError(e.to_string()))? != Greater ||
-           now.compare(cert.not_after()).map_err(|e| PluginError::InputError(e.to_string()))? != Less {
-            return Err(PluginError::InputError(format!("{} certificate is expired or not yet valid", cert_type)));
+        // Check if certificate is not yet valid (current time < not_before)
+        if now.compare(cert.not_before()).map_err(|e| PluginError::InputError(e.to_string()))? == Less {
+            return Err(PluginError::InputError(format!("{} certificate is not yet valid", cert_type)));
         }
+
+        // Check if certificate is expired (current time > not_after)
+        if now.compare(cert.not_after()).map_err(|e| PluginError::InputError(e.to_string()))? == Greater {
+            return Err(PluginError::InputError(format!("{} certificate is expired", cert_type)));
+        }
+
         Ok(())
     }
 
