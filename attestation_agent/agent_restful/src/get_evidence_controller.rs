@@ -25,7 +25,13 @@ pub fn get_evidence(body: Option<Value>) -> HttpResponse {
     // Parse and sanitize the request body, or use default if none provided
     let evidence_request = match body {
         Some(value) => match serde_json::from_value::<GetEvidenceRequest>(value) {
-            Ok(req) => req.sanitize(),
+            Ok(req) => {
+                let sanitized = req.sanitize();
+                if let Err(e) = sanitized.validate() {
+                    return create_challenge_error_response(e);
+                }
+                sanitized
+            },
             Err(e) => {
                 return create_error_response(e, StatusCode::BAD_REQUEST);
             },

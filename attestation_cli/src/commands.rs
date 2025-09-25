@@ -11,7 +11,7 @@
  */
 
 use clap::Subcommand;
-use crate::entities::{CertType, ContentType, UpdateCertType, DeleteType, NonceType, PolicyDeleteType};
+use crate::entities::{CertType, ContentType, UpdateCertType, DeleteType, NonceType, PolicyDeleteType, AttesterType, TokenFormat};
 
 #[derive(Subcommand)]
 pub enum CertificateCommands {
@@ -292,20 +292,28 @@ pub enum EvidenceCommands {
     /// Get evidence
     Get {
         /// Nonce type
-        #[clap(short = 't', long, required = true, value_enum)]
+        #[clap(short = 's', long, required = true, value_enum)]
         nonce_type: NonceType,
 
-        /// Fill in when nonce-type is user
-        #[clap(short, long)]
+        /// Nonce, base64 encoded string
+        #[clap(short = 'n', long)]
         nonce: Option<String>,
 
-        /// Output file address
-        #[clap(short, long, required = true)]
+        /// Output file path
+        #[clap(short = 'o', long, required = true)]
         out: String,
 
-        /// User data, reserved fields
-        #[clap(short, long)]
+        /// user data
+        #[clap(short = 'd', long)]
         attester_data: Option<serde_json::Value>,
+
+        /// List of attester types to collect evidence
+        #[clap(short = 't', long, value_delimiter = ',', value_enum)]
+        attester_types: Option<Vec<AttesterType>>,
+
+        /// Token format, default to eat
+        #[clap(short = 'f', long, value_enum)]
+        token_format: Option<TokenFormat>,
     },
 }
 

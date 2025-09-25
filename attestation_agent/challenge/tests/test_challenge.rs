@@ -29,6 +29,7 @@ fn test_full_evidence_collection_flow() {
         nonce_type: Some("verifier".to_string()),
         nonce: Some("test_nonce_value".repeat(5)),
         attester_data: Some(json!({"test": "data"})),
+        token_fmt: None,
     };
 
     let sanitized = request.sanitize();
@@ -52,6 +53,7 @@ fn test_token_request_flow() {
         }]),
         challenge: Some(false),
         attester_data: Some(json!({"test": "data"})),
+        token_fmt: None,
     };
 
     let sanitized = request.sanitize();
@@ -70,6 +72,7 @@ fn test_error_handling_integration() {
         nonce_type: Some("user".to_string()),
         nonce: None,
         attester_data: None,
+        token_fmt: None,
     };
     let result = EvidenceManager::get_evidence(&request);
     assert!(result.is_err());
@@ -83,6 +86,7 @@ fn test_error_handling_integration() {
         nonce_type: Some("invalid_type".to_string()),
         nonce: None,
         attester_data: None,
+        token_fmt: None,
     };
     let result = EvidenceManager::get_evidence(&request);
     assert!(result.is_err());
@@ -116,6 +120,7 @@ fn test_serialization_integration() {
         None,
         "test_node",
         vec![evidence],
+        None,
     );
 
     let serialized = serde_json::to_string(&response).unwrap();
@@ -132,6 +137,7 @@ fn test_request_sanitization_integration() {
         nonce_type: Some("   ".to_string()),
         nonce: None,
         attester_data: Some(json!(null)),
+        token_fmt: None,
     };
 
     let sanitized = empty_request.sanitize();
@@ -143,6 +149,7 @@ fn test_request_sanitization_integration() {
         attester_info: Some(vec![]),
         challenge: Some(true),
         attester_data: Some(json!(null)),
+        token_fmt: None,
     };
 
     let sanitized = empty_token_request.sanitize();
@@ -182,6 +189,7 @@ fn test_measurement_construction() {
         nonce_type: "ignore".to_string(),
         nonce: Some("test_nonce_value".repeat(5)),
         attester_data: Some(json!({"attester_data": "test"})),
+        token_fmt: None,
         evidences, // move evidences
     };
 
@@ -233,6 +241,7 @@ fn test_evidence_response_construction() {
         None,
         "test_node_id",
         evidences, // move evidences
+        None,
     );
 
     assert_eq!(response.agent_version, "2.0.0");
@@ -296,6 +305,7 @@ fn test_measurement_edge_cases() {
         nonce_type: "ignore".to_string(),
         nonce: None,
         attester_data: None,
+        token_fmt: None,
         evidences, // move evidences
     };
 
@@ -336,6 +346,7 @@ fn test_get_evidence_response_edge_cases() {
                 nonce_type: "ignore".to_string(),
                 nonce: None,
                 attester_data: None,
+                token_fmt: None,
                 evidences: evidences1,
             },
             Measurement {
@@ -343,6 +354,7 @@ fn test_get_evidence_response_edge_cases() {
                 nonce_type: "ignore".to_string(),
                 nonce: None,
                 attester_data: None,
+                token_fmt: None,
                 evidences: evidences2,
             },
         ],
@@ -410,3 +422,42 @@ fn test_json_serialization_edge_cases() {
     assert!(serialized.contains("array"));
     assert!(serialized.contains("object"));
 }
+
+    #[test]
+    fn test_evidence_token_fmt_sanitize_validate() {
+        // empty string should sanitize to None and validate OK
+        let req = GetEvidenceRequest {
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
+            nonce_type: Some("verifier".to_string()),
+            nonce: Some("test_nonce_value".repeat(5)),
+            token_fmt: Some("".to_string()),
+            attester_data: None,
+        };
+        let sanitized = req.sanitize();
+        assert_eq!(sanitized.token_fmt.as_deref(), Some(""));
+        assert!(sanitized.validate().is_err());
+
+        // valid 'EAR' mixed case should become lowercase and pass
+        let req = GetEvidenceRequest {
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
+            nonce_type: Some("verifier".to_string()),
+            nonce: Some("test_nonce_value".repeat(5)),
+            token_fmt: Some("EAR".to_string()),
+            attester_data: None,
+        };
+        let sanitized = req.sanitize();
+        assert_eq!(sanitized.token_fmt.as_deref(), Some("ear"));
+        assert!(sanitized.validate().is_ok());
+
+        // invalid value should error in validate
+        let req = GetEvidenceRequest {
+            attesters: vec![Attester { attester_type: "tpm_boot".to_string(), log_types: None }],
+            nonce_type: Some("verifier".to_string()),
+            nonce: Some("test_nonce_value".repeat(5)),
+            token_fmt: Some("invalid".to_string()),
+            attester_data: None,
+        };
+        let sanitized = req.sanitize();
+        assert!(sanitized.token_fmt.as_deref().is_some());
+        assert!(sanitized.validate().is_err());
+    }

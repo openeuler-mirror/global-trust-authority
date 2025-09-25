@@ -10,25 +10,26 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 
-use config_manager::types::context::CONFIG;
+use crate::entities::token::token_trait::TokenType;
+use base64::engine::general_purpose::STANDARD;
 use common_log::{error, info};
+use config_manager::types::context::CONFIG;
 use nonce::nonce_interface::{validate_nonce, Nonce, ValidateNonceParams};
+use openssl::sha::Sha256;
 use plugin_manager::{PluginManager, PluginManagerInstance, ServiceHostFunctions, ServicePlugin};
 use policy::api::{get_export_policy::get_export_policy, get_policy_by_ids, query_policy};
 use policy_engine::evaluate_policy;
 use rdb::get_connection;
 use token_management::manager::TokenManager;
-use base64::engine::general_purpose::STANDARD;
-use openssl::sha::Sha256;
 
 use crate::{
     entities::{
         attest_request::{Evidence, Measurement},
-        token_response::{AttestationResponse, AttesterResult, PolicyInfo},
+        token::PolicyInfo,
     },
     error::attestation_error::AttestationError,
 };
@@ -36,9 +37,7 @@ use crate::{
 pub struct DefaultHandler;
 
 impl DefaultHandler {
-    pub async fn validate_nonce_request(
-        measurement: &Measurement,
-    ) -> Result<(), AttestationError> {
+    pub async fn validate_nonce_request(measurement: &Measurement) -> Result<(), AttestationError> {
         let nonce_type = measurement.nonce_type.as_ref().map_or("verifier", |s| s);
         info!("Starting nonce validation with type: {}", nonce_type);
         match nonce_type {
@@ -77,10 +76,7 @@ impl DefaultHandler {
         })?;
 
         // Replace the first occurrence
-        info!(
-            "Validating nonce with period: {}",
-            CONFIG.get_instance()?.attestation_service.nonce.nonce_valid_period
-        );
+        info!("Validating nonce with period: {}", CONFIG.get_instance()?.attestation_service.nonce.nonce_valid_period);
         let validation_result = validate_nonce(ValidateNonceParams {
             // Replace the second occurrence
             valid_period: CONFIG.get_instance()?.attestation_service.nonce.nonce_valid_period,
@@ -107,14 +103,17 @@ impl DefaultHandler {
     }
 
     /// Generate aggregate nonce bytes from nonce and attester data
-    /// 
+    ///
     /// # Arguments
     /// * `nonce` - Option containing nonce bytes
     /// * `attester_data` - Option containing attester data
-    /// 
+    ///
     /// # Returns
     /// * `Option<Vec<u8>>` - Aggregate nonce bytes if both inputs are Some, otherwise None
-    pub fn get_aggregate_nonce_bytes(nonce: &Option<Vec<u8>>, attester_data: &Option<serde_json::Value>) -> Option<Vec<u8>> {
+    pub fn get_aggregate_nonce_bytes(
+        nonce: &Option<Vec<u8>>,
+        attester_data: &Option<serde_json::Value>,
+    ) -> Option<Vec<u8>> {
         // If both inputs are None, return None
         if attester_data.is_none() && nonce.is_none() {
             return None;
@@ -141,10 +140,7 @@ impl DefaultHandler {
         Some(result.to_vec())
     }
 
-    pub fn get_nonce_bytes(
-        nonce_type: &str,
-        nonce: Option<&String>,
-    ) -> Result<Option<Vec<u8>>, AttestationError> {
+    pub fn get_nonce_bytes(nonce_type: &str, nonce: Option<&String>) -> Result<Option<Vec<u8>>, AttestationError> {
         match nonce_type {
             "user" | "verifier" => {
                 if let Some(n) = nonce {
@@ -178,12 +174,12 @@ impl DefaultHandler {
         let attester_type = &evidence.attester_type;
         let plugin = Self::get_plugin_use_attester_type(attester_type)?;
 
-        plugin.verify_evidence(user_id, node_id.as_deref(), &evidence.evidence, nonce_bytes.as_deref())
-            .await
-            .map_err(|e| {
+        plugin.verify_evidence(user_id, node_id.as_deref(), &evidence.evidence, nonce_bytes.as_deref()).await.map_err(
+            |e| {
                 error!("Evidence verification failed: {}", e);
                 AttestationError::EvidenceVerificationError(e.to_string())
-            })
+            },
+        )
     }
 
     pub fn evaluate_export_policy(
@@ -214,10 +210,12 @@ impl DefaultHandler {
         }
     }
 
-    pub async fn evaluate_policies(
+    pub async fn evaluate_user_policies(
         verify_evidence: &serde_json::Value,
         policy_ids: Option<&Vec<String>>,
         attester_type: &str,
+        token_fmt: &str,
+        user_id: &str,
     ) -> Result<(Vec<bool>, Vec<PolicyInfo>), AttestationError> {
         let mut policy_id_list: Vec<String> = Vec::new();
         if let Some(ids) = policy_ids {
@@ -228,7 +226,7 @@ impl DefaultHandler {
                 error!("Failed to get database connection: {}", e);
                 AttestationError::DatabaseError(e.to_string())
             })?;
-            match query_policy::get_default_policies_by_type(&db_connection, attester_type.to_string()).await {
+            match query_policy::get_default_policies_by_type(&db_connection, attester_type.to_string(), user_id).await {
                 Ok(default_policies) => {
                     if !default_policies.is_empty() {
                         policy_id_list = default_policies.iter().map(|p| p.id.clone()).collect();
@@ -238,11 +236,15 @@ impl DefaultHandler {
                 },
                 Err(e) => {
                     error!("Failed to get default policies for attester_type {}: {}", attester_type, e);
-                    return Err(AttestationError::DatabaseError(e.to_string()))
-                }
+                    return Err(AttestationError::DatabaseError(e.to_string()));
+                },
             }
         }
-        let (verify_results, evaluate_results) = Self::evaluate_custom_policies(verify_evidence, &policy_id_list).await?;
+        if token_fmt == "ear" && policy_id_list.len() > 1 {
+            return Err(AttestationError::InvalidParameter("ear token only support one policy".to_string()));
+        }
+        let (verify_results, evaluate_results) =
+            Self::evaluate_custom_policies(verify_evidence, &policy_id_list).await?;
         Ok((verify_results, evaluate_results))
     }
 
@@ -297,55 +299,28 @@ impl DefaultHandler {
         Ok((verify_results, evaluate_results))
     }
 
-    pub fn create_evidence_response(
-        verify_results: Vec<bool>,
-        raw_evidence: Option<serde_json::Value>,
-        policy_info: Vec<PolicyInfo>,
-    ) -> AttesterResult {
-        let attestation_status = if policy_info.is_empty() {
-            "unknown"
-        } else if verify_results.iter().all(|&x| x) {
-            "pass"
-        } else {
-            "fail"
-        };
-
-        AttesterResult { attestation_status: attestation_status.to_string(), raw_evidence, policy_info }
-    }
-
-    pub fn create_attestation_response(
-        evidence_token_responses: &HashMap<String, AttesterResult>,
-        nonce_type: &str,
-        nonce: &Option<String>,
-        measurement: &Measurement,
-    ) -> AttestationResponse {
-        AttestationResponse {
-            eat_nonce: match nonce_type {
-                "verifier" | "user" => match serde_json::to_value(&nonce) {
-                    Ok(value) => Some(value),
-                    Err(e) => {
-                        error!("Failed to serialize user nonce: {}", e);
-                        None
-                    },
-                },
-                _ => None,
-            },
-            nonce_type: nonce_type.to_string(),
-            attester_data: measurement.attester_data.clone(), 
-            results: evidence_token_responses.clone(),
-            intuse: Some("Generic".to_string()),
-            ueid: Some(measurement.node_id.clone()),
-        }
-    }
-
-    pub async fn generate_token(attestation_response: &AttestationResponse) -> Result<String, AttestationError> {
+    pub async fn generate_token(attestation_response: &TokenType) -> Result<String, AttestationError> {
         info!("Generating token for attestation response");
-        let mut json_body = serde_json::to_value(attestation_response)
-            .map_err(|e| AttestationError::TokenGenerationError(e.to_string()))?;
 
-        TokenManager::generate_token(&mut json_body).await.map_err(|e| {
-            error!("Failed to generate token: {}", e);
-            AttestationError::TokenGenerationError(e.to_string())
-        })
+        match attestation_response {
+            TokenType::Eat(eat_token) => {
+                let mut json_body = serde_json::to_value(eat_token)
+                    .map_err(|e| AttestationError::TokenGenerationError(e.to_string()))?;
+
+                TokenManager::generate_token(&mut json_body).await.map_err(|e| {
+                    error!("Failed to generate token: {}", e);
+                    AttestationError::TokenGenerationError(e.to_string())
+                })
+            },
+            TokenType::Ear(ear_token) => {
+                let mut json_body = serde_json::to_value(ear_token)
+                    .map_err(|e| AttestationError::TokenGenerationError(e.to_string()))?;
+
+                TokenManager::generate_token(&mut json_body).await.map_err(|e| {
+                    error!("Failed to generate token: {}", e);
+                    AttestationError::TokenGenerationError(e.to_string())
+                })
+            },
+        }
     }
 }

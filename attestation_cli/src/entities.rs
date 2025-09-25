@@ -105,6 +105,42 @@ impl fmt::Display for NonceType {
     }
 }
 
+impl fmt::Display for TokenFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TokenFormat::Ear => write!(f, "ear"),
+            TokenFormat::Eat => write!(f, "eat"),
+        }
+    }
+}
+
+#[derive(clap::ValueEnum, Clone, Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+#[clap(rename_all = "lowercase")]
+pub enum TokenFormat {
+    Ear,
+    Eat,
+}
+
+#[derive(clap::ValueEnum, Clone, Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+#[clap(rename_all = "snake_case")]
+pub enum AttesterType {
+    TpmBoot,
+    TpmIma,
+    VirtCca,
+}
+
+impl fmt::Display for AttesterType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AttesterType::TpmBoot => write!(f, "tpm_boot"),
+            AttesterType::TpmIma => write!(f, "tpm_ima"),
+            AttesterType::VirtCca => write!(f, "virt_cca"),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct TokenResponse {
     pub(crate) token: String,

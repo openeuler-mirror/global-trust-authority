@@ -18,6 +18,12 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use cron::Schedule;
 
+/// Valid token format values
+pub const VALID_TOKEN_FORMATS: &[&str] = &["eat", "ear"];
+
+/// Default token format
+pub const DEFAULT_TOKEN_FORMAT: &str = "eat";
+
 // refer to registry-of-reserved-tpm-2.0-handles-and-localites
 const TPM_KEY_HANDLE_MIN: u32 = 0x81000000;
 const TPM_KEY_HANDLE_MAX: u32 = 0x81FFFFFF;
@@ -136,6 +142,18 @@ pub struct AgentConfig {
     pub uuid: Option<String>,    // Optional UUID to uniquely identify the agent
     pub user_id: Option<String>, // Optional use_id to uniquely identify the user
     pub apikey: Option<String>, // Optional apikey to uniquely identify the user
+    pub token_fmt: Option<String>,
+}
+
+impl AgentConfig {
+    /// Gets the normalized token format, defaulting to "eat" if not specified or empty
+    pub fn get_token_fmt_or_default(&self) -> String {
+        self.token_fmt
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_lowercase())
+            .unwrap_or_else(|| DEFAULT_TOKEN_FORMAT.to_string())
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -171,17 +189,20 @@ impl Config {
             return Err("Invalid listen port: cannot be 0".to_string());
         }
 
-        // 3. Validate server configuration
+        // 3. Validate agent token_fmt if provided
+        self.validate_token_fmt()?;
+
+        // 4. Validate server configuration
         if self.server.server_url.is_empty() {
             return Err("Server URL cannot be empty".to_string());
         }
 
-        // 4. Validate plugin configuration
+        // 5. Validate plugin configuration
         for (idx, plugin) in self.plugins.iter().enumerate() {
             self.validate_plugin(plugin, idx)?;
         }
 
-        // 5. Validate scheduler configuration
+        // 6. Validate scheduler configuration
         for (idx, scheduler) in self.schedulers.iter().enumerate() {
             // Validate name
             if scheduler.name.is_empty() {
@@ -189,7 +210,7 @@ impl Config {
             }
 
             // Validate cron expression
-            if cron::Schedule::from_str(&scheduler.cron_expression).is_err() {
+            if Schedule::from_str(&scheduler.cron_expression).is_err() {
                 return Err(format!(
                     "Scheduler #{} '{}' has invalid cron expression: {}",
                     idx, scheduler.name, scheduler.cron_expression
@@ -209,6 +230,25 @@ impl Config {
 
         // All validations passed
         Ok(())
+    }
+
+    /// Validates the token_fmt configuration
+    fn validate_token_fmt(&self) -> Result<(), String> {
+        let Some(ref token_fmt) = self.agent.token_fmt else { return Ok(()); };
+
+        if token_fmt.is_empty() {
+            return Err(format!(
+                "Invalid token_fmt: '{}', only '{}' and '{}' are supported",
+                token_fmt,
+                VALID_TOKEN_FORMATS[0],
+                VALID_TOKEN_FORMATS[1]
+            ));
+        }
+
+        let fmt_lower = token_fmt.to_lowercase();
+        if VALID_TOKEN_FORMATS.contains(&fmt_lower.as_str()) { return Ok(()); }
+
+        Err(format!("Invalid token_fmt: '{}', only '{}' and '{}' are supported", token_fmt, VALID_TOKEN_FORMATS[0], VALID_TOKEN_FORMATS[1]))
     }
 
     /// Validates a single plugin configuration.
@@ -436,5 +476,181 @@ impl ConfigManager {
     /// Returns an error string if serialization fails.
     pub fn to_json<T: serde::Serialize>(value: &T) -> Result<String, String> {
         serde_json::to_string(value).map_err(|e| format!("Failed to serialize to JSON: {}", e))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_agent_config_token_fmt_validation() {
+        // Test valid token_fmt values
+        let config = Config {
+            agent: AgentConfig {
+                listen_enabled: true,
+                listen_address: "127.0.0.1".to_string(),
+                listen_port: 8088,
+                uuid: Some("test_uuid".to_string()),
+                user_id: Some("test_user".to_string()),
+                apikey: Some("test_key".to_string()),
+                token_fmt: Some("eat".to_string()),
+            },
+            server: ServerConfig {
+                server_url: "http://localhost:8089".to_string(),
+                tls: None,
+            },
+            plugins: vec![],
+            schedulers: vec![],
+            logging: LoggingConfig {
+                level: "info".to_string(),
+                file: "/tmp/test.log".to_string(),
+            },
+        };
+        assert!(config.validate().is_ok());
+
+        let config = Config {
+            agent: AgentConfig {
+                listen_enabled: true,
+                listen_address: "127.0.0.1".to_string(),
+                listen_port: 8088,
+                uuid: Some("test_uuid".to_string()),
+                user_id: Some("test_user".to_string()),
+                apikey: Some("test_key".to_string()),
+                token_fmt: Some("ear".to_string()),
+            },
+            server: ServerConfig {
+                server_url: "http://localhost:8089".to_string(),
+                tls: None,
+            },
+            plugins: vec![],
+            schedulers: vec![],
+            logging: LoggingConfig {
+                level: "info".to_string(),
+                file: "/tmp/test.log".to_string(),
+            },
+        };
+        assert!(config.validate().is_ok());
+
+        // Test empty string token_fmt (should error)
+        let config = Config {
+            agent: AgentConfig {
+                listen_enabled: true,
+                listen_address: "127.0.0.1".to_string(),
+                listen_port: 8088,
+                uuid: Some("test_uuid".to_string()),
+                user_id: Some("test_user".to_string()),
+                apikey: Some("test_key".to_string()),
+                token_fmt: Some("".to_string()),
+            },
+            server: ServerConfig {
+                server_url: "http://localhost:8089".to_string(),
+                tls: None,
+            },
+            plugins: vec![],
+            schedulers: vec![],
+            logging: LoggingConfig {
+                level: "info".to_string(),
+                file: "/tmp/test.log".to_string(),
+            },
+        };
+        assert!(config.validate().is_err());
+
+        // Test None token_fmt (should not error)
+        let config = Config {
+            agent: AgentConfig {
+                listen_enabled: true,
+                listen_address: "127.0.0.1".to_string(),
+                listen_port: 8088,
+                uuid: Some("test_uuid".to_string()),
+                user_id: Some("test_user".to_string()),
+                apikey: Some("test_key".to_string()),
+                token_fmt: None,
+            },
+            server: ServerConfig {
+                server_url: "http://localhost:8089".to_string(),
+                tls: None,
+            },
+            plugins: vec![],
+            schedulers: vec![],
+            logging: LoggingConfig {
+                level: "info".to_string(),
+                file: "/tmp/test.log".to_string(),
+            },
+        };
+        assert!(config.validate().is_ok());
+
+        // Test invalid token_fmt (should error)
+        let config = Config {
+            agent: AgentConfig {
+                listen_enabled: true,
+                listen_address: "127.0.0.1".to_string(),
+                listen_port: 8088,
+                uuid: Some("test_uuid".to_string()),
+                user_id: Some("test_user".to_string()),
+                apikey: Some("test_key".to_string()),
+                token_fmt: Some("invalid".to_string()),
+            },
+            server: ServerConfig {
+                server_url: "http://localhost:8089".to_string(),
+                tls: None,
+            },
+            plugins: vec![],
+            schedulers: vec![],
+            logging: LoggingConfig {
+                level: "info".to_string(),
+                file: "/tmp/test.log".to_string(),
+            },
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.contains("Invalid token_fmt"));
+    }
+
+    #[test]
+    fn test_agent_config_get_token_fmt_or_default() {
+        let agent_config = AgentConfig {
+            listen_enabled: true,
+            listen_address: "127.0.0.1".to_string(),
+            listen_port: 8088,
+            uuid: Some("test_uuid".to_string()),
+            user_id: Some("test_user".to_string()),
+            apikey: Some("test_key".to_string()),
+            token_fmt: Some("eat".to_string()),
+        };
+        assert_eq!(agent_config.get_token_fmt_or_default(), "eat");
+
+        let agent_config = AgentConfig {
+            listen_enabled: true,
+            listen_address: "127.0.0.1".to_string(),
+            listen_port: 8088,
+            uuid: Some("test_uuid".to_string()),
+            user_id: Some("test_user".to_string()),
+            apikey: Some("test_key".to_string()),
+            token_fmt: Some("EAR".to_string()),
+        };
+        assert_eq!(agent_config.get_token_fmt_or_default(), "ear");
+
+        let agent_config = AgentConfig {
+            listen_enabled: true,
+            listen_address: "127.0.0.1".to_string(),
+            listen_port: 8088,
+            uuid: Some("test_uuid".to_string()),
+            user_id: Some("test_user".to_string()),
+            apikey: Some("test_key".to_string()),
+            token_fmt: Some("".to_string()),
+        };
+        assert_eq!(agent_config.get_token_fmt_or_default(), "eat");
+
+        let agent_config = AgentConfig {
+            listen_enabled: true,
+            listen_address: "127.0.0.1".to_string(),
+            listen_port: 8088,
+            uuid: Some("test_uuid".to_string()),
+            user_id: Some("test_user".to_string()),
+            apikey: Some("test_key".to_string()),
+            token_fmt: None,
+        };
+        assert_eq!(agent_config.get_token_fmt_or_default(), "eat");
     }
 }

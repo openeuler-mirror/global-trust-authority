@@ -13,7 +13,6 @@ mod tests {
 
     fn create_invalid_request() -> web::Json<AttestRequest> {
         web::Json(AttestRequest {
-            message: None,
             agent_version: Option::from("".to_string()),
             measurements: vec![]
         })

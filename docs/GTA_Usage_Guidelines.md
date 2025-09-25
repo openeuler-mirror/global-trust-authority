@@ -245,8 +245,16 @@ Install and run these components before deployment:
 Execute the command to start the service
 
 ```
-attestation_service
+systemctl start attestation_server
 ```
+
+Execute the command to enable the service to start automatically at system boot.
+
+```
+systemctl enable attestation_server
+```
+
+Use `systemctl status attestation_server` to check the service status. If the service is active, it indicates the service has started successfully.
 
 The following display appears, proving that the service was started successfully
 

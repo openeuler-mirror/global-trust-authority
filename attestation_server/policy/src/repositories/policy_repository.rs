@@ -396,6 +396,7 @@ impl PolicyRepository {
     pub async fn get_default_policies_by_type(
         db: &DatabaseConnection,
         attester_type: String,
+        user_id: &str,
     ) -> Result<Vec<SignaturePolicy>, PolicyError> {
         let policy_models = PolicyEntity::find()
             .filter(
@@ -404,6 +405,7 @@ impl PolicyRepository {
                     .and(Column::ValidCode.eq(0))
                     .and(Expr::cust(&format!("JSON_CONTAINS(attester_type, '\"{}\"')", attester_type))),
             )
+            .filter(Column::UserId.eq(user_id.to_string()))
             .into_model::<Model>()
             .all(db)
             .await

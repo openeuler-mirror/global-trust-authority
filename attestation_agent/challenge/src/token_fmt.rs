@@ -10,6 +10,17 @@
  * See the Mulan PSL v2 for more details.
  */
 
-pub mod challenge_request;
-pub mod attest_request;
-pub mod token;
+use config::config::{VALID_TOKEN_FORMATS};
+
+/// None is considered valid (means default will be used). Empty string is invalid.
+pub fn is_valid(opt_fmt: &Option<String>) -> bool {
+    match opt_fmt {
+        None => true,
+        Some(s) => {
+            if s.is_empty() {
+                return false;
+            }
+            VALID_TOKEN_FORMATS.iter().any(|&v| s.eq_ignore_ascii_case(v))
+        }
+    }
+}

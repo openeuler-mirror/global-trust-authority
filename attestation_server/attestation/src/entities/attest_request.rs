@@ -10,14 +10,12 @@
  * See the Mulan PSL v2 for more details.
  */
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use validator::{Validate, ValidationError};
 use crate::constants::VALID_TYPES;
 
 #[derive(Deserialize, Serialize, Validate, Debug)]
 pub struct AttestRequest {
-    pub message: Option<String>,
-
     #[validate(length(min = 1, max = 50))]
     pub agent_version: Option<String>,
 
@@ -34,6 +32,10 @@ pub struct Measurement {
 
     #[validate(custom(function = "validate_nonce_type"))]
     pub nonce_type: Option<String>,
+
+    #[serde(default, deserialize_with = "deserialize_lowercase_string")]
+    #[validate(custom(function = "validate_token_fmt"))]
+    pub token_fmt: Option<String>,
 
     pub attester_data: Option<serde_json::Value>,
 
@@ -100,4 +102,20 @@ fn validate_policy_ids(policy_ids: &Vec<String>) -> Result<(), ValidationError> 
         }
     }
     Ok(())
+}
+
+pub fn validate_token_fmt(token_fmt: &String) -> Result<(), ValidationError> {
+    let token_fmt_lower = token_fmt.to_lowercase();
+    if token_fmt_lower != "ear" && token_fmt_lower != "eat" {
+        return Err(ValidationError::new("token_fmt must be ear or eat"));
+    }
+    Ok(())
+}
+
+fn deserialize_lowercase_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: Option<String> = Option::deserialize(deserializer)?;
+    Ok(s.map(|val| val.to_lowercase()))
 }
