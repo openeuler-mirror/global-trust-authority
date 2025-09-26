@@ -37,7 +37,7 @@ impl ParameterFilter {
         if obj.len() > 0 {
             for key in obj.keys() {
                 if key != "ids" && key != "attester_type" {
-                    return Err(PolicyError::IncorrectFormatError(format!("Unsupported query parameter: {}", key)));
+                    return Err(PolicyError::IncorrectFormatError(format!("Unsupported query parameter '{}'", key)));
                 }
             }
         }

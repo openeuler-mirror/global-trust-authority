@@ -251,7 +251,7 @@ impl PolicyHandler {
         match PolicyRepository::check_policy_exist_use_id(db, id.to_string()).await {
             Ok(Some(_)) => {
                 error!("Policy with ID '{}' already exists", id);
-                return Err(PolicyError::PolicyExistError(format!("Policy ID '{}' already exists", id)));
+                return Err(PolicyError::PolicyExistError(format!("Policy '{}' already exists", id)));
             },
             Err(e) => {
                 error!("Database error when checking policy ID existence: {:?}", e);
@@ -376,9 +376,9 @@ impl PolicyHandler {
         model.signature = Set(policy.signature.clone());
         model.valid_code = Set(policy.valid_code);
         model.key_version = Set(policy.key_version.clone());
-        model.product_name = sea_orm::Set(String::new());
-        model.product_type = sea_orm::Set(String::new());
-        model.board_type = sea_orm::Set(String::new());
+        model.product_name = Set(String::new());
+        model.product_type = Set(String::new());
+        model.board_type = Set(String::new());
 
         Ok(model)
     }
@@ -772,7 +772,7 @@ impl PolicyHandler {
         for attester_type in &policy.attester_type {
             let plugin = match manager.get_plugin(attester_type) {
                 Some(p) => p,
-                None => return Err(PolicyError::PolicyMatchSyntaxError(format!("Plugin not found for attester type: {}", attester_type))),
+                None => return Err(PolicyError::PolicyMatchSyntaxError(format!("Plugin not found for attester type '{}'", attester_type))),
             };
             let sample_output = plugin.get_sample_output();
             match policy_engine::evaluate_policy(&sample_output, &policy.content) {

@@ -16,7 +16,7 @@ use rv::error::ref_value_error::RefValueError;
 #[test]
 fn test_db_error_status_code() {
     let error = RefValueError::DbError("Database connection failed".to_string());
-    assert_eq!(error.status_code(), StatusCode::BAD_REQUEST);
+    assert_eq!(error.status_code(), StatusCode::INTERNAL_SERVER_ERROR);
 }
 
 #[test]
@@ -40,7 +40,7 @@ fn test_invalid_parameter_status_code() {
 #[test]
 fn test_signature_error_status_code() {
     let error = RefValueError::SignatureError("Invalid signature".to_string());
-    assert_eq!(error.status_code(), StatusCode::BAD_REQUEST);
+    assert_eq!(error.status_code(), StatusCode::INTERNAL_SERVER_ERROR);
 }
 
 #[test]
@@ -58,5 +58,5 @@ fn test_db_error_message() {
     let error_msg = "Database connection failed";
     let error = RefValueError::DbError(error_msg.to_string());
     assert_eq!(error.message(), error.to_string());
-    assert!(error.message().contains(error_msg));
+    assert!(error.message().contains(&"Internal Server Error".to_string()));
 }

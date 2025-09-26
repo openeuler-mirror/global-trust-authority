@@ -110,26 +110,32 @@ impl Utils {
     pub fn encode_rv_db_model_to_bytes(model: ActiveModel) -> Result<Vec<u8>, RefValueError> {
         let mut bytes = Vec::new();
         if None == model.id.clone().into_value() {
+            error!("Model does not have an id, sign failed");
             return Err(RefValueError::SignatureError("Model does not have an id, sign failed".to_string()));
         }
         bytes.extend_from_slice(model.id.unwrap().as_bytes());
         if None == model.uid.clone().into_value() {
+            error!("Model does not have an uid, sign failed");
             return Err(RefValueError::SignatureError("Model does not have an uid, sign failed".to_string()));
         }
         bytes.extend_from_slice(model.uid.unwrap().as_bytes());
         if None == model.name.clone().into_value() {
+            error!("Model does not have a name, sign failed");
             return Err(RefValueError::SignatureError("Model does not have a name, sign failed".to_string()));
         }
         bytes.extend_from_slice(model.name.unwrap().as_bytes());
         if None == model.attester_type.clone().into_value() {
-            return Err(RefValueError::SignatureError("Model does not have a attester_type, sign failed".to_string()))
+            error!("Model does not have a attester_type, sign failed");
+            return Err(RefValueError::SignatureError("Model does not have a attester_type, sign failed".to_string()));
         }
         bytes.extend_from_slice(model.attester_type.unwrap().as_bytes());
         if None == model.content.clone().into_value() {
+            error!("Model does not have a content, sign failed");
             return Err(RefValueError::SignatureError("Model does not have a content, sign failed".to_string()));
         }
         bytes.extend_from_slice(model.content.unwrap().as_bytes());
         if None == model.is_default.clone().into_value() {
+            error!("Model does not have an is_default value, sign failed");
             return Err(RefValueError::SignatureError("Model does not have an is_default value, sign failed".to_string()));
         }
         bytes.extend_from_slice(&[model.is_default.unwrap() as u8]);

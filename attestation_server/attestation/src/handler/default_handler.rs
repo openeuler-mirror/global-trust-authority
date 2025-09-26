@@ -44,7 +44,7 @@ impl DefaultHandler {
             "user" => {
                 if measurement.nonce.is_none() {
                     error!("Nonce parameter required but not provided");
-                    return Err(AttestationError::NonceVerificationError("nonce parameter required".into()));
+                    return Err(AttestationError::NonceVerificationError("nonce parameter required".to_string()));
                 }
                 return Ok(());
             },
@@ -54,25 +54,25 @@ impl DefaultHandler {
 
         let nonce = measurement.nonce.as_ref().ok_or_else(|| {
             error!("Missing nonce in measurements");
-            AttestationError::NonceVerificationError("missing nonce in measurements".into())
+            AttestationError::NonceVerificationError("missing nonce in measurements".to_string())
         })?;
         
         // Decode the base64 nonce string first
         let decoded_nonce = BASE64.decode(nonce).map_err(|e| {
             error!("Failed to decode base64 nonce: {}", e);
-            AttestationError::NonceVerificationError(format!("failed to decode base64 nonce: {}", e))
+            AttestationError::NonceVerificationError("failed to decode base64 nonce".to_string())
         })?;
         
         // Convert the decoded bytes to a string
         let nonce_str = String::from_utf8(decoded_nonce).map_err(|e| {
             error!("Failed to convert nonce to string: {}", e);
-            AttestationError::NonceVerificationError(format!("invalid nonce format: {}", e))
+            AttestationError::NonceVerificationError("invalid nonce format".to_string())
         })?;
         
         // Parse the JSON string into a Nonce struct
         let parsed_nonce: Nonce = serde_json::from_str(&nonce_str).map_err(|e| {
             error!("Failed to deserialize nonce: {}", e);
-            AttestationError::NonceVerificationError(format!("invalid nonce format: {}", e))
+            AttestationError::NonceVerificationError("invalid nonce format".to_string())
         })?;
 
         // Replace the first occurrence
@@ -148,12 +148,12 @@ impl DefaultHandler {
                         Ok(bytes) => Ok(Some(bytes)),
                         Err(e) => {
                             error!("Failed to decode nonce: {}", e);
-                            Err(AttestationError::NonceVerificationError(format!("failed to decode nonce: {}", e)))
+                            Err(AttestationError::NonceVerificationError("failed to decode nonce".to_string()))
                         },
                     }
                 } else {
                     error!("Missing nonce");
-                    Err(AttestationError::NonceVerificationError("missing nonce".into()))
+                    Err(AttestationError::NonceVerificationError("missing nonce".to_string()))
                 }
             },
             "ignore" => Ok(None),
@@ -174,12 +174,10 @@ impl DefaultHandler {
         let attester_type = &evidence.attester_type;
         let plugin = Self::get_plugin_use_attester_type(attester_type)?;
 
-        plugin.verify_evidence(user_id, node_id.as_deref(), &evidence.evidence, nonce_bytes.as_deref()).await.map_err(
-            |e| {
-                error!("Evidence verification failed: {}", e);
-                AttestationError::EvidenceVerificationError(e.to_string())
-            },
-        )
+        plugin.verify_evidence(user_id, node_id.as_deref(), &evidence.evidence, nonce_bytes.as_deref()).await.map_err(|e| {
+            error!("Evidence verification failed: {}", e);
+            e.into()
+        })
     }
 
     pub fn evaluate_export_policy(
@@ -224,7 +222,7 @@ impl DefaultHandler {
             info!("No policy_ids provided, using default policies for attester_type: {}", attester_type);
             let db_connection = get_connection().await.map_err(|e| {
                 error!("Failed to get database connection: {}", e);
-                AttestationError::DatabaseError(e.to_string())
+                AttestationError::DatabaseError
             })?;
             match query_policy::get_default_policies_by_type(&db_connection, attester_type.to_string(), user_id).await {
                 Ok(default_policies) => {
@@ -236,7 +234,7 @@ impl DefaultHandler {
                 },
                 Err(e) => {
                     error!("Failed to get default policies for attester_type {}: {}", attester_type, e);
-                    return Err(AttestationError::DatabaseError(e.to_string()));
+                    return Err(AttestationError::DatabaseError);
                 },
             }
         }
@@ -305,20 +303,20 @@ impl DefaultHandler {
         match attestation_response {
             TokenType::Eat(eat_token) => {
                 let mut json_body = serde_json::to_value(eat_token)
-                    .map_err(|e| AttestationError::TokenGenerationError(e.to_string()))?;
+                    .map_err(|_| AttestationError::TokenGenerationError)?;
 
                 TokenManager::generate_token(&mut json_body).await.map_err(|e| {
                     error!("Failed to generate token: {}", e);
-                    AttestationError::TokenGenerationError(e.to_string())
+                    AttestationError::TokenGenerationError
                 })
             },
             TokenType::Ear(ear_token) => {
                 let mut json_body = serde_json::to_value(ear_token)
-                    .map_err(|e| AttestationError::TokenGenerationError(e.to_string()))?;
+                    .map_err(|_| AttestationError::TokenGenerationError)?;
 
                 TokenManager::generate_token(&mut json_body).await.map_err(|e| {
                     error!("Failed to generate token: {}", e);
-                    AttestationError::TokenGenerationError(e.to_string())
+                    AttestationError::TokenGenerationError
                 })
             },
         }

@@ -11,7 +11,7 @@
  */
 
 use sea_orm::entity::prelude::*;
-use sea_orm::{ColumnTrait, Condition, ConnectionTrait, DatabaseBackend, EntityTrait, MockDatabase};
+use sea_orm::{ColumnTrait, Condition, DatabaseBackend, MockDatabase};
 use rv::repositories::repo_ext::RepoExt;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]

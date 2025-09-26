@@ -65,7 +65,7 @@ impl PolicyService {
         info!("Handling request to add policy");
         let json_string = request_body.to_string();
         let req_body: PolicyAddRequest = serde_json::from_str(&json_string)
-            .map_err(|err| PolicyError::IncorrectFormatError(format!("JSON body error: {}", err)))?;
+            .map_err(|err| PolicyError::IncorrectFormatError(err.to_string()))?;
         req_body.validate().map_err(|e| PolicyError::IncorrectFormatError(e.to_string()))?;
         let headers = req.headers();
         let user_id = headers.get("User-Id").and_then(|h| h.to_str().ok()).unwrap_or("system").to_string();
@@ -143,7 +143,7 @@ impl PolicyService {
         let headers = req.headers();
         let json_string = request_body.to_string();
         let req_body: PolicyUpdateRequest = serde_json::from_str(&json_string)
-            .map_err(|err| PolicyError::IncorrectFormatError(format!("JSON body error: {}", err)))?;
+            .map_err(|err| PolicyError::IncorrectFormatError(err.to_string()))?;
         req_body.validate().map_err(|e| PolicyError::IncorrectFormatError(e.to_string()))?;
         let policy = match PolicyRepository::check_policy_exists(headers, &request_body).await {
             Ok(None) => {
@@ -221,7 +221,7 @@ impl PolicyService {
         info!("Handling request to delete policy");
                 let json_string = request_body.to_string();
         let req_body: PolicyDeleteRequest = serde_json::from_str(&json_string)
-            .map_err(|err| PolicyError::IncorrectFormatError(format!("JSON body error: {}", err)))?;
+            .map_err(|err| PolicyError::IncorrectFormatError(err.to_string()))?;
         req_body.validate().map_err(|e| PolicyError::IncorrectFormatError(e.to_string()))?;
         let user_id = req.headers().get("User-Id").and_then(|h| h.to_str().ok()).unwrap_or("system").to_string();
 
