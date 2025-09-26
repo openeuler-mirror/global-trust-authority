@@ -170,7 +170,7 @@ if [ "$mode" = "ima" ]; then
 
             # Filter lines that contain the specified algorithm and extract relevant information
             # Format of ascii_runtime_measurements lines: <pcr> <template_hash> <algorithm>:<hash> <path>
-            filtered_lines=$(grep "$algorithm:" "$ima_log" | awk '{print $3, $4}' | sort -k2)
+            filtered_lines=$(grep "$algorithm:" "$ima_log")
             total=$(echo "$filtered_lines" | wc -l | awk '{print $1}')
             count=0
 
@@ -179,8 +179,9 @@ if [ "$mode" = "ima" ]; then
                     count=$((count + 1))
 
                     # Extract hash value and file path
-                    hash_value=$(echo "$line" | awk '{print $1}' | sed "s/$algorithm://")
-                    file_path=$(echo "$line" | awk '{$1=""; print substr($0, 2)}')
+                    # Format: <pcr> <template_hash> <template_name> <algorithm>:<hash> <path>
+                    hash_value=$(echo "$line" | awk -v alg="$algorithm:" '{for(i=1;i<=NF;i++) if($i ~ alg) {split($i,arr,":"); print arr[2]; break}}')
+                    file_path=$(echo "$line" | awk '{for(i=1;i<=NF;i++) if($i ~ /:/) {for(j=i+1;j<=NF;j++) printf "%s ", $j; break}}' | sed 's/ $//')
 
                     # Process path escaping
                     escaped_name=$(escape_path "$file_path")
