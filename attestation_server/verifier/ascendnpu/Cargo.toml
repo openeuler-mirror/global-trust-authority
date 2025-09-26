@@ -1,0 +1,25 @@
+[package]
+name = "ascend_npu_verifier"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["rlib", "dylib"]
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+plugin_manager = { path = "../../../plugin_manager" }
+async-trait.workspace = true
+thiserror.workspace = true
+log.workspace = true
+base64.workspace = true
+hex.workspace = true
+openssl.workspace = true
+tokio.workspace = true
+tpm_common_verifier = { path = "../tpm/common" }
+common_verifier = { path = "../common" }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }
