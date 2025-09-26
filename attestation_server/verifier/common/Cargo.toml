@@ -14,3 +14,4 @@ tpm_common_verifier = { path = "../tpm/common"}
 plugin_manager.workspace = true
 openssl.workspace = true
 hex.workspace = true
+log.workspace = true

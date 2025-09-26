@@ -18,6 +18,7 @@ use openssl::hash::Hasher;
 use plugin_manager::PluginError;
 use crate::crypto_utils::CryptoVerifier;
 use crate::quote::QuoteVerifier;
+use std::collections::HashSet;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PcrValueEntry {
@@ -369,4 +370,65 @@ impl PcrValues {
 
         Ok(hex::encode(current_value))
     }
+}
+
+/// Valid PCR index range (0-23)
+const PCR_INDEX_MIN: i32 = 0;
+const PCR_INDEX_MAX: i32 = 23;
+
+/// Validates if the given PCR index is within valid range
+fn is_valid_pcr_index(index: u32) -> bool {
+    index >= PCR_INDEX_MIN as u32 && index <= PCR_INDEX_MAX as u32
+}
+
+/// Validates if the given string is valid hexadecimal format
+fn is_valid_hex_string(hex_str: &str) -> bool {
+    hex_str.len() % 2 == 0 && hex_str.chars().all(|c| c.is_ascii_hexdigit())
+}
+
+/// Validates PCR values for format correctness and basic constraints
+/// 
+/// This function performs validity checks only:
+/// - Ensures PCR values are not empty
+/// - Checks for duplicate PCR indices
+/// - Validates PCR index range (0-23)
+/// - Verifies hexadecimal format
+/// 
+/// It does NOT compare against reference values since `AscendNPU` PCRs have no baseline.
+pub fn validate_pcr_values(pcr_values: &[PcrValueEntry]) -> Result<(), PluginError> {
+    if pcr_values.is_empty() {
+        return Err(PluginError::InputError("PCR values cannot be empty".to_string()));
+    }
+
+    // Check for duplicate PCR indices
+    let mut seen_indices = HashSet::new();
+    for pcr_value in pcr_values {
+        if !seen_indices.insert(pcr_value.pcr_index) {
+            return Err(PluginError::InputError(format!(
+                "Duplicate PCR index found: {}",
+                pcr_value.pcr_index
+            )));
+        }
+    }
+
+    // Validate each PCR value
+    for (idx, pcr_value) in pcr_values.iter().enumerate() {
+        // Validate PCR index
+        if !is_valid_pcr_index(pcr_value.pcr_index) {
+            return Err(PluginError::InputError(format!(
+                "Invalid PCR index at position {}: {}. Valid range: {}-{}",
+                idx, pcr_value.pcr_index, PCR_INDEX_MIN, PCR_INDEX_MAX
+            )));
+        }
+
+        // Validate hexadecimal format
+        if !is_valid_hex_string(&pcr_value.pcr_value) {
+            return Err(PluginError::InputError(format!(
+                "Invalid hex format for PCR value at position {} (index {}): '{}'",
+                idx, pcr_value.pcr_index, pcr_value.pcr_value
+            )));
+        }
+    }
+
+    Ok(())
 }
