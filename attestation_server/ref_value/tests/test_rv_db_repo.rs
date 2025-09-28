@@ -561,39 +561,12 @@ async fn test_query_page_by_attester_type_and_uid_empty() {
     assert_eq!(result.unwrap().len(), 0);
 }
 
-async fn test_update_by_id_and_version_success() {
-    // test data
-    let id = "test_id";
-    let cur_version = 1;
-
-    let active_model = ActiveModel {
-        valid_code: Set(1),
-        ..Default::default()
-    };
-
-    // Mock database
-    let db = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(vec![
-            MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 1,
-            },
-        ])
-        .into_connection();
-
-    //  test
-    let result = RvDbRepo::update_by_id_and_version(&db, active_model, id, cur_version).await;
-
-    // Verification result
-    assert!(result.is_ok());
-}
-
 #[tokio::test]
 async fn test_update_by_id_and_version_no_rows_affected() {
     // test data
     let id = "test_id";
     let cur_version = 1;
-    let mut active_model = ActiveModel {
+    let active_model = ActiveModel {
         valid_code: Set(1),
         ..Default::default()
     };

@@ -150,13 +150,13 @@
 
 ##### Request Parameters
 
-| Field         | Sub-field | Type    | Required | parameter constraint    | Description                                             |
-| ------------- | --------- | ------- | -------- | ----------------------- | ------------------------------------------------------- |
-| name          |           | string  | Yes      | Length 1-255 characters | Reference value name                                    |
-| description   |           | string  | No       | Length 0-512 characters | Reference value description                             |
-| attester_type |           | string  | Yes      | only support tpm_ima    | Applicable challenge plugin type                        |
-| content       |           | string  | Yes      | Maximum length 10M      | Reference value content                                 |
-| is_default    |           | boolean | No       | true or false           | Whether it's default reference value, defaults to false |
+| Field         | Sub-field | Type    | Required | parameter constraint              | Description                                             |
+|---------------|-----------|---------|----------|-----------------------------------|---------------------------------------------------------|
+| name          |           | string  | Yes      | Length 1-255 characters           | Reference value name                                    |
+| description   |           | string  | No       | Length 0-512 characters           | Reference value description                             |
+| attester_type |           | string  | Yes      | only support tpm_ima and virt_cca | Applicable challenge plugin type                        |
+| content       |           | string  | Yes      | Maximum length 10M                | Reference value content                                 |
+| is_default    |           | boolean | No       | true or false                     | Whether it's default reference value, defaults to false |
 
 ##### Response Parameters
 
@@ -318,10 +318,10 @@ http(s)://ip:port/global-trust-authority/service/v1/refvalue?ids=2b0ead4b-6a15-4
 ##### Request Parameters
 
 | Field         | Sub-field | Type           | Required | parameter constraint   | Description          |
-| ------------- | --------- | -------------- | -------- | ---------------------- | -------------------- |
+| ------------- | --------- | -------------- | -------- |------------------------| -------------------- |
 | ids           |           | List of String | No       | Length 1-32 characters | Reference value IDs  |
 | attester_type |           | string         | No       | tpm_ima                | Reference value type |
-| delete_type   |           | string         | Yes      | id, type, all          | Delete Type          |
+| delete_type   |           | string         | Yes      | ids, type, all         | Delete Type          |
 
 ##### Response Parameters
 

@@ -65,7 +65,7 @@ mod tests {
             context: &'a mut InitContext,
         ) -> Pin<Box<dyn Future<Output = Result<(), String>> + 'a>> {
             Box::pin(async move {
-                let result = self.do_something().await?;
+                let _result = self.do_something().await?;
                 if let Some(next) = &self.next {
                     next.handle(context).await
                 } else {

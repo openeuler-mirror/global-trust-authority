@@ -16,20 +16,20 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum RefValueError {
     // Cert Verify Occur Database Error
-    #[error("RefValue occur database  error: {0}")]
+    #[error("Internal Server Error")]
     DbError(String),
 
     // Cert Verify Occur Verify Error
-    #[error("RefValue occur verify error: {0}")]
+    #[error("{0}")]
     VerifyError(String),
 
-    #[error("json parse error: {0}")]
+    #[error("{0}")]
     JsonParseError(String),
     
-    #[error("invalid param: {0}")]
+    #[error("{0}")]
     InvalidParameter(String),
 
-    #[error("signature error: {0}")]
+    #[error("Internal Server Error")]
     SignatureError(String),
 }
 
@@ -37,11 +37,11 @@ impl RefValueError {
     /// Get corresponding HTTP status code
     pub fn status_code(&self) -> StatusCode {
         match self {
-            RefValueError::DbError(_) => StatusCode::BAD_REQUEST,
+            RefValueError::DbError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             RefValueError::VerifyError(_) => StatusCode::BAD_REQUEST,
             RefValueError::JsonParseError(_) => StatusCode::BAD_REQUEST,
             RefValueError::InvalidParameter(_) => StatusCode::BAD_REQUEST,
-            RefValueError::SignatureError(_) => StatusCode::BAD_REQUEST,
+            RefValueError::SignatureError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 

@@ -17,67 +17,59 @@ use actix_web::http::StatusCode;
 #[derive(Error, Debug, Clone)]
 pub enum PolicyError {
     /// Incorrect input parameter format
-    #[error("Incorrect formatting of input parameters: {0}")]
+    #[error("{0}")]
     IncorrectFormatError(String),
 
-    /// Missing required parameters
-    #[error("Required parameters are missing: {0}")]
-    MissingRequiredParamError(String),
-
     /// Policy file not found
-    #[error("Policy not found: {0}")]
+    #[error("{0}")]
     PolicyNotFoundError(String),
 
     /// Policy is existing
-    #[error("Policy is existing: {0}")]
+    #[error("{0}")]
     PolicyExistError(String),
 
     /// Policy file signature verification failed
-    #[error("Failure to verify signature of policy file: {0}")]
+    #[error("{0}")]
     PolicySignatureVerificationError(String),
 
     /// Syntax error occurred when matching sample output with policy
-    #[error("Syntax error when sample output matches policy: {0}")]
+    #[error("{0}")]
     PolicyMatchSyntaxError(String),
 
     /// Failed to verify signature of policy retrieved from database
-    #[error("Failed to validate the policy signature taken out of the database: {0}")]
+    #[error("Internal Server Error")]
     DatabasePolicySignatureError(String),
 
     /// Database operation failed
-    #[error("Database operation failed: {0}")]
+    #[error("Internal Server Error")]
     DatabaseOperationError(String),
 
-    /// Database connection failed
-    #[error("Database connection failed: {0}")]
-    DatabaseConnectionError(String),
-
     /// Internal error
-    #[error("Internal error: {0}")]
+    #[error("Internal Server Error")]
     InternalError(String),
 
     /// Invalid policy content
-    #[error("Invalid policy content: {0}")]
+    #[error("{0}")]
     InvalidPolicyContent(String),
 
     // Policy signature failure
-    #[error("Policy signature failure: {0}")]
+    #[error("Internal Server Error")]
     PolicySignatureFailure(String),
 
     // Single user policy file creation limit reached
-    #[error("Strategy has reached its limit and cannot be created: {0}")]
+    #[error("{0}")]
     PolicyLimitReached(String),
 
     // Policy content size limit reached
-    #[error("Strategy content is greater than the cap: {0}")]
+    #[error("{0}")]
     PolicyContentSizeLimitReached(String),
 
     // Policy version overflow error
-    #[error("Policy version has reached maximum value: {0}")]
+    #[error("{0}")]
     PolicyVersionOverflowError(String),
 
     // Too many requests error
-    #[error("Too many requests: {0}")]
+    #[error("{0}")]
     TooManyRequestsError(String),
 }
 
@@ -88,12 +80,10 @@ impl PolicyError {
             PolicyError::IncorrectFormatError(_) => StatusCode::BAD_REQUEST,
             PolicyError::PolicyNotFoundError(_) => StatusCode::BAD_REQUEST,
             PolicyError::PolicyExistError(_) => StatusCode::BAD_REQUEST,
-            PolicyError::MissingRequiredParamError(_) => StatusCode::BAD_REQUEST,
             PolicyError::PolicySignatureVerificationError(_) => StatusCode::BAD_REQUEST,
             PolicyError::PolicyMatchSyntaxError(_) => StatusCode::BAD_REQUEST,
             PolicyError::DatabasePolicySignatureError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             PolicyError::DatabaseOperationError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            PolicyError::DatabaseConnectionError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             PolicyError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             PolicyError::InvalidPolicyContent(_) => StatusCode::BAD_REQUEST,
             PolicyError::PolicySignatureFailure(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -146,12 +136,10 @@ mod tests {
             (PolicyError::IncorrectFormatError("test".into()), StatusCode::BAD_REQUEST),
             (PolicyError::PolicyNotFoundError("test".into()), StatusCode::BAD_REQUEST),
             (PolicyError::PolicyExistError("test".into()), StatusCode::BAD_REQUEST),
-            (PolicyError::MissingRequiredParamError("test".into()), StatusCode::BAD_REQUEST),
             (PolicyError::PolicySignatureVerificationError("test".into()), StatusCode::BAD_REQUEST),
             (PolicyError::PolicyMatchSyntaxError("test".into()), StatusCode::BAD_REQUEST),
             (PolicyError::DatabasePolicySignatureError("test".into()), StatusCode::INTERNAL_SERVER_ERROR),
             (PolicyError::DatabaseOperationError("test".into()), StatusCode::INTERNAL_SERVER_ERROR),
-            (PolicyError::DatabaseConnectionError("test".into()), StatusCode::INTERNAL_SERVER_ERROR),
             (PolicyError::InternalError("test".into()), StatusCode::INTERNAL_SERVER_ERROR),
             (PolicyError::InvalidPolicyContent("test".into()), StatusCode::BAD_REQUEST),
             (PolicyError::PolicySignatureFailure("test".into()), StatusCode::INTERNAL_SERVER_ERROR),
@@ -169,24 +157,24 @@ mod tests {
     #[test]
     fn test_error_messages() {
         let error = PolicyError::IncorrectFormatError("invalid format".into());
-        assert_eq!(error.message(), "Incorrect formatting of input parameters: invalid format");
+        assert_eq!(error.message(), "invalid format");
 
         let error = PolicyError::PolicyNotFoundError("policy123".into());
-        assert_eq!(error.message(), "Policy not found: policy123");
+        assert_eq!(error.message(), "policy123");
     }
 
     #[test]
     fn test_from_string() {
         let error: PolicyError = "test error".to_string().into();
         assert!(matches!(error, PolicyError::InternalError(_)));
-        assert_eq!(error.message(), "Internal error: test error");
+        assert_eq!(error.message(), "Internal Server Error");
     }
 
     #[test]
     fn test_from_str() {
         let error: PolicyError = "test error".into();
         assert!(matches!(error, PolicyError::InternalError(_)));
-        assert_eq!(error.message(), "Internal error: test error");
+        assert_eq!(error.message(), "Internal Server Error");
     }
 
     #[test]
@@ -194,7 +182,7 @@ mod tests {
         let io_error = IoError::new(ErrorKind::NotFound, "file not found");
         let error: PolicyError = io_error.into();
         assert!(matches!(error, PolicyError::InternalError(_)));
-        assert_eq!(error.message(), "Internal error: file not found");
+        assert_eq!(error.message(), "Internal Server Error");
     }
 
     #[test]

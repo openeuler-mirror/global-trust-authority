@@ -12,48 +12,45 @@
 
 use actix_web::http::StatusCode;
 use thiserror::Error;
+use plugin_manager::PluginError;
 
 /// Custom error types for the attestation service
 #[derive(Debug, Error)]
 pub enum AttestationError {
     /// Error indicating invalid input parameters
-    #[error("Invalid parameter: {0}")]
+    #[error("{0}")]
     InvalidParameter(String),
 
     /// Error indicating failure in nonce verification process
-    #[error("Nonce verification failed: {0}")]
+    #[error("{0}")]
     NonceVerificationError(String),
 
     /// Error indicating failure in policy verification
-    #[error("Policy verification failed: {0}")]
+    #[error("{0}")]
     PolicyVerificationError(String),
 
-    /// Error indicating failure in policy export operation
-    #[error("Get export policy failed: {0}")]
-    GetExportPolicyError(String),
-
     /// Error indicating failure in evidence verification
-    #[error("Evidence verification failed: {0}")]
+    #[error("{0}")]
     EvidenceVerificationError(String),
 
     /// Error indicating failure in token generation
-    #[error("Token generation failed: {0}")]
-    TokenGenerationError(String),
+    #[error("Internal Server Error")]
+    TokenGenerationError,
 
     /// Error indicating database operation failures
-    #[error("Database operation failed: {0}")]
-    DatabaseError(String),
+    #[error("Internal Server Error")]
+    DatabaseError,
 
     /// Error indicating internal service errors
-    #[error("Internal service error: {0}")]
+    #[error("Internal Server Error")]
     InternalError(String),
 
     /// Error indicating required plugin was not found
-    #[error("Plugin not found: {0}")]
+    #[error("{0}")]
     PluginNotFoundError(String),
 
     /// Error indicating policy was not found
-    #[error("Policy not found: {0}")]
+    #[error("{0}")]
     PolicyNotFoundError(String),
 }
 
@@ -68,10 +65,9 @@ impl AttestationError {
             Self::InvalidParameter(_) => StatusCode::BAD_REQUEST,
             Self::NonceVerificationError(_) => StatusCode::BAD_REQUEST,
             Self::PolicyVerificationError(_) => StatusCode::BAD_REQUEST,
-            Self::GetExportPolicyError(_) => StatusCode::BAD_REQUEST,
             Self::EvidenceVerificationError(_) => StatusCode::BAD_REQUEST,
-            Self::TokenGenerationError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::TokenGenerationError => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::DatabaseError => StatusCode::INTERNAL_SERVER_ERROR,
             Self::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::PluginNotFoundError(_) => StatusCode::BAD_REQUEST,
             Self::PolicyNotFoundError(_) => StatusCode::BAD_REQUEST,
@@ -109,5 +105,18 @@ impl From<String> for AttestationError {
 impl From<&str> for AttestationError {
     fn from(err: &str) -> Self {
         AttestationError::InternalError(err.to_string())
+    }
+}
+
+impl From<PluginError> for AttestationError {
+    fn from(error: PluginError) -> Self {
+        match error {
+            PluginError::InputError(msg) => {
+                AttestationError::EvidenceVerificationError(msg)
+            }
+            PluginError::InternalError(msg) => {
+                AttestationError::InternalError(msg)
+            }
+        }
     }
 }

@@ -37,7 +37,7 @@ async fn test_generate_token_uninitialized() {
 }
 
 #[tokio::test]
-async fn test_verify_token_No_key_found() {
+async fn test_verify_token_no_key_found() {
     let mut mock = MockCryptoImpl::new();
     mock.expect_get_public_key()
         .returning(|_, _| Err(KeyManagerError::new("No key found")));

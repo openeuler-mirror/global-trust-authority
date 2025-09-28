@@ -74,7 +74,7 @@ impl ExportPolicyHandler {
         }
         
         error!("No export policy file found for attester_type: {}", attester_type);
-        Err(PolicyError::PolicyNotFoundError(format!("No policy file found for: {}", attester_type)))
+        Err(PolicyError::PolicyNotFoundError(format!("No policy file found for {}", attester_type)))
     }
 
     /// Reads the content of a policy file from the given path.

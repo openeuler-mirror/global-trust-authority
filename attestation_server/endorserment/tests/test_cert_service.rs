@@ -11,9 +11,9 @@
  */
 
 use actix_web::web::Data;
-use endorserment::entities::{cert_info, cert_revoked_list};
+use endorserment::entities::cert_info;
 use endorserment::repositories::cert_repository::CertRepository;
-use endorserment::services::cert_service::{parse_cert_content, parse_crl_content, CertService, ValidCode};
+use endorserment::services::cert_service::{parse_cert_content, parse_crl_content, CertService};
 use sea_orm::{ActiveValue, DatabaseBackend, DbErr, MockDatabase, MockExecResult, TransactionTrait};
 use std::sync::Arc;
 
@@ -352,22 +352,7 @@ async fn test_get_all_certs_when_db_error_then_error() {
 
 #[tokio::test]
 async fn test_get_all_certs_with_revoked_cert_success() {
-    let mock_certs = vec![(
-        cert_info::Model {
-            id: "cert1".to_string(),
-            valid_code: Some(ValidCode::NORMAL),
-            ..Default::default()
-        },
-        Some(cert_revoked_list::Model {
-            id: "cert1".to_string(),
-            valid_code: Some(ValidCode::NORMAL),
-            key_version: Some("v1".to_string()),
-            ..Default::default()
-        }),
-    )];
-
     let db = MockDatabase::new(DatabaseBackend::Postgres)
-        // .append_query_results(vec![mock_certs])
         .append_exec_results(vec![MockExecResult {
             last_insert_id: 0,
             rows_affected: 1,

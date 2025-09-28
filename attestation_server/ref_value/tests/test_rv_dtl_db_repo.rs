@@ -11,11 +11,9 @@
  */
 
 use rv::repositories::rv_dtl_db_repo::RvDtlDbRepo;
-use sea_orm::{DatabaseBackend, DbErr, MockDatabase, MockExecResult, MockRow, TransactionTrait};
-use serde_json::json;
+use sea_orm::{DatabaseBackend, DbErr, MockDatabase, MockExecResult, TransactionTrait};
 use rv::entities::db_model::rv_detail_db_model::Model;
 use rv::entities::inner_model::rv_content::RefValueDetail;
-use rv::entities::inner_model::rv_model::RefValueModel;
 use rv::error::ref_value_error::RefValueError;
 
 #[tokio::test]
