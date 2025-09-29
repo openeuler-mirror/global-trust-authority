@@ -17,6 +17,7 @@ use plugin_manager::{PluginError, ServiceHostFunctions};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::io::{Cursor, Read};
 use std::str::{self, FromStr};
 use tpm_common_verifier::CryptoVerifier;
 use tpm_common_verifier::PcrValueEntry;
@@ -41,6 +42,287 @@ pub struct ImaLog {
 }
 
 impl ImaLog {
+    /// Create ImaLog from binary IMA log data (ima-ng format only)
+    ///
+    /// # Arguments
+    ///
+    /// * `log_data` - Binary IMA log data
+    /// * `template_hash_alg` - Hash algorithm for template hash calculation
+    ///
+    /// # Errors
+    ///
+    /// * `PluginError::InputError` - If the log data is not valid
+    pub fn from_binary(log_data: &[u8], template_hash_alg: &str) -> Result<Self, PluginError> {
+        let mut cursor = Cursor::new(log_data);
+        let mut logs = Vec::new();
+        
+        log::info!("Parsing binary IMA log ({} bytes)", log_data.len());
+        
+        while cursor.position() < log_data.len() as u64 {
+            let entry = Self::parse_binary_ima_entry(&mut cursor, template_hash_alg)?;
+            logs.push(entry);
+        }
+        
+        log::info!("Successfully parsed {} binary IMA entries", logs.len());
+        Ok(Self { logs })
+    }
+
+    /// Parse a single binary IMA template entry
+    fn parse_binary_ima_entry(cursor: &mut Cursor<&[u8]>, template_hash_alg: &str) -> Result<ImaLogEntry, PluginError> {
+        let pcr_index = Self::parse_pcr_index(cursor)?;
+        let _digest = Self::parse_digest(cursor)?;
+        let template_name = Self::parse_template_name(cursor)?;
+        let template_data = Self::parse_template_data_bytes(cursor)?;
+        
+        // Parse template data to extract file information
+        let (file_hash_alg, file_hash, file_path) = Self::parse_template_data(&template_data, &template_name)?;
+        
+        // Calculate template hash
+        let template_hash = Self::calculate_template_hash(&file_hash, &file_hash_alg, &file_path, template_hash_alg)?;
+        
+        Ok(ImaLogEntry {
+            pcr_index,
+            template_hash,
+            template_name,
+            file_hash_alg,
+            file_hash,
+            file_path,
+            ref_value_matched: None,
+        })
+    }
+
+    /// Parse PCR index from binary data
+    fn parse_pcr_index(cursor: &mut Cursor<&[u8]>) -> Result<u32, PluginError> {
+        use std::io::Read;
+        
+        const MAX_PCR_INDEX: u32 = 23;
+        
+        // Read PCR index (4 bytes, little-endian)
+        let mut pcr_bytes = [0u8; 4];
+        cursor.read_exact(&mut pcr_bytes)
+            .map_err(|e| PluginError::InputError(format!("Failed to read PCR index: {}", e)))?;
+        let pcr_index = u32::from_le_bytes(pcr_bytes);
+        
+        // Validate PCR index range
+        if pcr_index > MAX_PCR_INDEX {
+            return Err(PluginError::InputError(format!(
+                "Invalid PCR index: {}, must be 0-{}", pcr_index, MAX_PCR_INDEX
+            )));
+        }
+        
+        Ok(pcr_index)
+    }
+
+    /// Parse digest from binary data
+    fn parse_digest(cursor: &mut Cursor<&[u8]>) -> Result<Vec<u8>, PluginError> {
+        use std::io::Read;
+        
+        const SHA256_DIGEST_SIZE: usize = 32;
+        
+        // Read digest (32 bytes for SHA256)
+        let mut digest = vec![0u8; SHA256_DIGEST_SIZE];
+        cursor.read_exact(&mut digest)
+            .map_err(|e| PluginError::InputError(format!("Failed to read digest: {}", e)))?;
+        
+        Ok(digest)
+    }
+
+    /// Parse template name from binary data
+    fn parse_template_name(cursor: &mut Cursor<&[u8]>) -> Result<String, PluginError> {
+        use std::io::Read;
+        
+        const MAX_TEMPLATE_NAME_LEN: u32 = 1024; // 1KB limit
+        
+        // Read template name length (4 bytes, little-endian)
+        let mut name_len_bytes = [0u8; 4];
+        cursor.read_exact(&mut name_len_bytes)
+            .map_err(|e| PluginError::InputError(format!("Failed to read template name length: {}", e)))?;
+        let template_name_len = u32::from_le_bytes(name_len_bytes);
+        
+        // Validate template name length
+        if template_name_len == 0 {
+            return Err(PluginError::InputError("Template name length cannot be zero".to_string()));
+        }
+        if template_name_len > MAX_TEMPLATE_NAME_LEN {
+            return Err(PluginError::InputError(format!(
+                "Template name too long: {} bytes, maximum allowed: {}", 
+                template_name_len, MAX_TEMPLATE_NAME_LEN
+            )));
+        }
+        
+        // Read template name
+        let mut template_name_bytes = vec![0u8; template_name_len as usize];
+        cursor.read_exact(&mut template_name_bytes)
+            .map_err(|e| PluginError::InputError(format!("Failed to read template name: {}", e)))?;
+        let template_name = String::from_utf8(template_name_bytes)
+            .map_err(|e| PluginError::InputError(format!("Invalid template name UTF-8: {}", e)))?;
+        
+        Ok(template_name)
+    }
+
+    /// Parse template data bytes from binary data
+    fn parse_template_data_bytes(cursor: &mut Cursor<&[u8]>) -> Result<Vec<u8>, PluginError> {
+        use std::io::Read;
+        
+        const MAX_TEMPLATE_DATA_LEN: u32 = 1024 * 1024; // 1MB limit
+        
+        // Read template data length (4 bytes, little-endian)
+        let mut data_len_bytes = [0u8; 4];
+        cursor.read_exact(&mut data_len_bytes)
+            .map_err(|e| PluginError::InputError(format!("Failed to read template data length: {}", e)))?;
+        let template_data_len = u32::from_le_bytes(data_len_bytes);
+        
+        // Validate template data length
+        if template_data_len > MAX_TEMPLATE_DATA_LEN {
+            return Err(PluginError::InputError(format!(
+                "Template data too large: {} bytes, maximum allowed: {}", 
+                template_data_len, MAX_TEMPLATE_DATA_LEN
+            )));
+        }
+        
+        // Read template data
+        let mut template_data = vec![0u8; template_data_len as usize];
+        cursor.read_exact(&mut template_data)
+            .map_err(|e| PluginError::InputError(format!("Failed to read template data: {}", e)))?;
+        
+        Ok(template_data)
+    }
+
+    /// Parse template data to extract file hash algorithm, file hash, and file path
+    fn parse_template_data(template_data: &[u8], template_name: &str) -> Result<(String, String, String), PluginError> {
+        log::debug!("Parsing template data for '{}', length: {}", template_name, template_data.len());
+        log::debug!("Template data hex: {}", hex::encode(template_data));
+        
+        match template_name {
+            "ima-ng" => Self::parse_ima_ng_template_data(template_data),
+            _ => Err(PluginError::InputError(format!(
+                "Unsupported IMA template: '{}'. Only 'ima-ng' format is supported",
+                template_name
+            ))),
+        }
+    }
+
+    /// Parse IMA-NG template data format
+    /// 
+    /// Format structure:
+    /// 1. Length field (4 bytes) - length of hash algorithm prefix + file hash + file path length + file path
+    /// 2. Hash algorithm prefix (8 bytes) - "sha256:\0"
+    /// 3. File hash (32 bytes)
+    /// 4. File path length (4 bytes)
+    /// 5. File path (variable length, null-terminated)
+    fn parse_ima_ng_template_data(template_data: &[u8]) -> Result<(String, String, String), PluginError> {
+        const MIN_TEMPLATE_SIZE: usize = 4 + 8 + 32 + 4; // length + hash_alg + file_hash + path_len
+        const HASH_ALG_PREFIX: &[u8] = b"sha256:\0";
+        const SHA256_HASH_SIZE: usize = 32;
+        const MAX_FILE_PATH_LEN: u32 = 4096; // 4KB limit for file paths
+        
+        if template_data.len() < MIN_TEMPLATE_SIZE {
+            return Err(PluginError::InputError(format!(
+                "Template data too short: {} bytes, minimum required: {} bytes",
+                template_data.len(), MIN_TEMPLATE_SIZE
+            )));
+        }
+        
+        let mut cursor = Cursor::new(template_data);
+        
+        // Read length field (4 bytes)
+        let data_len = Self::read_u32_le(&mut cursor, "template data length")?;
+        log::debug!("Template data length field: {}", data_len);
+        
+        // Validate data length consistency
+        // The data_len field should match the actual data length (excluding the length field itself)
+        let expected_data_len = template_data.len() - 4; // Subtract the 4-byte length field
+        // Allow some tolerance for different IMA implementations
+        if data_len as usize != expected_data_len && (data_len as i32 - expected_data_len as i32).abs() > 20 {
+            return Err(PluginError::InputError(format!(
+                "Data length mismatch: declared {} bytes, actual {} bytes",
+                data_len, expected_data_len
+            )));
+        }
+        
+        // Check minimum required data
+        let min_required_len = HASH_ALG_PREFIX.len() + SHA256_HASH_SIZE + 4; // hash_alg + file_hash + path_len
+        if expected_data_len < min_required_len {
+            return Err(PluginError::InputError(format!(
+                "Template data too short: {} bytes, minimum required: {} bytes",
+                expected_data_len, min_required_len
+            )));
+        }
+        
+        // Read and validate hash algorithm prefix (8 bytes)
+        let hash_alg_bytes = Self::read_bytes(&mut cursor, HASH_ALG_PREFIX.len(), "hash algorithm prefix")?;
+        if hash_alg_bytes != HASH_ALG_PREFIX {
+            return Err(PluginError::InputError(format!(
+                "Invalid hash algorithm prefix: expected 'sha256:\\0', got: {:?}",
+                String::from_utf8_lossy(&hash_alg_bytes)
+            )));
+        }
+        log::debug!("Hash algorithm prefix validated: sha256:");
+        
+        // Read file hash (32 bytes)
+        let file_hash_bytes = Self::read_bytes(&mut cursor, SHA256_HASH_SIZE, "file hash")?;
+        log::debug!("File hash: {}", hex::encode(&file_hash_bytes));
+        
+        // Read file path length (4 bytes)
+        let path_len = Self::read_u32_le(&mut cursor, "file path length")?;
+        log::debug!("File path length: {}", path_len);
+        
+        // Validate file path length
+        if path_len == 0 {
+            return Err(PluginError::InputError("File path length cannot be zero".to_string()));
+        }
+        if path_len > MAX_FILE_PATH_LEN {
+            return Err(PluginError::InputError(format!(
+                "File path too long: {} bytes, maximum allowed: {} bytes",
+                path_len, MAX_FILE_PATH_LEN
+            )));
+        }
+        
+        // Check if path length is consistent with remaining data
+        let expected_total_len = HASH_ALG_PREFIX.len() + SHA256_HASH_SIZE + 4 + path_len as usize;
+        // Allow some tolerance for different IMA implementations
+        if expected_total_len != data_len as usize && (expected_total_len as i32 - data_len as i32).abs() > 20 {
+            return Err(PluginError::InputError(format!(
+                "Data length mismatch: expected {} bytes, got {} bytes",
+                expected_total_len, data_len
+            )));
+        }
+        
+        // Read file path
+        let file_path_bytes = Self::read_bytes(&mut cursor, path_len as usize, "file path")?;
+        let file_path = String::from_utf8_lossy(&file_path_bytes)
+            .trim_end_matches('\0')
+            .to_string();
+        log::debug!("File path: {}", file_path);
+        
+        // Validate file path is not empty after trimming
+        if file_path.is_empty() {
+            return Err(PluginError::InputError("File path cannot be empty".to_string()));
+        }
+        
+        Ok((
+            "sha256".to_string(),
+            hex::encode(&file_hash_bytes),
+            file_path,
+        ))
+    }
+
+    /// Read a 32-bit little-endian unsigned integer from cursor
+    fn read_u32_le(cursor: &mut Cursor<&[u8]>, field_name: &str) -> Result<u32, PluginError> {
+        let mut bytes = [0u8; 4];
+        cursor.read_exact(&mut bytes)
+            .map_err(|e| PluginError::InputError(format!("Failed to read {}: {}", field_name, e)))?;
+        Ok(u32::from_le_bytes(bytes))
+    }
+
+    /// Read a specified number of bytes from cursor
+    fn read_bytes(cursor: &mut Cursor<&[u8]>, count: usize, field_name: &str) -> Result<Vec<u8>, PluginError> {
+        let mut bytes = vec![0u8; count];
+        cursor.read_exact(&mut bytes)
+            .map_err(|e| PluginError::InputError(format!("Failed to read {}: {}", field_name, e)))?;
+        Ok(bytes)
+    }
+
     /// Create ImaLog from base64 encoded ima log data
     ///
     /// # Arguments
@@ -187,6 +469,7 @@ impl ImaLog {
     /// * `pcr_values` - PCR values to verify against
     /// * `service_host_functions` - Service host functions
     /// * `user_id` - User ID
+    /// * `plugin_type` - Plugin type for reference value checking
     ///
     /// # Returns
     ///
@@ -200,6 +483,7 @@ impl ImaLog {
         pcr_values: &mut PcrValues,
         service_host_functions: &ServiceHostFunctions,
         user_id: &str,
+        plugin_type: &str,
     ) -> Result<(bool, bool), PluginError> {
         // First, replay using template_hash values to update PCR replay values
         self.replay_pcr_values(pcr_values)?;
@@ -207,7 +491,7 @@ impl ImaLog {
         // Check if PCR values match replay values and update is_matched fields
         let replay_result = pcr_values.check_is_matched()?;
 
-        let ref_value_result = self.check_reference_values(service_host_functions, user_id, "tpm_ima").await?;
+        let ref_value_result = self.check_reference_values(service_host_functions, user_id, plugin_type).await?;
 
         Ok((replay_result, ref_value_result))
     }
@@ -339,7 +623,7 @@ impl ImaLog {
     ///                                 the `get_unmatched_measurements` function pointer.
     /// * `user_id` - A string slice representing the ID of the user for whom the measurements
     ///               are being checked.
-    /// * `plugin_name` - A string slice indicating the name of the plugin (e.g., "tpm_ima", "virt_cca")
+    /// * `plugin_type` - A string slice indicating the type of the plugin (e.g., "tpm_ima", "virt_cca")
     ///                   to be used when calling `get_unmatched_measurements`.
     ///
     /// # Returns
@@ -355,7 +639,7 @@ impl ImaLog {
         &mut self,
         service_host_functions: &ServiceHostFunctions,
         user_id: &str,
-        plugin_name: &str,
+        plugin_type: &str,
     ) -> Result<bool, PluginError> {
         // Extract file hashes from logs, skipping 'boot_aggregate' entries
         let file_hashes: Vec<String> = self
@@ -367,7 +651,7 @@ impl ImaLog {
 
         // Call the get_unmatched_measurements function pointer to check reference values
         let unmatched_hashes: std::collections::HashSet<String> =
-            match (service_host_functions.get_unmatched_measurements)(&file_hashes, plugin_name, user_id).await {
+            match (service_host_functions.get_unmatched_measurements)(&file_hashes, plugin_type, user_id).await {
                 Ok(values) => values.into_iter().collect(),
                 Err(err) => {
                     return Err(PluginError::InternalError(format!("Failed to get unmatched measurements: {}", err)))

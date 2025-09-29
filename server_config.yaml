@@ -22,6 +22,8 @@ attestation_service:
         path: "/var/test_docker/app/export_policy/tpm_ima.rego"
       - name: "virt_cca"
         path: "/var/test_docker/app/export_policy/virt_cca.rego"
+      - name: "ascend_npu"
+        path: "/var/test_docker/app/export_policy/ascend_npu.rego"
     is_verify_policy_signature: false
     single_user_policy_limit: 30
     policy_content_size_limit: 500
@@ -38,3 +40,5 @@ attestation_service:
       path: "/usr/local/lib/libtpm_ima_verifier.so"
     - name: "virt_cca"
       path: "/usr/local/lib/libvirtcca_verifier.so"
+    - name: "ascend_npu"
+      path: "/usr/local/lib/libascend_npu_verifier.so"

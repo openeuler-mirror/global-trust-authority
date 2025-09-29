@@ -163,7 +163,11 @@ mod tests {
 
     #[test]
     fn test_enable_apikey_invalid_value() {
+        // Remove any existing ENABLE_APIKEY to ensure clean state
+        unsafe { env::remove_var("ENABLE_APIKEY"); }
         unsafe { env::set_var("ENABLE_APIKEY", "not_a_boolean"); }
+        // Call get_api_key_enable() directly instead of using the lazy_static value
+        // which was initialized when the module was first loaded
         assert!(!get_api_key_enable());
         unsafe { env::remove_var("ENABLE_APIKEY"); }
     }

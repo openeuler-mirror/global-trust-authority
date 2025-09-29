@@ -10,14 +10,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-mod crypto_utils;
-mod structure;
-mod quote;
-pub mod pcr;
+pub mod verifier;
 pub mod evidence;
-
-pub use crypto_utils::CryptoVerifier;
-pub use structure::{TpmsAttest, TpmtSignature, SignatureData, Tpm2SignatureAlgID, AlgorithmId, TpmsPcrSelection};
-pub use quote::QuoteVerifier;
-pub use pcr::{PcrValues, PcrValueEntry};
-pub use evidence::{Evidence, GenerateEvidence, EvidenceResult, LogResult, Logs};
+pub mod log_verifier;
